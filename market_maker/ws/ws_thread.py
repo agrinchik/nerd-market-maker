@@ -164,10 +164,12 @@ class BitMEXWebsocket():
         self.logger.info("Started thread")
 
         # Wait for connect before continuing
-        conn_timeout = 3 * 60
+        conn_timeout = 15 * 60
+        RETRY_PERIOD = 10
         while (not self.ws.sock or not self.ws.sock.connected) and conn_timeout and not self._error:
-            sleep(10)
-            conn_timeout -= 10
+            self.logger.info("Could not connect right away. Retrying in {} seconds".format(RETRY_PERIOD))
+            sleep(RETRY_PERIOD)
+            conn_timeout -= RETRY_PERIOD
 
         if not conn_timeout or self._error:
             self.logger.error("Couldn't connect to WS! Exiting.")
