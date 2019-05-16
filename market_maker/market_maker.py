@@ -507,7 +507,9 @@ class OrderManager:
             # This will restart on very short downtime, but if it's longer,
             # the MM will crash entirely as it is unable to connect to the WS on boot.
             if not self.check_connection():
-                logger.error("Realtime data connection unexpectedly closed, restarting.")
+                RESTART_TIMEOUT = 300
+                logger.error("Realtime data connection unexpectedly closed, restarting in {} seconds.".format(RESTART_TIMEOUT))
+                sleep(RESTART_TIMEOUT)
                 self.restart()
 
             self.sanity_check()  # Ensures health of mm - several cut-out points here
