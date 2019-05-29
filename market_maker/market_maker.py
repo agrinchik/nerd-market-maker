@@ -7,6 +7,8 @@ import random
 import requests
 import atexit
 import signal
+from market_maker.utils.log import log_info
+from market_maker.utils.log import log_error
 
 from market_maker import bitmex
 from market_maker.settings import settings
@@ -401,7 +403,7 @@ class OrderManager:
                     sleep(0.5)
                     return self.place_orders()
                 else:
-                    logger.error("Unknown error on amend: %s. Exiting" % errorObj)
+                    log_error(logger, "Unknown error on amend: %s. Exiting" % errorObj, True)
                     sys.exit(1)
 
         if len(to_create) > 0:
@@ -456,7 +458,7 @@ class OrderManager:
             logger.error("Buy: %s, Sell: %s" % (self.start_position_buy, self.start_position_sell))
             logger.error("First buy position: %s\nBitMEX Best Ask: %s\nFirst sell position: %s\nBitMEX Best Bid: %s" %
                          (self.get_price_offset(-1), ticker["sell"], self.get_price_offset(1), ticker["buy"]))
-            logger.error("Sanity check failed, exchange data is inconsistent")
+            log_error(logger, "Sanity check failed, exchange data is inconsistent", True)
             self.exit()
 
         # Messaging if the position limits are reached
@@ -508,7 +510,7 @@ class OrderManager:
             # the MM will crash entirely as it is unable to connect to the WS on boot.
             if not self.check_connection():
                 RESTART_TIMEOUT = 300
-                logger.error("Realtime data connection unexpectedly closed, restarting in {} seconds.".format(RESTART_TIMEOUT)) 
+                log_error(logger, "Realtime data connection unexpectedly closed, restarting in {} seconds.".format(RESTART_TIMEOUT), True)
                 sleep(RESTART_TIMEOUT)
                 self.restart()
 
@@ -540,7 +542,7 @@ def margin(instrument, quantity, price):
 
 
 def run():
-    logger.info('BitMEX Market Maker Version: %s\n' % constants.VERSION)
+    log_info(logger, 'BitMEX Market Maker Version: %s\n' % constants.VERSION, True)
 
     om = OrderManager()
     # Try/except just keeps ctrl-c from printing an ugly stacktrace
