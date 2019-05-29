@@ -7,6 +7,7 @@ from time import sleep
 import json
 import decimal
 import logging
+from market_maker.utils.log import log_error
 from market_maker.settings import settings
 from market_maker.auth.APIKeyAuth import generate_expires, generate_signature
 from market_maker.utils.log import setup_custom_logger
@@ -132,7 +133,7 @@ class BitMEXWebsocket():
     #
     def error(self, err):
         self._error = err
-        self.logger.error(err)
+        log_error(self.logger, err, True)
         self.exit()
 
     def exit(self):
@@ -170,7 +171,7 @@ class BitMEXWebsocket():
             conn_timeout -= 1
 
         if not conn_timeout or self._error:
-            self.logger.error("Couldn't connect to WS! Exiting.")
+            log_error(self.logger, "Couldn't connect to WS! Exiting.", True)
             self.exit()
             sys.exit(1)
 
@@ -217,13 +218,13 @@ class BitMEXWebsocket():
                 if message['success']:
                     self.logger.debug("Subscribed to %s." % message['subscribe'])
                 else:
-                    self.error("Unable to subscribe to %s. Error: \"%s\" Please check and restart." %
-                               (message['request']['args'][0], message['error']))
+                    log_error(self.logger, "Unable to subscribe to %s. Error: \"%s\" Please check and restart." %
+                               (message['request']['args'][0], message['error']), True)
             elif 'status' in message:
                 if message['status'] == 400:
-                    self.error(message['error'])
+                    log_error(self.logger, message['error'], True)
                 if message['status'] == 401:
-                    self.error("API Key incorrect, please check and restart.")
+                    log_error(self.logger, "API Key incorrect, please check and restart.", True)
             elif action:
 
                 if table not in self.data:
@@ -287,7 +288,7 @@ class BitMEXWebsocket():
                 else:
                     raise Exception("Unknown action: %s" % action)
         except:
-            self.logger.error(traceback.format_exc())
+            log_error(self.logger, traceback.format_exc(), True)
 
     def __on_open(self):
         self.logger.debug("Websocket Opened.")
