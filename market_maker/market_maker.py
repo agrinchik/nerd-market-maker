@@ -382,14 +382,17 @@ class OrderManager:
             sells_matched += 1
 
         if len(to_amend) > 0:
+            combined_msg = ""
             for amended_order in reversed(to_amend):
                 reference_order = [o for o in existing_orders if o['orderID'] == amended_order['orderID']][0]
-                logger.info("Amending %4s: %d @ %.*f to %d @ %.*f (%+.*f)" % (
+                combined_msg += "Amending %4s: %d @ %.*f to %d @ %.*f (%+.*f)\n" % (
                     amended_order['side'],
                     reference_order['leavesQty'], tickLog, reference_order['price'],
                     (amended_order['orderQty'] - reference_order['cumQty']), tickLog, amended_order['price'],
                     tickLog, (amended_order['price'] - reference_order['price'])
-                ))
+                )
+            log_info(logger, combined_msg, True)
+
             # This can fail if an order has closed in the time we were processing.
             # The API will send us `invalid ordStatus`, which means that the order's status (Filled/Canceled)
             # made it not amendable.
@@ -407,16 +410,18 @@ class OrderManager:
                     sys.exit(1)
 
         if len(to_create) > 0:
-            logger.info("Creating %d orders:" % (len(to_create)))
+            combined_msg = "Creating %d orders:\n" % (len(to_create))
             for order in reversed(to_create):
-                logger.info("%4s %d @ %.*f" % (order['side'], order['orderQty'], tickLog, order['price']))
+                combined_msg += "%4s %d @ %.*f\n" % (order['side'], order['orderQty'], tickLog, order['price'])
+            log_info(logger, combined_msg, True)
             self.exchange.create_bulk_orders(to_create)
 
         # Could happen if we exceed a delta limit
         if len(to_cancel) > 0:
-            logger.info("Canceling %d orders:" % (len(to_cancel)))
+            combined_msg = "Cancelling %d orders:\n" % (len(to_cancel))
             for order in reversed(to_cancel):
-                logger.info("%4s %d @ %.*f" % (order['side'], order['leavesQty'], tickLog, order['price']))
+                combined_msg += "%4s %d @ %.*f\n" % (order['side'], order['leavesQty'], tickLog, order['price'])
+            log_info(logger, combined_msg, True)
             self.exchange.cancel_bulk_orders(to_cancel)
 
     ###
