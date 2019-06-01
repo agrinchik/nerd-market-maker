@@ -268,7 +268,7 @@ class BitMEXWebsocket():
                                 contExecuted = updateData['cumQty'] - item['cumQty']
                                 if contExecuted > 0:
                                     instrument = self.get_instrument(item['symbol'])
-                                    log_info("Execution: %s %d Contracts of %s at %.*f" %
+                                    log_info(self.logger, "Execution: %s %d Contracts of %s at %.*f" %
                                              (item['side'], contExecuted, item['symbol'],
                                               instrument['tickLog'], item['price']), True)
 
