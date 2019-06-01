@@ -7,7 +7,7 @@ from time import sleep
 import json
 import decimal
 import logging
-from market_maker.utils.log import log_error
+from market_maker.utils.log import log_error, log_info
 from market_maker.settings import settings
 from market_maker.auth.APIKeyAuth import generate_expires, generate_signature
 from market_maker.utils.log import setup_custom_logger
@@ -268,9 +268,9 @@ class BitMEXWebsocket():
                                 contExecuted = updateData['cumQty'] - item['cumQty']
                                 if contExecuted > 0:
                                     instrument = self.get_instrument(item['symbol'])
-                                    self.logger.info("Execution: %s %d Contracts of %s at %.*f" %
+                                    log_info("Execution: %s %d Contracts of %s at %.*f" %
                                              (item['side'], contExecuted, item['symbol'],
-                                              instrument['tickLog'], item['price']))
+                                              instrument['tickLog'], item['price']), True)
 
                         # Update this item.
                         item.update(updateData)

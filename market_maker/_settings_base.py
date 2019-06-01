@@ -64,7 +64,7 @@ RELIST_INTERVAL = 0.01
 
 # Position limits - set to True to activate. Values are in contracts.
 # If you exceed a position limit, the bot will log and stop quoting that side.
-CHECK_POSITION_LIMITS = False
+CHECK_POSITION_LIMITS = True
 MIN_POSITION = -10000
 MAX_POSITION = 10000
 

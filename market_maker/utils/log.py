@@ -28,10 +28,12 @@ def send_telegram_message(message=""):
         'parse_mode': 'html'  # or html
     })
 
+
 def log_info(logger, log_txt, send_telegram=False):
     logger.info(log_txt)
     if settings.LOG_TO_TELEGRAM is True and send_telegram is True:
         send_telegram_message(log_txt)
+
 
 def log_error(logger, log_txt, send_telegram=False):
     logger.error(log_txt)
