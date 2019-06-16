@@ -11,7 +11,8 @@ def setup_custom_logger(name, log_level=settings.LOG_LEVEL):
 
     logger = logging.getLogger(name)
     logger.setLevel(log_level)
-    logger.addHandler(handler)
+    logging.basicConfig(filename='ttt_mm.txt', filemode='w', format='%(asctime)s - %(levelname)s - %(module)s - %(message)s')
+    #logger.addHandler(handler)
     return logger
 
 

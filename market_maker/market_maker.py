@@ -35,7 +35,10 @@ class ExchangeInterface:
         self.bitmex = bitmex.BitMEX(base_url=settings.BASE_URL, symbol=self.symbol,
                                     apiKey=settings.API_KEY, apiSecret=settings.API_SECRET,
                                     orderIDPrefix=settings.ORDERID_PREFIX, postOnly=settings.POST_ONLY,
-                                    timeout=settings.TIMEOUT)
+                                    timeout=settings.TIMEOUT,
+                                    retries=settings.RETRIES,
+                                    retry_delay=settings.RETRY_DELAY
+                                    )
 
     def cancel_order(self, order):
         tickLog = self.get_instrument()['tickLog']
@@ -505,8 +508,7 @@ class OrderManager:
 
     def run_loop(self):
         while True:
-            sys.stdout.write("-----\n")
-            sys.stdout.flush()
+            logger.info("*" * 400)
 
             self.check_file_change()
             sleep(settings.LOOP_INTERVAL)
