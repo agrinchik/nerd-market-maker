@@ -1,4 +1,7 @@
-/settings.py
+settings_live.py
+settings_test.py
+settings.py
+get_live_logs.sh
 *.pyc
 dist/
 *.egg-info/
