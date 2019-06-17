@@ -2,6 +2,8 @@ settings_live.py
 settings_test.py
 settings.py
 get_live_logs.sh
+mm_test_log_out.txt
+mm_live_log_out.txt
 *.pyc
 dist/
 *.egg-info/
