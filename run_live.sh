@@ -10,6 +10,4 @@ conda activate nerd-market-maker
 
 echo Executing NerdMarketMaker in BitMex LIVE ...
 
-cp ./settings_live.py ./settings.py
-
-./marketmaker
+./marketmaker --live

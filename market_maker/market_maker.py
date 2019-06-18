@@ -28,10 +28,7 @@ logger = log.setup_custom_logger('root')
 class ExchangeInterface:
     def __init__(self, dry_run=False):
         self.dry_run = dry_run
-        if len(sys.argv) > 1:
-            self.symbol = sys.argv[1]
-        else:
-            self.symbol = settings.SYMBOL
+        self.symbol = settings.SYMBOL
         self.bitmex = bitmex.BitMEX(base_url=settings.BASE_URL, symbol=self.symbol,
                                     apiKey=settings.API_KEY, apiSecret=settings.API_SECRET,
                                     orderIDPrefix=settings.ORDERID_PREFIX, postOnly=settings.POST_ONLY,
@@ -557,3 +554,5 @@ def run():
         om.run_loop()
     except (KeyboardInterrupt, SystemExit):
         sys.exit()
+    except Exception as e:
+        log_error(logger, "Unexpected exception! %s".format(e), True)

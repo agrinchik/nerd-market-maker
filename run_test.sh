@@ -10,7 +10,5 @@ conda activate nerd-market-maker
 
 echo Executing NerdMarketMaker in BitMex TESTNET ...
 
-cp ./settings_test.py ./settings.py
-
 ./marketmaker
 
