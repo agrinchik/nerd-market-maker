@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import importlib
 import os
 import sys
+import argparse
 
 from market_maker.utils.dotdict import dotdict
 import market_maker._settings_base as baseSettings
@@ -22,22 +23,36 @@ def import_path(fullpath):
     return module
 
 
-userSettings = import_path(os.path.join('.', 'settings'))
-symbolSettings = None
-symbol = sys.argv[1] if len(sys.argv) > 1 else None
-if symbol:
-    print("Importing symbol settings for %s..." % symbol)
-    try:
-        symbolSettings = import_path(os.path.join('..', 'settings-%s' % symbol))
-    except Exception as e:
-        print("Unable to find settings-%s.py." % symbol)
+def parse_args():
+    parser = argparse.ArgumentParser(description='NerdMarketMaker')
+
+    parser.add_argument('--live',
+                        action='store_true',
+                        help=('Execution Live flag'))
+
+    parser.add_argument('--debug',
+                        action='store_true',
+                        help=('Print Debugs'))
+
+    return parser.parse_args()
+
+
+def resolve_settings_filename(is_live_flag):
+    if is_live_flag:
+        return "settings_live"
+    else:
+        return "settings_test"
+
+
+args = parse_args()
+
+settings_filename = resolve_settings_filename(args.live)
+userSettings = import_path(os.path.join('.', settings_filename))
 
 # Assemble settings.
 settings = {}
 settings.update(vars(baseSettings))
 settings.update(vars(userSettings))
-if symbolSettings:
-    settings.update(vars(symbolSettings))
 
 # Main export
 settings = dotdict(settings)
