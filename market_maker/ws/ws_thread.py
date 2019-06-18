@@ -7,6 +7,7 @@ from time import sleep
 import json
 import decimal
 import logging
+from market_maker.utils import constants
 from market_maker.utils.log import log_error, log_info
 from market_maker.settings import settings
 from market_maker.auth.APIKeyAuth import generate_expires, generate_signature
@@ -16,6 +17,9 @@ from future.utils import iteritems
 from future.standard_library import hooks
 with hooks():  # Python 2/3 compat
     from urllib.parse import urlparse, urlunparse
+
+def XBt_to_XBT(XBt):
+    return float(XBt) / constants.XBt_TO_XBT
 
 
 # Connects to BitMEX websocket for streaming realtime data.
@@ -274,7 +278,7 @@ class BitMEXWebsocket():
                                     log_info(self.logger, "Execution: %s %d Contracts of %s at %.*f" %
                                              (item['side'], contExecuted, item['symbol'],
                                               instrument['tickLog'], item['price']), True)
-                                    log_info(self.logger, "Current quantity: {},\nCurrent margin balance: {}".format(self.current_qty(), self.funds()), True)
+                                    log_info(self.logger, "Current quantity: {},\nWallet balance: {},\nMargin balance: {}".format(self.current_qty(), self.funds()["walletBalance"], self.funds()["marginBalance"]), True)
 
                         # Update this item.
                         item.update(updateData)
