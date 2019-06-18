@@ -108,6 +108,9 @@ class BitMEXWebsocket():
     def funds(self):
         return self.data['margin'][0]
 
+    def current_qty(self):
+        return self.position(self.symbol)['currentQty']
+
     def market_depth(self, symbol):
         raise NotImplementedError('orderBook is not subscribed; use askPrice and bidPrice on instrument')
         # return self.data['orderBook25'][0]
@@ -271,7 +274,7 @@ class BitMEXWebsocket():
                                     log_info(self.logger, "Execution: %s %d Contracts of %s at %.*f" %
                                              (item['side'], contExecuted, item['symbol'],
                                               instrument['tickLog'], item['price']), True)
-                                    log_info(self.logger, "Current margin balance: %d".format(self.funds()), True)
+                                    log_info(self.logger, "Current quantity: {},\nCurrent margin balance: {}".format(self.current_qty(), self.funds()), True)
 
                         # Update this item.
                         item.update(updateData)
