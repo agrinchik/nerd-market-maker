@@ -278,7 +278,7 @@ class BitMEXWebsocket():
                                     log_info(self.logger, "Execution: %s %d Contracts of %s at %.*f" %
                                              (item['side'], contExecuted, item['symbol'],
                                               instrument['tickLog'], item['price']), True)
-                                    log_info(self.logger, "Current quantity: {},\nWallet balance: {},\nMargin balance: {}".format(self.current_qty(), self.funds()["walletBalance"], self.funds()["marginBalance"]), True)
+                                    log_info(self.logger, "Current quantity: {}\nWallet balance: {} XBT\nMargin balance: {} XBT".format(self.current_qty(), XBt_to_XBT(self.funds()["walletBalance"]), XBt_to_XBT(self.funds()["marginBalance"])), True)
 
                         # Update this item.
                         item.update(updateData)
