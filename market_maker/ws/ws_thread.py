@@ -269,19 +269,24 @@ class BitMEXWebsocket():
                             continue  # No item found to update. Could happen before push
 
                         # Log executions
+                        is_executed = False
                         if table == 'order':
                             is_canceled = 'ordStatus' in updateData and updateData['ordStatus'] == 'Canceled'
                             if 'cumQty' in updateData and not is_canceled:
                                 contExecuted = updateData['cumQty'] - item['cumQty']
                                 if contExecuted > 0:
+                                    is_executed = True
                                     instrument = self.get_instrument(item['symbol'])
                                     log_info(self.logger, "Execution: %s %d Contracts of %s at %.*f" %
                                              (item['side'], contExecuted, item['symbol'],
                                               instrument['tickLog'], item['price']), True)
-                                    log_info(self.logger, "Current quantity: {}\nWallet balance: {} XBT\nMargin balance: {} XBT".format(self.current_qty(), XBt_to_XBT(self.funds()["walletBalance"]), XBt_to_XBT(self.funds()["marginBalance"])), True)
 
                         # Update this item.
                         item.update(updateData)
+
+                        if is_executed is True:
+                            log_info(self.logger, "Current quantity: {}\nWallet balance: {} XBT\nMargin balance: {} XBT".format(self.current_qty(),
+                                      XBt_to_XBT(self.funds()["walletBalance"]), XBt_to_XBT(self.funds()["marginBalance"])), True)
 
                         # Remove canceled / filled orders
                         if table == 'order' and item['leavesQty'] <= 0:
