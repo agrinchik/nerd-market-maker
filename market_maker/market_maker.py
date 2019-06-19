@@ -224,12 +224,12 @@ class OrderManager:
     def reset(self):
         self.exchange.cancel_all_orders()
         self.sanity_check()
-        self.print_status()
+        self.print_status(False)
 
         # Create orders and converge.
         self.place_orders()
 
-    def print_status(self):
+    def print_status(self, send_to_telegram):
         """Print the current MM status."""
 
         margin = self.exchange.get_margin()
@@ -238,15 +238,16 @@ class OrderManager:
         tickLog = self.exchange.get_instrument()['tickLog']
         self.start_XBt = margin["marginBalance"]
 
-        logger.info("Current XBT Balance: %.6f" % XBt_to_XBT(self.start_XBt))
-        logger.info("Current Contract Position: %d" % self.running_qty)
+        combined_msg = "Current XBT Balance: %.8f\n" % XBt_to_XBT(self.start_XBt)
+        combined_msg += "Current Contract Position: %d\n" % self.running_qty
         if settings.CHECK_POSITION_LIMITS:
-            logger.info("Position limits: %d/%d" % (settings.MIN_POSITION, settings.MAX_POSITION))
+            combined_msg += "Position limits: %d/%d\n" % (settings.MIN_POSITION, settings.MAX_POSITION)
         if position['currentQty'] != 0:
-            logger.info("Avg Cost Price: %.*f" % (tickLog, float(position['avgCostPrice'])))
-            logger.info("Avg Entry Price: %.*f" % (tickLog, float(position['avgEntryPrice'])))
-        logger.info("Contracts Traded This Run: %d" % (self.running_qty - self.starting_qty))
-        logger.info("Total Contract Delta: %.4f XBT" % self.exchange.calc_delta()['spot'])
+            combined_msg += "Avg Cost Price: %.*f\n" % (tickLog, float(position['avgCostPrice']))
+            combined_msg += "Avg Entry Price: %.*f\n" % (tickLog, float(position['avgEntryPrice']))
+        combined_msg += "Contracts Traded This Run: %d\n" % (self.running_qty - self.starting_qty)
+        combined_msg += "Total Contract Delta: %.8f XBT\n" % self.exchange.calc_delta()['spot']
+        log_info(logger, combined_msg, send_to_telegram)
 
     def get_ticker(self):
         ticker = self.exchange.get_ticker()
@@ -414,6 +415,9 @@ class OrderManager:
             for order in reversed(to_create):
                 combined_msg += "%4s %d @ %.*f\n" % (order['side'], order['orderQty'], tickLog, order['price'])
             log_info(logger, combined_msg, True)
+
+            self.print_status(True)
+
             self.exchange.create_bulk_orders(to_create)
 
         # Could happen if we exceed a delta limit
@@ -519,7 +523,7 @@ class OrderManager:
                 self.restart()
 
             self.sanity_check()  # Ensures health of mm - several cut-out points here
-            self.print_status()  # Print skew, delta, etc
+            self.print_status(False)  # Print skew, delta, etc
             self.place_orders()  # Creates desired orders and converges to existing orders
 
     def restart(self):
