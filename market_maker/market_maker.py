@@ -237,7 +237,7 @@ class OrderManager:
         self.running_qty = self.exchange.get_delta()
         tickLog = self.exchange.get_instrument()['tickLog']
         self.start_XBt = margin["marginBalance"]
-
+ 
         combined_msg = "\nCurrent Wallet XBT Balance: %.8f\n" % XBt_to_XBT(margin["walletBalance"])
         combined_msg += "Current Margin Balance: %.8f\n" % XBt_to_XBT(self.start_XBt)
         combined_msg += "Current Contract Position: %d\n" % self.running_qty
