@@ -546,7 +546,7 @@ def margin(instrument, quantity, price):
 
 
 def run():
-    log_info(logger, 'BitMEX Market Maker Version: %s\n' % constants.VERSION, True)
+    log_info(logger, 'Nerd Market Maker Version: %s\n' % constants.VERSION, True)
 
     om = OrderManager()
     # Try/except just keeps ctrl-c from printing an ugly stacktrace
