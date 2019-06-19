@@ -238,7 +238,8 @@ class OrderManager:
         tickLog = self.exchange.get_instrument()['tickLog']
         self.start_XBt = margin["marginBalance"]
 
-        combined_msg = "Current XBT Balance: %.8f\n" % XBt_to_XBT(self.start_XBt)
+        combined_msg = "Current wallet XBT Balance: %.8f\n" % XBt_to_XBT(margin["walletBalance"])
+        combined_msg += "Current margin Balance: %.8f\n" % XBt_to_XBT(self.start_XBt)
         combined_msg += "Current Contract Position: %d\n" % self.running_qty
         if settings.CHECK_POSITION_LIMITS:
             combined_msg += "Position limits: %d/%d\n" % (settings.MIN_POSITION, settings.MAX_POSITION)
