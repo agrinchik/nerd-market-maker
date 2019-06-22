@@ -25,6 +25,10 @@ watched_files_mtimes = [(f, getmtime(f)) for f in settings.WATCHED_FILES]
 logger = log.setup_custom_logger('root')
 
 
+class ForceRestartException(Exception):
+    pass
+
+
 class ExchangeInterface:
     def __init__(self, dry_run=False):
         self.dry_run = dry_run
@@ -518,7 +522,7 @@ class OrderManager:
             # This will restart on very short downtime, but if it's longer,
             # the MM will crash entirely as it is unable to connect to the WS on boot.
             if not self.check_connection():
-                RESTART_TIMEOUT = 300
+                RESTART_TIMEOUT = 60
                 log_error(logger, "Realtime data connection unexpectedly closed, restarting in {} seconds.".format(RESTART_TIMEOUT), True)
                 sleep(RESTART_TIMEOUT)
                 self.restart()
@@ -529,7 +533,8 @@ class OrderManager:
 
     def restart(self):
         logger.info("Restarting the market maker...")
-        os.execv(sys.executable, [sys.executable] + sys.argv)
+        #os.execv(sys.executable, [sys.executable] + sys.argv)
+        raise ForceRestartException("The NerdMarketMaker bot will be restarted")
 
 #
 # Helpers
@@ -557,7 +562,7 @@ def run():
     # Try/except just keeps ctrl-c from printing an ugly stacktrace
     try:
         om.run_loop()
-    except (KeyboardInterrupt, SystemExit):
+    except (ForceRestartException, KeyboardInterrupt, SystemExit):
         sys.exit()
     except Exception as e:
         log_error(logger, "Unexpected exception! {}".format(e), True)

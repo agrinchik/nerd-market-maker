@@ -10,4 +10,8 @@ conda activate nerd-market-maker
 
 echo Executing NerdMarketMaker in BitMex LIVE ...
 
-./marketmaker --live
+while true
+    do ./marketmaker --live
+    sleep 600
+done
+
