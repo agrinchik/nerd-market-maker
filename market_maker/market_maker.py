@@ -560,4 +560,4 @@ def run():
     except (KeyboardInterrupt, SystemExit):
         sys.exit()
     except Exception as e:
-        log_error(logger, "Unexpected exception! %s".format(e), True)
+        log_error(logger, "Unexpected exception! {}".format(e), True)
