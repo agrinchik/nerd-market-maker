@@ -10,5 +10,7 @@ conda activate nerd-market-maker
 
 echo Executing NerdMarketMaker in BitMex TESTNET ...
 
-./marketmaker
-
+while true
+    do ./marketmaker
+    sleep 600
+done
