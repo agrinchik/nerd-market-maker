@@ -12,5 +12,5 @@ echo Executing NerdMarketMaker in BitMex TESTNET ...
 
 while true
     do ./marketmaker
-    sleep 600
+    sleep 10
 done

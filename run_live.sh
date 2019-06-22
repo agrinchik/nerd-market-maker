@@ -7,11 +7,11 @@ elif [ -d "/home/alex/anaconda3" ]; then
 fi
 
 conda activate nerd-market-maker
- 
+
 echo Executing NerdMarketMaker in BitMex LIVE ...
 
 while true
     do ./marketmaker --live
-    sleep 600
+    sleep 10
 done
 
