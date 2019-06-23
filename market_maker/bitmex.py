@@ -10,6 +10,7 @@ import logging
 from market_maker.auth import APIKeyAuthWithExpires
 from market_maker.utils import constants, errors
 from market_maker.ws.ws_thread import BitMEXWebsocket
+from market_maker.utils.log import log_error, log_info
 
 
 # https://www.bitmex.com/api/explorer/
@@ -263,6 +264,8 @@ class BitMEX(object):
             req = requests.Request(verb, url, json=postdict, auth=auth, params=query)
             prepped = self.session.prepare_request(req)
             response = self.session.send(prepped, timeout=timeout)
+            ratelimit_remaining = response.headers['X-RateLimit-Remaining']
+            log_info(self.logger, "CURL request: {}, X-RateLimit-Remaining={}".format(url, ratelimit_remaining), True)
             # Make non-200s throw
             response.raise_for_status()
 
