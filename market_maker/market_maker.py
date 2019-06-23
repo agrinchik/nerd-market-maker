@@ -397,7 +397,7 @@ class OrderManager:
                     (amended_order['orderQty'] - reference_order['cumQty']), tickLog, amended_order['price'],
                     tickLog, (amended_order['price'] - reference_order['price'])
                 )
-            log_info(logger, combined_msg, True)
+            log_info(logger, combined_msg, False)
 
             # This can fail if an order has closed in the time we were processing.
             # The API will send us `invalid ordStatus`, which means that the order's status (Filled/Canceled)
@@ -419,7 +419,7 @@ class OrderManager:
             combined_msg = "Creating %d orders:\n" % (len(to_create))
             for order in reversed(to_create):
                 combined_msg += "%4s %d @ %.*f\n" % (order['side'], order['orderQty'], tickLog, order['price'])
-            log_info(logger, combined_msg, True)
+            log_info(logger, combined_msg, False)
 
             self.print_status(True)
 
@@ -430,7 +430,7 @@ class OrderManager:
             combined_msg = "Cancelling %d orders:\n" % (len(to_cancel))
             for order in reversed(to_cancel):
                 combined_msg += "%4s %d @ %.*f\n" % (order['side'], order['leavesQty'], tickLog, order['price'])
-            log_info(logger, combined_msg, True)
+            log_info(logger, combined_msg, False)
             self.exchange.cancel_bulk_orders(to_cancel)
 
     ###
