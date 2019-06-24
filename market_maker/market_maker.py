@@ -349,6 +349,7 @@ class OrderManager:
         return {'price': price, 'orderQty': quantity, 'side': "Buy" if index < 0 else "Sell"}
 
     def is_order_placement_allowed(self, order):
+        result = True
         position = self.exchange.get_position()
         position_avg_price = position['avgEntryPrice']
         position_qty = position['currentQty']
@@ -356,24 +357,26 @@ class OrderManager:
         order_price = order["price"]
 
         if position_qty == 0:
-            return True
+            result = True
 
         if position_qty > 0:
             if is_order_buy_side is True:
-                return True
+                result = True
             else:
                 if order_price >= position_avg_price:
-                    return True
+                    result = True
                 else:
-                    return False
+                    result = False
         else:
             if is_order_buy_side is False:
-                return True
+                result = True
             else:
                 if order_price <= position_avg_price:
-                    return True
+                    result = True
                 else:
-                    return False
+                    result = False
+        print("is_order_placement_allowed(): order={}, result={}".format(order, result))
+        return result
 
     def converge_orders(self, buy_orders, sell_orders):
         """Converge the orders we currently have in the book with what we want to be in the book.
