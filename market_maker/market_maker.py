@@ -238,13 +238,17 @@ class OrderManager:
 
         margin = self.exchange.get_margin()
         position = self.exchange.get_position()
+        ticker = self.exchange.get_ticker()
+        XBT_rate = ticker["last"]
         self.running_qty = self.exchange.get_delta()
         tickLog = self.exchange.get_instrument()['tickLog']
+        wallet_balance_XBT = XBt_to_XBT(margin["walletBalance"])
+        wallet_balance_USD = wallet_balance_XBT * XBT_rate
         self.start_XBt = margin["marginBalance"]
  
-        combined_msg = "\nCurrent Wallet XBT Balance: %.8f\n" % XBt_to_XBT(margin["walletBalance"])
-        combined_msg += "Current Margin Balance: %.8f\n" % XBt_to_XBT(self.start_XBt)
-        combined_msg += "Current Contract Position: %d\n" % self.running_qty
+        combined_msg = "\nWallet Balance: %.8f ($%.2f)\n" % (wallet_balance_XBT, wallet_balance_USD)
+        combined_msg += "Margin Balance: %.8f\n" % XBt_to_XBT(self.start_XBt)
+        combined_msg += "Contract Position: %d\n" % self.running_qty
         if settings.CHECK_POSITION_LIMITS:
             combined_msg += "Position limits: %d/%d\n" % (settings.MIN_POSITION, settings.MAX_POSITION)
         if position['currentQty'] != 0:
@@ -344,6 +348,33 @@ class OrderManager:
 
         return {'price': price, 'orderQty': quantity, 'side': "Buy" if index < 0 else "Sell"}
 
+    def is_order_placement_allowed(self, order):
+        position = self.exchange.get_position()
+        position_avg_price = position['avgEntryPrice']
+        position_qty = position['currentQty']
+        is_order_buy_side = True if order["side"] == "Buy" else False
+        order_price = order["price"]
+
+        if position_qty == 0:
+            return True
+
+        if position_qty > 0:
+            if is_order_buy_side is True:
+                return True
+            else:
+                if order_price >= position_avg_price:
+                    return True
+                else:
+                    return False
+        else:
+            if is_order_buy_side is False:
+                return True
+            else:
+                if order_price <= position_avg_price:
+                    return True
+                else:
+                    return False
+
     def converge_orders(self, buy_orders, sell_orders):
         """Converge the orders we currently have in the book with what we want to be in the book.
            This involves amending any open orders and creating new ones if any have filled completely.
@@ -373,18 +404,23 @@ class OrderManager:
                         # If price has changed, and the change is more than our RELIST_INTERVAL, amend.
                         desired_order['price'] != order['price'] and
                         abs((desired_order['price'] / order['price']) - 1) > settings.RELIST_INTERVAL):
-                    to_amend.append({'orderID': order['orderID'], 'orderQty': order['cumQty'] + desired_order['orderQty'],
-                                     'price': desired_order['price'], 'side': order['side']})
+                    if self.is_order_placement_allowed(desired_order) is True:
+                        to_amend.append({'orderID': order['orderID'], 'orderQty': order['cumQty'] + desired_order['orderQty'],
+                                        'price': desired_order['price'], 'side': order['side']})
             except IndexError:
                 # Will throw if there isn't a desired order to match. In that case, cancel it.
                 to_cancel.append(order)
 
         while buys_matched < len(buy_orders):
-            to_create.append(buy_orders[buys_matched])
+            buy_order = buy_orders[buys_matched]
+            if self.is_order_placement_allowed(buy_order) is True:
+                to_create.append(buy_order)
             buys_matched += 1
 
         while sells_matched < len(sell_orders):
-            to_create.append(sell_orders[sells_matched])
+            sell_order = sell_orders[sells_matched]
+            if self.is_order_placement_allowed(sell_order) is True:
+                to_create.append(sell_order)
             sells_matched += 1
 
         if len(to_amend) > 0:
@@ -397,7 +433,7 @@ class OrderManager:
                     (amended_order['orderQty'] - reference_order['cumQty']), tickLog, amended_order['price'],
                     tickLog, (amended_order['price'] - reference_order['price'])
                 )
-            log_info(logger, combined_msg, False)
+            log_info(logger, combined_msg, True)
 
             # This can fail if an order has closed in the time we were processing.
             # The API will send us `invalid ordStatus`, which means that the order's status (Filled/Canceled)
@@ -419,7 +455,7 @@ class OrderManager:
             combined_msg = "Creating %d orders:\n" % (len(to_create))
             for order in reversed(to_create):
                 combined_msg += "%4s %d @ %.*f\n" % (order['side'], order['orderQty'], tickLog, order['price'])
-            log_info(logger, combined_msg, False)
+            log_info(logger, combined_msg, True)
 
             self.print_status(True)
 
@@ -430,7 +466,7 @@ class OrderManager:
             combined_msg = "Cancelling %d orders:\n" % (len(to_cancel))
             for order in reversed(to_cancel):
                 combined_msg += "%4s %d @ %.*f\n" % (order['side'], order['leavesQty'], tickLog, order['price'])
-            log_info(logger, combined_msg, False)
+            log_info(logger, combined_msg, True)
             self.exchange.cancel_bulk_orders(to_cancel)
 
     ###
