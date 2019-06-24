@@ -375,7 +375,7 @@ class OrderManager:
                     result = True
                 else:
                     result = False
-        print("is_order_placement_allowed(): order={}, result={}".format(order, result))
+        log_info(logger, "is_order_placement_allowed(): order={}, result={}".format(order, result), False)
         return result
 
     def converge_orders(self, buy_orders, sell_orders):
