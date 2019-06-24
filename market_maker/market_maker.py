@@ -223,12 +223,33 @@ class OrderManager:
         self.instrument = self.exchange.get_instrument()
         self.starting_qty = self.exchange.get_delta()
         self.running_qty = self.starting_qty
+        self.max_wallet_balance = self.get_cached_wallet_balance()
         self.reset()
+
+    def get_wallet_balance_filename(self):
+        if settings.ENV == "TEST":
+            return "./stats/walletbalance/test.txt"
+        else:
+            return "./stats/walletbalance/live.txt"
+
+    def get_cached_wallet_balance(self):
+        result = 0
+        filename = self.get_wallet_balance_filename()
+        with open(filename, encoding='utf8') as f:
+            text = f.read().strip()
+            result = float(text)
+        return result
+
+    def store_wallet_balance(self, balance):
+        filename = self.get_wallet_balance_filename()
+        with open(filename, "w") as text_file:
+            text_file.write("{:08}".format(balance))
 
     def reset(self):
         self.exchange.cancel_all_orders()
         self.sanity_check()
         self.print_status(False)
+        self.check_wallet_balance()
 
         # Create orders and converge.
         self.place_orders()
@@ -257,6 +278,17 @@ class OrderManager:
         combined_msg += "Contracts Traded This Run: %d\n" % (self.running_qty - self.starting_qty)
         combined_msg += "Total Contract Delta: %.8f XBT\n" % self.exchange.calc_delta()['spot']
         log_info(logger, combined_msg, send_to_telegram)
+
+    def check_wallet_balance(self):
+        margin = self.exchange.get_margin()
+        curr_wallet_balance = XBt_to_XBT(margin["walletBalance"])
+        cached_wallet_balance = self.get_cached_wallet_balance()
+        capital_drawdown_pct = abs(100 * (curr_wallet_balance - cached_wallet_balance) / cached_wallet_balance)
+        if curr_wallet_balance > cached_wallet_balance:
+            self.store_wallet_balance(curr_wallet_balance)
+        elif capital_drawdown_pct > settings.CAPITAL_STOPLOSS_PCT:
+            log_info(logger, "CRITICAL: current wallet balance drawdown has exceeded capital stop-loss value ({}%)! Shutting down the NerdMarketMaker!".format(settings.CAPITAL_STOPLOSS_PCT), True)
+            self.exit(settings.CAPITAL_STOPLOSS_EXIT_STATUS_CODE)
 
     def get_ticker(self):
         ticker = self.exchange.get_ticker()
@@ -539,7 +571,7 @@ class OrderManager:
         """Ensure the WS connections are still open."""
         return self.exchange.is_open()
 
-    def exit(self):
+    def exit(self, status=None):
         logger.info("Shutting down. All open orders will be cancelled.")
         try:
             self.exchange.cancel_all_orders()
@@ -549,7 +581,7 @@ class OrderManager:
         except Exception as e:
             logger.info("Unable to cancel orders: %s" % e)
 
-        sys.exit()
+        sys.exit(status)
 
     def run_loop(self):
         while True:
@@ -568,6 +600,7 @@ class OrderManager:
 
             self.sanity_check()  # Ensures health of mm - several cut-out points here
             self.print_status(False)  # Print skew, delta, etc
+            self.check_wallet_balance()
             self.place_orders()  # Creates desired orders and converges to existing orders
 
     def restart(self):
@@ -595,13 +628,15 @@ def margin(instrument, quantity, price):
 
 
 def run():
-    log_info(logger, 'Nerd Market Maker Version: %s\n' % constants.VERSION, True)
+    log_info(logger, 'Nerd Market Maker %s\n' % constants.VERSION, True)
 
     om = OrderManager()
     # Try/except just keeps ctrl-c from printing an ugly stacktrace
     try:
         om.run_loop()
-    except (ForceRestartException, KeyboardInterrupt, SystemExit):
-        sys.exit()
+    except (ForceRestartException, KeyboardInterrupt) as fe:
+        sys.exit(1)
+    except SystemExit as se:
+        sys.exit(se.code)
     except Exception as e:
         log_error(logger, "Unexpected exception! {}".format(e), True)
