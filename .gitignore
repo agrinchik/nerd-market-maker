@@ -1,3 +1,4 @@
+stats/walletbalance/test.txt
 settings_live.py
 settings_test.py
 settings.py
@@ -10,5 +11,3 @@ dist/
 env
 .idea/
 logs/
-stats/walletbalance/live.txt
-stats/walletbalance/test.txt
