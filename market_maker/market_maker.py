@@ -390,23 +390,23 @@ class OrderManager:
 
         if position_qty == 0:
             result = True
-
-        if position_qty > 0:
-            if is_order_buy_side is True:
-                result = True
-            else:
-                if order_price >= position_avg_price:
-                    result = True
-                else:
-                    result = False
         else:
-            if is_order_buy_side is False:
-                result = True
-            else:
-                if order_price <= position_avg_price:
+            if position_qty > 0:
+                if is_order_buy_side is True:
                     result = True
                 else:
-                    result = False
+                    if order_price >= position_avg_price:
+                        result = True
+                    else:
+                        result = False
+            else:
+                if is_order_buy_side is False:
+                    result = True
+                else:
+                    if order_price <= position_avg_price:
+                        result = True
+                    else:
+                        result = False
         log_info(logger, "is_order_placement_allowed(): order={}, result={}".format(order, result), False)
         return result
 
