@@ -388,7 +388,7 @@ class OrderManager:
         is_order_buy_side = True if order["side"] == "Buy" else False
         order_price = order["price"]
 
-        if position_qty == 0:
+        if settings.STOP_PLACING_ORDER_IF_INSIDE_LOSS_RANGE is False or position_qty == 0:
             result = True
         else:
             if position_qty > 0:
