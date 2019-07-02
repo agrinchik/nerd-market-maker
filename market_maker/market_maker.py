@@ -138,6 +138,35 @@ class ExchangeInterface:
             symbol = self.symbol
         return self.bitmex.instrument(symbol)
 
+    def get_volatility(self):
+        return self.bitmex.instrument(".BVOL24H")['lastPrice']
+
+    def get_distance_to_avg_price_pct(self):
+        result = 0
+        position = self.get_position()
+        last_price = self.get_ticker()["last"]
+        if position['currentQty'] != 0:
+            result = round(-(last_price - position['avgEntryPrice']) * 100 / last_price, 2)
+        return result
+
+    def get_position_pnl_text_status(self):
+        result = ""
+        position = self.get_position()
+        last_price = self.get_ticker()["last"]
+        curr_quantity = position['currentQty']
+        avg_entry_price = position['avgEntryPrice']
+        if curr_quantity != 0:
+            if curr_quantity > 0 and last_price >= avg_entry_price:
+                result = "PROFIT"
+            elif curr_quantity > 0 and last_price < avg_entry_price:
+                result = "LOSS"
+            elif curr_quantity < 0 and last_price >= avg_entry_price:
+                result = "LOSS"
+            elif curr_quantity < 0 and last_price < avg_entry_price:
+                result = "PROFIT"
+        return result
+
+
     def get_margin(self):
         if self.dry_run:
             return {'marginBalance': float(settings.DRY_BTC), 'availableFunds': float(settings.DRY_BTC)}
@@ -224,6 +253,7 @@ class OrderManager:
         self.starting_qty = self.exchange.get_delta()
         self.running_qty = self.starting_qty
         self.max_wallet_balance = self.get_cached_wallet_balance()
+        self.is_trading_suspended = False
         self.reset()
 
     def get_wallet_balance_filename(self):
@@ -249,7 +279,8 @@ class OrderManager:
         self.exchange.cancel_all_orders()
         self.sanity_check()
         self.print_status(False)
-        self.check_wallet_balance()
+        self.check_suspend_trading()
+        self.check_stop_trading()
 
         # Create orders and converge.
         self.place_orders()
@@ -260,12 +291,13 @@ class OrderManager:
         margin = self.exchange.get_margin()
         position = self.exchange.get_position()
         ticker = self.exchange.get_ticker()
-        XBT_rate = ticker["last"]
+        last_price = ticker["last"]
         self.running_qty = self.exchange.get_delta()
         tickLog = self.exchange.get_instrument()['tickLog']
         wallet_balance_XBT = XBt_to_XBT(margin["walletBalance"])
-        wallet_balance_USD = wallet_balance_XBT * XBT_rate
+        wallet_balance_USD = wallet_balance_XBT * last_price
         self.start_XBt = margin["marginBalance"]
+        curr_volatility = self.exchange.get_volatility()
  
         combined_msg = "\nWallet Balance: %.8f ($%.2f)\n" % (wallet_balance_XBT, wallet_balance_USD)
         combined_msg += "Margin Balance: %.8f\n" % XBt_to_XBT(self.start_XBt)
@@ -275,20 +307,34 @@ class OrderManager:
         if position['currentQty'] != 0:
             combined_msg += "Avg Cost Price: %.*f\n" % (tickLog, float(position['avgCostPrice']))
             combined_msg += "Avg Entry Price: %.*f\n" % (tickLog, float(position['avgEntryPrice']))
+            combined_msg += "Distance To Avg Price: {:.2f}% ({})\n".format(self.exchange.get_distance_to_avg_price_pct(), self.exchange.get_position_pnl_text_status())
         combined_msg += "Contracts Traded This Run: %d\n" % (self.running_qty - self.starting_qty)
         combined_msg += "Total Contract Delta: %.8f XBT\n" % self.exchange.calc_delta()['spot']
+        combined_msg += "XBT Volatility (24h): %.2f\n" % curr_volatility
         log_info(logger, combined_msg, send_to_telegram)
 
-    def check_wallet_balance(self):
+    def check_suspend_trading(self):
+        curr_volatility = self.exchange.get_volatility()
+        if self.is_trading_suspended is False:
+            if settings.STOP_QUOTING_CHECK_MAX_VOLATILITY_ENABLED is True and curr_volatility >= settings.STOP_QUOTING_CHECK_MAX_VOLATILITY_THRESHOLD:
+                log_info(logger, "WARNING: Trading would be suspended as current XBT volatility={} has exceeded the configured threshold={}".format(curr_volatility, settings.STOP_QUOTING_CHECK_MAX_VOLATILITY_THRESHOLD), True)
+                self.is_trading_suspended = True
+                self.exchange.cancel_all_orders()
+        else:
+            if settings.STOP_QUOTING_CHECK_MAX_VOLATILITY_ENABLED is True and curr_volatility < settings.STOP_QUOTING_CHECK_MAX_VOLATILITY_THRESHOLD:
+                log_info(logger, "WARNING: Trading would be re-enabled as current XBT volatility={} has dropped below the configured threshold={}".format(curr_volatility, settings.STOP_QUOTING_CHECK_MAX_VOLATILITY_THRESHOLD), True)
+                self.is_trading_suspended = False
+
+    def check_stop_trading(self):
         margin = self.exchange.get_margin()
         curr_wallet_balance = XBt_to_XBT(margin["walletBalance"])
         cached_wallet_balance = self.get_cached_wallet_balance()
         capital_drawdown_pct = abs(100 * (curr_wallet_balance - cached_wallet_balance) / cached_wallet_balance)
         if curr_wallet_balance > cached_wallet_balance:
             self.store_wallet_balance(curr_wallet_balance)
-        elif capital_drawdown_pct > settings.CAPITAL_STOPLOSS_PCT:
-            log_info(logger, "CRITICAL: current wallet balance drawdown has exceeded capital stop-loss value ({}%)! Shutting down the NerdMarketMaker!".format(settings.CAPITAL_STOPLOSS_PCT), True)
-            self.exit(settings.CAPITAL_STOPLOSS_EXIT_STATUS_CODE)
+        elif capital_drawdown_pct > settings.STOP_TRADING_CAPITAL_STOPLOSS_PCT:
+            log_info(logger, "CRITICAL: current wallet balance drawdown has exceeded capital stop-loss value ({}%)! Shutting down the NerdMarketMaker!".format(settings.STOP_TRADING_CAPITAL_STOPLOSS_PCT), True)
+            self.exit(settings.STOP_TRADING_CAPITAL_STOPLOSS_EXIT_STATUS_CODE)
 
     def get_ticker(self):
         ticker = self.exchange.get_ticker()
@@ -366,6 +412,9 @@ class OrderManager:
             if not self.short_position_limit_exceeded():
                 sell_orders.append(self.prepare_order(i))
 
+        if self.is_trading_suspended is True:
+            return
+
         return self.converge_orders(buy_orders, sell_orders)
 
     def prepare_order(self, index):
@@ -388,7 +437,7 @@ class OrderManager:
         is_order_buy_side = True if order["side"] == "Buy" else False
         order_price = order["price"]
 
-        if settings.STOP_PLACING_ORDER_IF_INSIDE_LOSS_RANGE is False or position_qty == 0:
+        if settings.STOP_QUOTING_IF_INSIDE_LOSS_RANGE is False or position_qty == 0:
             result = True
         else:
             if position_qty > 0:
@@ -407,6 +456,7 @@ class OrderManager:
                         result = True
                     else:
                         result = False
+
         log_info(logger, "is_order_placement_allowed(): order={}, result={}".format(order, result), False)
         return result
 
@@ -600,7 +650,8 @@ class OrderManager:
 
             self.sanity_check()  # Ensures health of mm - several cut-out points here
             self.print_status(False)  # Print skew, delta, etc
-            self.check_wallet_balance()
+            self.check_suspend_trading()
+            self.check_stop_trading()
             self.place_orders()  # Creates desired orders and converges to existing orders
 
     def restart(self):
