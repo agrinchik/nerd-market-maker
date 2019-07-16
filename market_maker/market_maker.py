@@ -157,13 +157,13 @@ class ExchangeInterface:
         avg_entry_price = position['avgEntryPrice']
         if curr_quantity != 0:
             if curr_quantity > 0 and last_price >= avg_entry_price:
-                result = "PROFIT"
+                result = "GAIN"
             elif curr_quantity > 0 and last_price < avg_entry_price:
                 result = "LOSS"
             elif curr_quantity < 0 and last_price >= avg_entry_price:
                 result = "LOSS"
             elif curr_quantity < 0 and last_price < avg_entry_price:
-                result = "PROFIT"
+                result = "GAIN"
         return result
 
 
@@ -301,15 +301,12 @@ class OrderManager:
  
         combined_msg = "\nWallet Balance: %.8f ($%.2f)\n" % (wallet_balance_XBT, wallet_balance_USD)
         combined_msg += "Margin Balance: %.8f\n" % XBt_to_XBT(self.start_XBt)
-        combined_msg += "Contract Position: %d\n" % self.running_qty
+        combined_msg += "Contract Position: {} ({})\n".format(self.running_qty, round(abs(self.running_qty/settings.MIN_POSITION) * 100, 2))
         if settings.CHECK_POSITION_LIMITS:
             combined_msg += "Position limits: %d/%d\n" % (settings.MIN_POSITION, settings.MAX_POSITION)
         if position['currentQty'] != 0:
-            combined_msg += "Avg Cost Price: %.*f\n" % (tickLog, float(position['avgCostPrice']))
             combined_msg += "Avg Entry Price: %.*f\n" % (tickLog, float(position['avgEntryPrice']))
             combined_msg += "Distance To Avg Price: {:.2f}% ({})\n".format(self.exchange.get_distance_to_avg_price_pct(), self.exchange.get_position_pnl_text_status())
-        combined_msg += "Contracts Traded This Run: %d\n" % (self.running_qty - self.starting_qty)
-        combined_msg += "Total Contract Delta: %.8f XBT\n" % self.exchange.calc_delta()['spot']
         combined_msg += "XBT Volatility (24h): %.2f\n" % curr_volatility
         log_info(logger, combined_msg, send_to_telegram)
 
