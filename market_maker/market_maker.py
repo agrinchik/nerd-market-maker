@@ -149,6 +149,14 @@ class ExchangeInterface:
             result = round(-(last_price - position['avgEntryPrice']) * 100 / last_price, 2)
         return result
 
+    def get_distance_to_liq_price_pct(self):
+        result = 0
+        position = self.get_position()
+        last_price = self.get_ticker()["last"]
+        if position['currentQty'] != 0:
+            result = abs(round((last_price - position['liquidationPrice']) * 100 / last_price, 2))
+        return result
+
     def get_position_pnl_text_status(self):
         result = ""
         position = self.get_position()
@@ -301,12 +309,14 @@ class OrderManager:
  
         combined_msg = "\nWallet Balance: %.8f ($%.2f)\n" % (wallet_balance_XBT, wallet_balance_USD)
         combined_msg += "Margin Balance: %.8f\n" % XBt_to_XBT(self.start_XBt)
-        combined_msg += "Contract Position: {} ({})\n".format(self.running_qty, round(abs(self.running_qty/settings.MIN_POSITION) * 100, 2))
+        combined_msg += "Contract Position: {} ({}%)\n".format(self.running_qty, round(abs(self.running_qty/settings.MIN_POSITION) * 100, 2))
         if settings.CHECK_POSITION_LIMITS:
             combined_msg += "Position limits: %d/%d\n" % (settings.MIN_POSITION, settings.MAX_POSITION)
         if position['currentQty'] != 0:
             combined_msg += "Avg Entry Price: %.*f\n" % (tickLog, float(position['avgEntryPrice']))
             combined_msg += "Distance To Avg Price: {:.2f}% ({})\n".format(self.exchange.get_distance_to_avg_price_pct(), self.exchange.get_position_pnl_text_status())
+            combined_msg += "Liquidation Price: %.*f\n" % (tickLog, float(position['liquidationPrice']))
+            combined_msg += "Distance To Liq. Price: {:.2f}%\n".format(self.exchange.get_distance_to_liq_price_pct())
         combined_msg += "XBT Volatility (24h): %.2f\n" % curr_volatility
         log_info(logger, combined_msg, send_to_telegram)
 
@@ -399,18 +409,32 @@ class OrderManager:
 
         buy_orders = []
         sell_orders = []
-        # Create orders from the outside in. This is intentional - let's say the inner order gets taken;
-        # then we match orders from the outside in, ensuring the fewest number of orders are amended and only
-        # a new order is created in the inside. If we did it inside-out, all orders would be amended
-        # down and a new order would be created at the outside.
-        for i in reversed(range(1, settings.ORDER_PAIRS + 1)):
-            if not self.long_position_limit_exceeded():
-                buy_orders.append(self.prepare_order(-i))
-            if not self.short_position_limit_exceeded():
-                sell_orders.append(self.prepare_order(i))
 
         if self.is_trading_suspended is True:
             return
+
+        self.running_qty = self.exchange.get_delta()
+        if settings.WORKING_MODE == settings.MODE2_ALWAYS_CLOSE_FULL_POSITION_STRATEGY and self.running_qty != 0:
+            if self.running_qty > 0:
+                sell_orders.append(self.prepare_order_opposite_side(True, abs(self.running_qty)))
+                for i in reversed(range(1, settings.ORDER_PAIRS + 1)):
+                    if not self.long_position_limit_exceeded():
+                        buy_orders.append(self.prepare_order(-i))
+            else:
+                buy_orders.append(self.prepare_order_opposite_side(False, abs(self.running_qty)))
+                for i in reversed(range(1, settings.ORDER_PAIRS + 1)):
+                    if not self.short_position_limit_exceeded():
+                        sell_orders.append(self.prepare_order(i))
+        else:
+            # Create orders from the outside in. This is intentional - let's say the inner order gets taken;
+            # then we match orders from the outside in, ensuring the fewest number of orders are amended and only
+            # a new order is created in the inside. If we did it inside-out, all orders would be amended
+            # down and a new order would be created at the outside.
+            for i in reversed(range(1, settings.ORDER_PAIRS + 1)):
+                if not self.long_position_limit_exceeded():
+                    buy_orders.append(self.prepare_order(-i))
+                if not self.short_position_limit_exceeded():
+                    sell_orders.append(self.prepare_order(i))
 
         return self.converge_orders(buy_orders, sell_orders)
 
@@ -425,6 +449,18 @@ class OrderManager:
         price = self.get_price_offset(index)
 
         return {'price': price, 'orderQty': quantity, 'side': "Buy" if index < 0 else "Sell"}
+
+    def prepare_order_opposite_side(self, is_long, quantity):
+        position = self.exchange.get_position()
+        avg_entry_price = position['avgEntryPrice']
+        take_profit_pct = settings.MODE2_CLOSE_FULL_POSITION_TAKE_PROFIT_PCT
+        if is_long:
+            price = avg_entry_price + avg_entry_price * take_profit_pct
+        else:
+            price = avg_entry_price - avg_entry_price * take_profit_pct
+        price = math.toNearest(price, self.instrument['tickSize'])
+
+        return {'price': price, 'orderQty': quantity, 'side': "Sell" if is_long is True else "Buy"}
 
     def is_order_placement_allowed(self, order):
         result = True
