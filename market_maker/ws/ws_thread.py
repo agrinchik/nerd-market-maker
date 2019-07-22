@@ -132,6 +132,16 @@ class BitMEXWebsocket():
             return {'avgCostPrice': 0, 'avgEntryPrice': 0, 'currentQty': 0, 'symbol': symbol}
         return pos[0]
 
+    def is_position_partial_close(self, order_side):
+        result = True
+        is_order_long = True if order_side == "Buy" else False
+        curr_position = self.current_qty()
+        if curr_position == 0 or curr_position > 0 and is_order_long is True or curr_position < 0 and is_order_long is False:
+            result = False
+        else:
+            result = True
+        return result
+
     def recent_trades(self):
         return self.data['trade']
 
@@ -275,7 +285,13 @@ class BitMEXWebsocket():
                                 contExecuted = updateData['cumQty'] - item['cumQty']
                                 if contExecuted > 0:
                                     instrument = self.get_instrument(item['symbol'])
-                                    log_info(self.logger, "Execution: %s %d Contracts of %s at %.*f" %
+                                    is_position_partial_close = self.is_position_partial_close(item['side'])
+                                    if is_position_partial_close is False:
+                                        log_info(self.logger, "Execution (position increase): %s %d Contracts of %s at %.*f" %
+                                             (item['side'], contExecuted, item['symbol'],
+                                              instrument['tickLog'], item['price']), True)
+                                    else:
+                                        log_info(self.logger, "Execution (position partial close): %s %d Contracts of %s at %.*f" %
                                              (item['side'], contExecuted, item['symbol'],
                                               instrument['tickLog'], item['price']), True)
 
