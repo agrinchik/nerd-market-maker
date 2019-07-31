@@ -14,6 +14,10 @@ from market_maker import bitmex
 from market_maker.settings import settings
 from market_maker.utils import log, constants, errors, math
 
+from market_maker.dynamic_settings import DynamicSettings
+
+from market_maker.utils.utils import XBt_to_XBT
+
 # Used for reloading the bot - saves modified times of key files
 import os
 watched_files_mtimes = [(f, getmtime(f)) for f in settings.WATCHED_FILES]
@@ -261,7 +265,7 @@ class OrderManager:
         self.starting_qty = self.exchange.get_delta()
         self.running_qty = self.starting_qty
         self.max_wallet_balance = self.get_cached_wallet_balance()
-        self.is_trading_suspended = False
+        self.dynamic_settings = DynamicSettings(self.exchange)
         self.reset()
 
     def get_wallet_balance_filename(self):
@@ -287,8 +291,8 @@ class OrderManager:
         self.exchange.cancel_all_orders()
         self.sanity_check()
         self.print_status(False)
-        self.check_suspend_trading()
         self.check_stop_trading()
+        self.dynamic_settings.update_app_settings()
 
         # Create orders and converge.
         self.place_orders()
@@ -319,18 +323,6 @@ class OrderManager:
             combined_msg += "Distance To Liq. Price: {:.2f}%\n".format(self.exchange.get_distance_to_liq_price_pct())
         combined_msg += "XBT Volatility (24h): %.2f\n" % curr_volatility
         log_info(logger, combined_msg, send_to_telegram)
-
-    def check_suspend_trading(self):
-        curr_volatility = self.exchange.get_volatility()
-        if self.is_trading_suspended is False:
-            if settings.STOP_QUOTING_CHECK_MAX_VOLATILITY_ENABLED is True and curr_volatility >= settings.STOP_QUOTING_CHECK_MAX_VOLATILITY_THRESHOLD:
-                log_info(logger, "WARNING: Trading would be suspended as current XBT volatility={} has exceeded the configured threshold={}".format(curr_volatility, settings.STOP_QUOTING_CHECK_MAX_VOLATILITY_THRESHOLD), True)
-                self.is_trading_suspended = True
-                self.exchange.cancel_all_orders()
-        else:
-            if settings.STOP_QUOTING_CHECK_MAX_VOLATILITY_ENABLED is True and curr_volatility < settings.STOP_QUOTING_CHECK_MAX_VOLATILITY_THRESHOLD:
-                log_info(logger, "WARNING: Trading would be re-enabled as current XBT volatility={} has dropped below the configured threshold={}".format(curr_volatility, settings.STOP_QUOTING_CHECK_MAX_VOLATILITY_THRESHOLD), True)
-                self.is_trading_suspended = False
 
     def check_stop_trading(self):
         margin = self.exchange.get_margin()
@@ -409,9 +401,6 @@ class OrderManager:
 
         buy_orders = []
         sell_orders = []
-
-        if self.is_trading_suspended is True:
-            return
 
         self.running_qty = self.exchange.get_delta()
         if settings.WORKING_MODE == settings.MODE2_ALWAYS_CLOSE_FULL_POSITION_STRATEGY and self.running_qty != 0:
@@ -644,11 +633,10 @@ class OrderManager:
     # Running
     ###
 
-    def check_file_change(self):
-        """Restart if any files we're watching have changed."""
-        for f, mtime in watched_files_mtimes:
-            if getmtime(f) > mtime:
-                self.restart()
+    def update_app_settings(self):
+        result = self.dynamic_settings.update_app_settings()
+        if result is True:
+            self.exchange.cancel_all_orders()
 
     def check_connection(self):
         """Ensure the WS connections are still open."""
@@ -670,7 +658,6 @@ class OrderManager:
         while True:
             logger.info("*" * 400)
 
-            self.check_file_change()
             sleep(settings.LOOP_INTERVAL)
 
             # This will restart on very short downtime, but if it's longer,
@@ -683,8 +670,8 @@ class OrderManager:
 
             self.sanity_check()  # Ensures health of mm - several cut-out points here
             self.print_status(False)  # Print skew, delta, etc
-            self.check_suspend_trading()
             self.check_stop_trading()
+            self.dynamic_settings.update_app_settings()
             self.place_orders()  # Creates desired orders and converges to existing orders
 
     def restart(self):
@@ -695,10 +682,6 @@ class OrderManager:
 #
 # Helpers
 #
-
-
-def XBt_to_XBT(XBt):
-    return float(XBt) / constants.XBt_TO_XBT
 
 
 def cost(instrument, quantity, price):
