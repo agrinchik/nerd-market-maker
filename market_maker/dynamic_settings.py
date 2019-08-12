@@ -15,39 +15,141 @@ DEFAULT_MIN_SPREAD_ADJUSTMENT_FACTOR = 0.6
 DEFAULT_RELIST_INTERVAL_ADJUSTMENT_FACTOR = 1.2
 DEFAULT_MIN_POSITION_SHORTS_ADJUSTMENT_FACTOR = 1.4
 
-BALANCE_BASED_PARAMS_UPDATE_INTERVAL = 1800    # 30 minutes
-VOLATILITY_BASED_PARAMS_UPDATE_INTERVAL = 300  # 5 minutes
-
+PARAMS_UPDATE_INTERVAL = 300  # 5 minutes
 BALANCE_CHANGE_THRESHOLD_PCT = 0.01
 
-# Pre-configured parameters based on volatility bands (BitMEX index - .BVOL24H)
-VOLATILITY_BASED_PARAMS_ARR = [
+# Risk management configuration matrix - pre-configured parameters based on volatility (BitMEX index - .BVOL24H) and deposit load values (bands)
+RISK_MANAGEMENT_MATRIX = [
     {
-        "band_id": 0,
-        "band_start": 0,
-        "band_end": 2.999,
-        "max_drawdown_pct": 0.075,
-        "working_range_pct": 0.03,
-        "max_number_dca_orders": 26,
+        "id": 0,
+        "vol_band_start": 0,
+        "vol_band_end": 2.999,
+        "deposit_load_band_start": 0,
+        "deposit_load_band_end": 24.999,
+        "risk_profile": "RP1"
     },
     {
-        "band_id": 1,
-        "band_start": 3,
-        "band_end": 6.999,
-        "max_drawdown_pct": 0.15,
-        "working_range_pct": 0.06,
-        "max_number_dca_orders": 26,
+        "id": 1,
+        "vol_band_start": 0,
+        "vol_band_end": 2.999,
+        "deposit_load_band_start": 25,
+        "deposit_load_band_end": 49.999,
+        "risk_profile": "RP2"
     },
     {
-        "band_id": 2,
-        "band_start": 7,
-        "band_end": 99999999,
-        "max_drawdown_pct": 0.30,
-        "working_range_pct": 0.12,
-        "max_number_dca_orders": 26,
+        "id": 2,
+        "vol_band_start": 0,
+        "vol_band_end": 2.999,
+        "deposit_load_band_start": 50,
+        "deposit_load_band_end": 74.999,
+        "risk_profile": "RP3"
+    },
+    {
+        "id": 3,
+        "vol_band_start": 0,
+        "vol_band_end": 2.999,
+        "deposit_load_band_start": 75,
+        "deposit_load_band_end": 999999,
+        "risk_profile": "RP4"
+    },
+    {
+        "id": 4,
+        "vol_band_start": 3,
+        "vol_band_end": 6.999,
+        "deposit_load_band_start": 0,
+        "deposit_load_band_end": 24.999,
+        "risk_profile": "RP2"
+    },
+    {
+        "id": 5,
+        "vol_band_start": 3,
+        "vol_band_end": 6.999,
+        "deposit_load_band_start": 25,
+        "deposit_load_band_end": 49.999,
+        "risk_profile": "RP3"
+    },
+    {
+        "id": 6,
+        "vol_band_start": 3,
+        "vol_band_end": 6.999,
+        "deposit_load_band_start": 50,
+        "deposit_load_band_end": 74.999,
+        "risk_profile": "RP4"
+    },
+    {
+        "id": 7,
+        "vol_band_start": 3,
+        "vol_band_end": 6.999,
+        "deposit_load_band_start": 75,
+        "deposit_load_band_end": 999999,
+        "risk_profile": "RP5"
+    },
+    {
+        "id": 8,
+        "vol_band_start": 7,
+        "vol_band_end": 9999999,
+        "deposit_load_band_start": 0,
+        "deposit_load_band_end": 24.999,
+        "risk_profile": "RP2"
+    },
+    {
+        "id": 9,
+        "vol_band_start": 7,
+        "vol_band_end": 9999999,
+        "deposit_load_band_start": 25,
+        "deposit_load_band_end": 49.999,
+        "risk_profile": "RP3"
+    },
+    {
+        "id": 10,
+        "vol_band_start": 7,
+        "vol_band_end": 9999999,
+        "deposit_load_band_start": 50,
+        "deposit_load_band_end": 74.999,
+        "risk_profile": "RP5"
+    },
+    {
+        "id": 11,
+        "vol_band_start": 7,
+        "vol_band_end": 9999999,
+        "deposit_load_band_start": 75,
+        "deposit_load_band_end": 999999,
+        "risk_profile": "RP5"
     }
 ]
 
+RISK_PROFILE_CONFIGURATION = [
+    {
+        "id": "RP1",
+        "max_drawdown_pct": 0.05,
+        "working_range_pct": 0.025,
+        "max_number_dca_orders": 16
+    },
+    {
+        "id": "RP2",
+        "max_drawdown_pct": 0.1,
+        "working_range_pct": 0.04,
+        "max_number_dca_orders": 20
+    },
+    {
+        "id": "RP3",
+        "max_drawdown_pct": 0.1875,
+        "working_range_pct": 0.06,
+        "max_number_dca_orders": 25
+    },
+    {
+        "id": "RP4",
+        "max_drawdown_pct": 0.32,
+        "working_range_pct": 0.08,
+        "max_number_dca_orders": 32
+    },
+    {
+        "id": "RP5",
+        "max_drawdown_pct": 0.75,
+        "working_range_pct": 0.12,
+        "max_number_dca_orders": 50
+    }
+]
 
 class DynamicSettings(object):
 
@@ -74,11 +176,29 @@ class DynamicSettings(object):
         self.order_step_size = 0
         self.order_start_size = 0
         self.order_pairs = 0
+        self.deposit_load_pct = 0
+        self.deposit_load_intensity = 0
 
-        self.balance_based_params_last_update = datetime.datetime.now() - timedelta(days=1000)
+        self.params_last_update = datetime.datetime.now() - timedelta(days=1000)
         self.curr_balance_value = 0
-        self.volatility_based_params_last_update = datetime.datetime.now() - timedelta(days=1000)
-        self.curr_volatility_band_id = -1
+        self.curr_risk_profile_id = ""
+
+    def initialize_params(self):
+        ticker = self.exchange.get_ticker()
+        ticker_last_price = ticker["last"]
+        margin = self.exchange.get_margin()
+        wallet_balance_XBT = XBt_to_XBT(margin["walletBalance"])
+        curr_volatility = self.exchange.get_volatility()
+        running_qty = self.exchange.get_delta()
+        deposit_load_pct = self.get_deposit_load_pct(running_qty)
+        risk_profile = self.get_risk_profile(curr_volatility, deposit_load_pct)
+
+        self.update_dynamic_params(wallet_balance_XBT, ticker_last_price, risk_profile)
+        self.update_settings_value("MIN_POSITION", self.min_position)
+        self.update_settings_value("MAX_POSITION", self.max_position)
+
+        self.curr_balance_value = 0
+        self.curr_risk_profile_id = ""
 
     def update_settings_value(self, key, value):
         if settings[key] != value:
@@ -99,6 +219,12 @@ class DynamicSettings(object):
             log_info(self.logger, "Updated NerdMarketMaker settings!", False)
         return params_updated
 
+    def get_deposit_load_pct(self, running_qty):
+        if running_qty < 0:
+            return abs(running_qty / settings.MIN_POSITION) * 100
+        else:
+            return abs(running_qty / settings.MAX_POSITION) * 100
+
     def update_parameters(self):
         result = False
         ticker = self.exchange.get_ticker()
@@ -106,22 +232,23 @@ class DynamicSettings(object):
         margin = self.exchange.get_margin()
         wallet_balance_XBT = XBt_to_XBT(margin["walletBalance"])
         curr_volatility = self.exchange.get_volatility()
-
+        running_qty = self.exchange.get_delta()
+        self.deposit_load_pct = self.get_deposit_load_pct(running_qty)
         curr_time = datetime.datetime.now()
-        volatility_based_params_seconds_from_last_update = (curr_time - self.volatility_based_params_last_update).total_seconds()
-        volatility_band = self.get_volatility_band(curr_volatility)
-        if volatility_based_params_seconds_from_last_update >= VOLATILITY_BASED_PARAMS_UPDATE_INTERVAL and volatility_band["band_id"] != self.curr_volatility_band_id:
-            self.update_volatility_based_params(volatility_band)
-            self.volatility_based_params_last_update = curr_time
-            log_info(self.logger, "Updated volatility-based parameters!", True)
-            result = True
 
-        balance_based_params_seconds_from_last_update = (curr_time - self.balance_based_params_last_update).total_seconds()
+        params_seconds_from_last_update = (curr_time - self.params_last_update).total_seconds()
         balance_change_pct = abs((wallet_balance_XBT - self.curr_balance_value) / self.curr_balance_value) if self.curr_balance_value != 0 else 1
-        if balance_based_params_seconds_from_last_update >= BALANCE_BASED_PARAMS_UPDATE_INTERVAL and balance_change_pct >= BALANCE_CHANGE_THRESHOLD_PCT:
-            self.update_balance_based_params(wallet_balance_XBT, ticker_last_price)
-            self.balance_based_params_last_update = curr_time
-            log_info(self.logger, "Updated balance-based parameters!", True)
+        risk_profile = self.get_risk_profile(curr_volatility, self.deposit_load_pct)
+        risk_profile_id = risk_profile["id"]
+
+        is_params_exceeded_update_interval_flag = params_seconds_from_last_update >= PARAMS_UPDATE_INTERVAL
+        is_balance_changed_flag = balance_change_pct >= BALANCE_CHANGE_THRESHOLD_PCT
+        is_risk_profile_changed_flag = risk_profile_id != self.curr_risk_profile_id
+
+        if is_params_exceeded_update_interval_flag is True and (is_balance_changed_flag is True or is_risk_profile_changed_flag is True):
+            self.update_dynamic_params(wallet_balance_XBT, ticker_last_price, risk_profile)
+            self.params_last_update = curr_time
+            log_info(self.logger, "Dynamic parameters have been updated!", True)
             result = True
 
         if result is True:
@@ -129,8 +256,17 @@ class DynamicSettings(object):
 
         return result
 
-    def update_balance_based_params(self, last_wallet_balance, ticker_last_price):
+    def update_dynamic_params(self, last_wallet_balance, ticker_last_price, risk_profile):
         self.curr_balance_value = last_wallet_balance
+        self.curr_risk_profile_id = risk_profile["id"]
+        self.max_drawdown_pct = risk_profile["max_drawdown_pct"]
+        self.working_range_pct = risk_profile["working_range_pct"]
+        self.max_number_dca_orders = risk_profile["max_number_dca_orders"]
+        self.interval_pct = round(self.max_drawdown_pct / self.max_number_dca_orders, 8)
+        self.min_spread_pct = round(self.interval_pct * 2 * DEFAULT_MIN_SPREAD_ADJUSTMENT_FACTOR, 8)
+        self.relist_interval_pct = round(self.interval_pct * DEFAULT_RELIST_INTERVAL_ADJUSTMENT_FACTOR, 8)
+        self.order_pairs = int(round(self.working_range_pct / self.interval_pct))
+
         self.position_margin_amount = round(last_wallet_balance * self.position_margin_pct, 8)
         self.order_margin_amount = round(last_wallet_balance * self.order_margin_pct, 8)
         self.max_possible_position_margin = round(self.position_margin_amount * self.default_leverage * ticker_last_price)
@@ -138,29 +274,23 @@ class DynamicSettings(object):
         self.max_position = round(self.max_possible_position_margin)
         self.order_step_size = self.get_order_step_size(last_wallet_balance)
         self.order_start_size = round(self.max_possible_position_margin / self.max_number_dca_orders - self.order_step_size * (self.max_number_dca_orders - 1) / 2)
+        self.deposit_load_intensity = round(self.order_start_size / (100 * self.interval_pct), 8)
 
-    def update_volatility_based_params(self, volatility_band):
-        self.populate_volatility_based_parameters(volatility_band)
-        self.interval_pct = round(self.max_drawdown_pct / self.max_number_dca_orders, 8)
-        self.min_spread_pct = round(self.interval_pct * 2 * DEFAULT_MIN_SPREAD_ADJUSTMENT_FACTOR, 8)
-        self.relist_interval_pct = round(self.interval_pct * DEFAULT_RELIST_INTERVAL_ADJUSTMENT_FACTOR, 8)
-        self.order_start_size = round(self.max_possible_position_margin / self.max_number_dca_orders - self.order_step_size * (self.max_number_dca_orders - 1) / 2)
-        self.order_pairs = int(round(self.working_range_pct / self.interval_pct))
+    def get_risk_profile(self, volatility24h, deposit_load_pct):
+        for rmm_entry in RISK_MANAGEMENT_MATRIX:
+            vol_band_start = rmm_entry["vol_band_start"]
+            vol_band_end = rmm_entry["vol_band_end"]
+            deposit_load_band_start = rmm_entry["deposit_load_band_start"]
+            deposit_load_band_end = rmm_entry["deposit_load_band_end"]
+            risk_profile_id = rmm_entry["risk_profile"]
 
-    def get_volatility_band(self, volatility24h):
-        for entry in VOLATILITY_BASED_PARAMS_ARR:
-            band_start = entry["band_start"]
-            band_end = entry["band_end"]
-            if volatility24h >= band_start and volatility24h <= band_end:
-                return entry
+            if volatility24h >= vol_band_start and volatility24h <= vol_band_end and deposit_load_pct >= deposit_load_band_start and deposit_load_pct <= deposit_load_band_end:
+                for rpc_entry in RISK_PROFILE_CONFIGURATION:
+                    id = rpc_entry["id"]
+                    if id == risk_profile_id:
+                        return rpc_entry
 
-        raise Exception("Unable to configure volatility-based parameters for volatility: " + volatility24h)
-
-    def populate_volatility_based_parameters(self, volatility_band):
-        self.curr_volatility_band_id = volatility_band["band_id"]
-        self.max_drawdown_pct = volatility_band["max_drawdown_pct"]
-        self.working_range_pct = volatility_band["working_range_pct"]
-        self.max_number_dca_orders = volatility_band["max_number_dca_orders"]
+        raise Exception("Unable to retrieve risk profile configuration for the following parameters: volatility24h={}, deposit_load_pct={}".format(volatility24h, deposit_load_pct))
 
     def get_order_step_size(self, last_wallet_balance):
         if last_wallet_balance < 0.2:
@@ -196,6 +326,8 @@ class DynamicSettings(object):
         txt = self.append_log_text(txt, "order_step_size = {}".format(self.order_step_size))
         txt = self.append_log_text(txt, "order_start_size = {}".format(self.order_start_size))
         txt = self.append_log_text(txt, "order_pairs = {}".format(self.order_pairs))
+        txt = self.append_log_text(txt, "deposit_load_pct = {}%".format(round(self.deposit_load_pct, 2)))
+        txt = self.append_log_text(txt, "deposit_load_intensity (USD/1% interval) = {}".format(self.deposit_load_intensity))
         #txt = self.append_log_text(txt, "curr_balance_value = {}".format(self.curr_balance_value))
-        txt = self.append_log_text(txt, "curr_volatility_band_id = {}".format(self.curr_volatility_band_id))
+        txt = self.append_log_text(txt, "curr_risk_profile_id = {}".format(self.curr_risk_profile_id))
         log_info(self.logger, txt, True)

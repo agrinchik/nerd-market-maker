@@ -282,6 +282,12 @@ class OrderManager:
             result = float(text)
         return result
 
+    def get_deposit_load_pct(self, running_qty):
+        if running_qty < 0:
+            return abs(running_qty / settings.MIN_POSITION) * 100
+        else:
+            return abs(running_qty / settings.MAX_POSITION) * 100
+
     def store_wallet_balance(self, balance):
         filename = self.get_wallet_balance_filename()
         with open(filename, "w") as text_file:
@@ -292,7 +298,7 @@ class OrderManager:
         self.sanity_check()
         self.print_status(False)
         self.check_stop_trading()
-        self.dynamic_settings.update_app_settings()
+        self.dynamic_settings.initialize_params()
 
         # Create orders and converge.
         self.place_orders()
@@ -313,7 +319,7 @@ class OrderManager:
  
         combined_msg = "\nWallet Balance: %.8f ($%.2f)\n" % (wallet_balance_XBT, wallet_balance_USD)
         combined_msg += "Margin Balance: %.8f\n" % XBt_to_XBT(self.start_XBt)
-        combined_msg += "Contract Position: {} ({}%)\n".format(self.running_qty, round(abs(self.running_qty/settings.MIN_POSITION) * 100, 2))
+        combined_msg += "Contract Position: {} ({}%)\n".format(self.running_qty, round(self.get_deposit_load_pct(self.running_qty), 2))
         if settings.CHECK_POSITION_LIMITS:
             combined_msg += "Position limits: %d/%d\n" % (settings.MIN_POSITION, settings.MAX_POSITION)
         if position['currentQty'] != 0:
