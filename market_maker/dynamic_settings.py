@@ -21,40 +21,8 @@ BALANCE_CHANGE_THRESHOLD_PCT = 0.01
 # Risk management configuration matrix - pre-configured parameters based on volatility (BitMEX index - .BVOL24H) and deposit load values (bands)
 RISK_MANAGEMENT_MATRIX = [
     {
-        "id": 0,
-        "vol_band_start": 0,
-        "vol_band_end": 2.999,
-        "deposit_load_band_start": 0,
-        "deposit_load_band_end": 24.999,
-        "risk_profile": "RP1"
-    },
-    {
-        "id": 1,
-        "vol_band_start": 0,
-        "vol_band_end": 2.999,
-        "deposit_load_band_start": 25,
-        "deposit_load_band_end": 49.999,
-        "risk_profile": "RP2"
-    },
-    {
-        "id": 2,
-        "vol_band_start": 0,
-        "vol_band_end": 2.999,
-        "deposit_load_band_start": 50,
-        "deposit_load_band_end": 74.999,
-        "risk_profile": "RP3"
-    },
-    {
-        "id": 3,
-        "vol_band_start": 0,
-        "vol_band_end": 2.999,
-        "deposit_load_band_start": 75,
-        "deposit_load_band_end": 999999,
-        "risk_profile": "RP4"
-    },
-    {
         "id": 4,
-        "vol_band_start": 3,
+        "vol_band_start": 0,
         "vol_band_end": 6.999,
         "deposit_load_band_start": 0,
         "deposit_load_band_end": 24.999,
@@ -62,7 +30,7 @@ RISK_MANAGEMENT_MATRIX = [
     },
     {
         "id": 5,
-        "vol_band_start": 3,
+        "vol_band_start": 0,
         "vol_band_end": 6.999,
         "deposit_load_band_start": 25,
         "deposit_load_band_end": 49.999,
@@ -70,7 +38,7 @@ RISK_MANAGEMENT_MATRIX = [
     },
     {
         "id": 6,
-        "vol_band_start": 3,
+        "vol_band_start": 0,
         "vol_band_end": 6.999,
         "deposit_load_band_start": 50,
         "deposit_load_band_end": 74.999,
@@ -78,7 +46,7 @@ RISK_MANAGEMENT_MATRIX = [
     },
     {
         "id": 7,
-        "vol_band_start": 3,
+        "vol_band_start": 0,
         "vol_band_end": 6.999,
         "deposit_load_band_start": 75,
         "deposit_load_band_end": 999999,
@@ -119,12 +87,6 @@ RISK_MANAGEMENT_MATRIX = [
 ]
 
 RISK_PROFILE_CONFIGURATION = [
-    {
-        "id": "RP1",
-        "max_drawdown_pct": 0.05,
-        "working_range_pct": 0.025,
-        "max_number_dca_orders": 16
-    },
     {
         "id": "RP2",
         "max_drawdown_pct": 0.1,
