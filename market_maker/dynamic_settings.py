@@ -15,7 +15,7 @@ DEFAULT_RELIST_INTERVAL_ADJUSTMENT_FACTOR = 1.2
 DEFAULT_MIN_POSITION_SHORTS_ADJUSTMENT_FACTOR = 1.4
 
 PARAMS_UPDATE_INTERVAL = 300  # 5 minutes
-BALANCE_CHANGE_THRESHOLD_PCT = 0.01
+
 
 # Risk management configuration matrix - pre-configured parameters based on distance to average price (bands) and deposit load values (bands)
 RISK_MANAGEMENT_MATRIX = [
@@ -152,42 +152,49 @@ RISK_MANAGEMENT_MATRIX = [
 RISK_PROFILE_CONFIGURATION = [
     {
         "id": "RP1",
+        "risk_level": 70,
         "max_drawdown_pct": 0.15,
         "working_range_pct": 0.04,
         "max_number_dca_orders": 30
     },
     {
         "id": "RP2",
+        "risk_level": 60,
         "max_drawdown_pct": 0.285,
         "working_range_pct": 0.06,
         "max_number_dca_orders": 38
     },
     {
         "id": "RP3",
+        "risk_level": 50,
         "max_drawdown_pct": 0.48,
         "working_range_pct": 0.08,
         "max_number_dca_orders": 48
     },
     {
         "id": "RP4",
+        "risk_level": 40,
         "max_drawdown_pct": 0.90,
         "working_range_pct": 0.12,
         "max_number_dca_orders": 60
     },
     {
         "id": "RP5",
+        "risk_level": 30,
         "max_drawdown_pct": 1.5,
         "working_range_pct": 0.16,
         "max_number_dca_orders": 75
     },
     {
         "id": "RP6",
+        "risk_level": 20,
         "max_drawdown_pct": 2.25,
         "working_range_pct": 0.20,
         "max_number_dca_orders": 90
     },
     {
         "id": "RP7",
+        "risk_level": 10,
         "max_drawdown_pct": 5.00,
         "working_range_pct": 0.40,
         "max_number_dca_orders": 100
@@ -225,8 +232,8 @@ class DynamicSettings(object):
         self.deposit_load_intensity = 0
 
         self.params_last_update = datetime.datetime.now() - timedelta(days=1000)
-        self.curr_balance_value = 0
         self.curr_risk_profile_id = ""
+        self.curr_risk_level = 1000000
 
     def initialize_params(self):
         ticker = self.exchange.get_ticker()
@@ -234,7 +241,9 @@ class DynamicSettings(object):
         margin = self.exchange.get_margin()
         wallet_balance_XBT = XBt_to_XBT(margin["walletBalance"])
         position = self.exchange.get_position()
-        distance_to_avg_price_pct = self.get_distance_to_avg_price_pct(position, ticker_last_price)
+        current_qty = position['currentQty']
+        avg_entry_price = position['avgEntryPrice']
+        distance_to_avg_price_pct = self.get_distance_to_avg_price_pct(current_qty, avg_entry_price, ticker_last_price)
         running_qty = self.exchange.get_delta()
         deposit_load_pct = self.get_deposit_load_pct(running_qty)
         risk_profile = self.get_risk_profile(distance_to_avg_price_pct, deposit_load_pct)
@@ -243,8 +252,8 @@ class DynamicSettings(object):
         self.update_settings_value("MIN_POSITION", self.min_position)
         self.update_settings_value("MAX_POSITION", self.max_position)
 
-        self.curr_balance_value = 0
         self.curr_risk_profile_id = ""
+        self.curr_risk_level = 1000000
 
     def update_settings_value(self, key, value):
         if settings[key] != value:
@@ -265,10 +274,10 @@ class DynamicSettings(object):
             log_info(self.logger, "Updated NerdMarketMaker settings!", False)
         return params_updated
 
-    def get_distance_to_avg_price_pct(self, position, last_price):
+    def get_distance_to_avg_price_pct(self, current_qty, avg_entry_price, last_price):
         result = 0
-        if position['currentQty'] != 0:
-            result = abs((last_price - position['avgEntryPrice']) * 100 / last_price)
+        if current_qty != 0:
+            result = abs((last_price - avg_entry_price) * 100 / last_price)
         return result
 
     def get_deposit_load_pct(self, running_qty):
@@ -285,20 +294,21 @@ class DynamicSettings(object):
         wallet_balance_XBT = XBt_to_XBT(margin["walletBalance"])
         running_qty = self.exchange.get_delta()
         position = self.exchange.get_position()
-        self.distance_to_avg_price_pct = self.get_distance_to_avg_price_pct(position, ticker_last_price)
+        current_qty = position['currentQty']
+        avg_entry_price = position['avgEntryPrice']
+        self.distance_to_avg_price_pct = self.get_distance_to_avg_price_pct(current_qty, avg_entry_price, ticker_last_price)
         self.deposit_load_pct = self.get_deposit_load_pct(running_qty)
         curr_time = datetime.datetime.now()
 
         params_seconds_from_last_update = (curr_time - self.params_last_update).total_seconds()
-        balance_change_pct = abs((wallet_balance_XBT - self.curr_balance_value) / self.curr_balance_value) if self.curr_balance_value != 0 else 1
         risk_profile = self.get_risk_profile(self.distance_to_avg_price_pct, self.deposit_load_pct)
         risk_profile_id = risk_profile["id"]
+        risk_level = risk_profile["risk_level"]
 
         is_params_exceeded_update_interval_flag = params_seconds_from_last_update >= PARAMS_UPDATE_INTERVAL
-        is_balance_changed_flag = balance_change_pct >= BALANCE_CHANGE_THRESHOLD_PCT
-        is_risk_profile_changed_flag = risk_profile_id != self.curr_risk_profile_id
+        is_risk_profile_changed_flag = True if risk_profile_id != self.curr_risk_profile_id and (current_qty == 0 or current_qty != 0 and risk_level < self.curr_risk_level) else False
 
-        if is_params_exceeded_update_interval_flag is True and (is_balance_changed_flag is True or is_risk_profile_changed_flag is True):
+        if is_params_exceeded_update_interval_flag is True and is_risk_profile_changed_flag is True:
             self.update_dynamic_params(wallet_balance_XBT, ticker_last_price, risk_profile)
             self.params_last_update = curr_time
             log_info(self.logger, "Dynamic parameters have been updated!", True)
@@ -310,8 +320,8 @@ class DynamicSettings(object):
         return result
 
     def update_dynamic_params(self, last_wallet_balance, ticker_last_price, risk_profile):
-        self.curr_balance_value = last_wallet_balance
         self.curr_risk_profile_id = risk_profile["id"]
+        self.curr_risk_level = risk_profile["risk_level"]
         self.max_drawdown_pct = risk_profile["max_drawdown_pct"]
         self.working_range_pct = risk_profile["working_range_pct"]
         self.max_number_dca_orders = risk_profile["max_number_dca_orders"]
@@ -382,6 +392,6 @@ class DynamicSettings(object):
         txt = self.append_log_text(txt, "distance_to_avg_price_pct = {}%".format(round(self.distance_to_avg_price_pct, 2)))
         txt = self.append_log_text(txt, "deposit_load_pct = {}%".format(round(self.deposit_load_pct, 2)))
         txt = self.append_log_text(txt, "deposit_load_intensity (USD/1% interval) = {}".format(self.deposit_load_intensity))
-        #txt = self.append_log_text(txt, "curr_balance_value = {}".format(self.curr_balance_value))
         txt = self.append_log_text(txt, "curr_risk_profile_id = {}".format(self.curr_risk_profile_id))
+        txt = self.append_log_text(txt, "curr_risk_level (1-100) = {}".format(self.curr_risk_level))
         log_info(self.logger, txt, True)
