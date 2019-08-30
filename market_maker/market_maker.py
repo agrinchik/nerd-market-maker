@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 from time import sleep
 import sys
+import datetime
 from datetime import datetime
 from os.path import getmtime
 import random
@@ -142,9 +143,6 @@ class ExchangeInterface:
             symbol = self.symbol
         return self.bitmex.instrument(symbol)
 
-    def get_volatility(self):
-        return self.bitmex.instrument(".BVOL24H")['lastPrice']
-
     def get_distance_to_avg_price_pct(self):
         result = 0
         position = self.get_position()
@@ -266,6 +264,9 @@ class OrderManager:
         self.running_qty = self.starting_qty
         self.max_wallet_balance = self.get_cached_wallet_balance()
         self.dynamic_settings = DynamicSettings(self.exchange)
+        self.is_trading_suspended = False
+        self.price_change_last_check = datetime.now()
+        self.price_change_last_price = -1
         self.reset()
 
     def get_wallet_balance_filename(self):
@@ -297,6 +298,7 @@ class OrderManager:
         self.exchange.cancel_all_orders()
         self.sanity_check()
         self.print_status(False)
+        self.check_suspend_trading()
         self.check_stop_trading()
         self.dynamic_settings.initialize_params()
 
@@ -315,8 +317,7 @@ class OrderManager:
         wallet_balance_XBT = XBt_to_XBT(margin["walletBalance"])
         wallet_balance_USD = wallet_balance_XBT * last_price
         self.start_XBt = margin["marginBalance"]
-        curr_volatility = self.exchange.get_volatility()
- 
+
         combined_msg = "\nWallet Balance: %.8f ($%.2f)\n" % (wallet_balance_XBT, wallet_balance_USD)
         combined_msg += "Margin Balance: %.8f\n" % XBt_to_XBT(self.start_XBt)
         combined_msg += "Contract Position: {} ({}%)\n".format(self.running_qty, round(self.get_deposit_load_pct(self.running_qty), 2))
@@ -327,8 +328,39 @@ class OrderManager:
             combined_msg += "Distance To Avg Price: {:.2f}% ({})\n".format(self.exchange.get_distance_to_avg_price_pct(), self.exchange.get_position_pnl_text_status())
             combined_msg += "Liquidation Price: %.*f\n" % (tickLog, float(position['liquidationPrice']))
             combined_msg += "Distance To Liq. Price: {:.2f}%\n".format(self.exchange.get_distance_to_liq_price_pct())
-        combined_msg += "XBT Volatility (24h): %.2f\n" % curr_volatility
         log_info(logger, combined_msg, send_to_telegram)
+
+    def check_suspend_trading(self):
+        curr_time = datetime.now()
+        ticker = self.exchange.get_ticker()
+        ticker_last_price = ticker["last"]
+        price_change_last_checked_seconds_ago = (curr_time - self.price_change_last_check).total_seconds()
+        price_change_diff_pct = abs((ticker_last_price - self.price_change_last_price) * 100 / self.price_change_last_price)
+
+        if self.is_trading_suspended is False:
+            if settings.STOP_QUOTING_CHECK_IMPULSE_PRICE_CHANGE is True:
+                if self.price_change_last_price == -1:
+                    self.price_change_last_check = curr_time
+                    self.price_change_last_price = ticker_last_price
+                    return
+
+                if price_change_last_checked_seconds_ago > settings.STOP_QUOTING_PRICE_CHANGE_CHECK_TIME_PERIOD_SECONDS:
+                    if price_change_diff_pct > settings.STOP_QUOTING_PRICE_CHANGE_EXCEEDED_THRESHOLD_PCT:
+                        log_info(logger, "WARNING: Trading would be SUSPENDED as in the past {} seconds the XBT last price had moved very fast and exceeded the threshold = {}%".
+                                 format(settings.STOP_QUOTING_PRICE_CHANGE_CHECK_TIME_PERIOD_SECONDS, settings.STOP_QUOTING_PRICE_CHANGE_EXCEEDED_THRESHOLD_PCT), True)
+                        self.is_trading_suspended = True
+                        self.exchange.cancel_all_orders()
+                    self.price_change_last_check = curr_time
+                    self.price_change_last_price = ticker_last_price
+        else:
+            if settings.STOP_QUOTING_CHECK_IMPULSE_PRICE_CHANGE is True:
+                if price_change_last_checked_seconds_ago > settings.STOP_QUOTING_PRICE_CHANGE_CHECK_TIME_PERIOD_SECONDS:
+                    if price_change_diff_pct < settings.RESUME_QUOTING_PRICE_CHANGE_WENT_BELOW_THRESHOLD_PCT:
+                        log_info(logger, "WARNING: Trading would be RESUMED as in the past {} seconds the XBT last price had changed within the threshold = {}%".
+                                 format(settings.STOP_QUOTING_PRICE_CHANGE_CHECK_TIME_PERIOD_SECONDS, settings.RESUME_QUOTING_PRICE_CHANGE_WENT_BELOW_THRESHOLD_PCT), True)
+                        self.is_trading_suspended = False
+                    self.price_change_last_check = curr_time
+                    self.price_change_last_price = ticker_last_price
 
     def check_stop_trading(self):
         margin = self.exchange.get_margin()
@@ -430,6 +462,9 @@ class OrderManager:
                     buy_orders.append(self.prepare_order(-i))
                 if not self.short_position_limit_exceeded():
                     sell_orders.append(self.prepare_order(i))
+
+        if self.is_trading_suspended is True:
+            return
 
         return self.converge_orders(buy_orders, sell_orders)
 
@@ -676,6 +711,7 @@ class OrderManager:
 
             self.sanity_check()  # Ensures health of mm - several cut-out points here
             self.print_status(False)  # Print skew, delta, etc
+            self.check_suspend_trading()
             self.check_stop_trading()
             self.dynamic_settings.update_app_settings()
             self.place_orders()  # Creates desired orders and converges to existing orders
