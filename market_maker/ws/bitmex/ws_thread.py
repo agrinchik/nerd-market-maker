@@ -10,7 +10,7 @@ import logging
 from market_maker.utils import constants
 from market_maker.utils.log import log_error, log_info
 from market_maker.settings import settings
-from market_maker.auth.APIKeyAuth import generate_expires, generate_signature
+from market_maker.auth.bitmex.APIKeyAuth import generate_expires, generate_signature
 from market_maker.utils.log import setup_custom_logger
 from market_maker.utils.math import toNearest
 from future.utils import iteritems
