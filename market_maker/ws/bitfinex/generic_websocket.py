@@ -10,7 +10,7 @@ import time
 from threading import Thread
 
 from pyee import EventEmitter
-from ..utils.custom_logger import CustomLogger
+from market_maker.utils.bitfinex.custom_logger import CustomLogger
 
 # websocket exceptions
 from websockets.exceptions import ConnectionClosed

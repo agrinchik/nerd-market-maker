@@ -2,7 +2,7 @@
 Module used to handle wallet updates and data types
 """
 
-from ..models import Wallet
+from market_maker.models.bitfinex import Wallet
 
 
 class WalletManager:

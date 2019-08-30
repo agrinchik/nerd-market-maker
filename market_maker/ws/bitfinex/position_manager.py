@@ -2,8 +2,8 @@
 Module used to house all of the functions/classes used to handle positions
 """
 
-from ..utils.custom_logger import CustomLogger
-from ..models import Position
+from market_maker.utils.bitfinex.custom_logger import CustomLogger
+from market_maker.models.bitfinex import Position
 
 
 class PositionManager:

@@ -5,8 +5,8 @@ Module used to house all of the functions/classes used to handle orders
 import time
 import asyncio
 
-from ..utils.custom_logger import CustomLogger
-from ..models import Order
+from market_maker.utils.bitfinex.custom_logger import CustomLogger
+from market_maker.models.bitfinex import Order
 
 
 class OrderManager:

@@ -12,8 +12,8 @@ from .subscription_manager import SubscriptionManager
 from .wallet_manager import WalletManager
 from .order_manager import OrderManager
 from .position_manager import PositionManager
-from ..utils.auth import generate_auth_payload
-from ..models import Order, Trade, OrderBook
+from market_maker.utils.bitfinex.auth import generate_auth_payload
+from market_maker.models.bitfinex import Order, Trade, OrderBook
 
 
 class Flags:
