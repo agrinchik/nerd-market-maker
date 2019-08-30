@@ -5,7 +5,7 @@ import os
 import sys
 import argparse
 
-from market_maker.utils.dotdict import dotdict
+from market_maker.utils.bitmex.dotdict import dotdict
 import market_maker._settings_base as baseSettings
 
 
