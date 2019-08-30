@@ -1,8 +1,8 @@
 import logging
-from market_maker.utils.utils import XBt_to_XBT
+from market_maker.utils.bitmex.utils import XBt_to_XBT
 import datetime
 from datetime import timedelta
-from market_maker.utils.log import log_info
+from market_maker.utils.bitmex.log import log_info
 from market_maker.settings import settings
 
 DEFAULT_POSITION_MARGIN_TO_WALLET_RATIO_PCT = 0.0386

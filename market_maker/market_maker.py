@@ -8,19 +8,18 @@ import random
 import requests
 import atexit
 import signal
-from market_maker.utils.log import log_info
-from market_maker.utils.log import log_error
+from market_maker.utils.bitmex.log import log_info
+from market_maker.utils.bitmex.log import log_error
 
 from market_maker import bitmex
 from market_maker.settings import settings
-from market_maker.utils import log, constants, errors, math
+from market_maker.utils.bitmex import constants, errors, log, math
 
 from market_maker.dynamic_settings import DynamicSettings
 
-from market_maker.utils.utils import XBt_to_XBT
+from market_maker.utils.bitmex.utils import XBt_to_XBT
 
 # Used for reloading the bot - saves modified times of key files
-import os
 watched_files_mtimes = [(f, getmtime(f)) for f in settings.WATCHED_FILES]
 
 
