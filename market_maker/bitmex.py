@@ -71,30 +71,6 @@ class BitMEX(object):
         """Get an instrument's details."""
         return self.ws.get_instrument(symbol)
 
-    def instruments(self, filter=None):
-        query = {}
-        if filter is not None:
-            query['filter'] = json.dumps(filter)
-        return self._curl_bitmex(path='instrument', query=query, verb='GET')
-
-    def market_depth(self, symbol):
-        """Get market depth / orderbook."""
-        return self.ws.market_depth(symbol)
-
-    def recent_trades(self):
-        """Get recent trades.
-
-        Returns
-        -------
-        A list of dicts:
-              {u'amount': 60,
-               u'date': 1306775375,
-               u'price': 8.7401099999999996,
-               u'tid': u'93842'},
-
-        """
-        return self.ws.recent_trades()
-
     #
     # Authentication required methods
     #
@@ -119,59 +95,6 @@ class BitMEX(object):
         return self.ws.position(symbol)
 
     @authentication_required
-    def isolate_margin(self, symbol, leverage, rethrow_errors=False):
-        """Set the leverage on an isolated margin position"""
-        path = "position/leverage"
-        postdict = {
-            'symbol': symbol,
-            'leverage': leverage
-        }
-        return self._curl_bitmex(path=path, postdict=postdict, verb="POST", rethrow_errors=rethrow_errors)
-
-    @authentication_required
-    def delta(self):
-        return self.position(self.symbol)['homeNotional']
-
-    @authentication_required
-    def buy(self, quantity, price):
-        """Place a buy order.
-
-        Returns order object. ID: orderID
-        """
-        return self.place_order(quantity, price)
-
-    @authentication_required
-    def sell(self, quantity, price):
-        """Place a sell order.
-
-        Returns order object. ID: orderID
-        """
-        return self.place_order(-quantity, price)
-
-    @authentication_required
-    def place_order(self, quantity, price):
-        """Place an order."""
-        if price < 0:
-            raise Exception("Price must be positive.")
-
-        endpoint = "order"
-        # Generate a unique clOrdID with our prefix so we can identify it.
-        clOrdID = self.orderIDPrefix + base64.b64encode(uuid.uuid4().bytes).decode('utf8').rstrip('=\n')
-        postdict = {
-            'symbol': self.symbol,
-            'orderQty': quantity,
-            'price': price,
-            'clOrdID': clOrdID
-        }
-        return self._curl_bitmex(path=endpoint, postdict=postdict, verb="POST")
-
-    @authentication_required
-    def amend_bulk_orders(self, orders):
-        """Amend multiple orders."""
-        # Note rethrow; if this fails, we want to catch it and re-tick
-        return self._curl_bitmex(path='order/bulk', postdict={'orders': orders}, verb='PUT', rethrow_errors=True, max_retries=self.max_retries)
-
-    @authentication_required
     def create_bulk_orders(self, orders):
         """Create multiple orders."""
         for order in orders:
@@ -180,6 +103,12 @@ class BitMEX(object):
             if self.postOnly:
                 order['execInst'] = 'ParticipateDoNotInitiate'
         return self._curl_bitmex(path='order/bulk', postdict={'orders': orders}, verb='POST', max_retries=self.max_retries)
+
+    @authentication_required
+    def amend_bulk_orders(self, orders):
+        """Amend multiple orders."""
+        # Note rethrow; if this fails, we want to catch it and re-tick
+        return self._curl_bitmex(path='order/bulk', postdict={'orders': orders}, verb='PUT', rethrow_errors=True, max_retries=self.max_retries)
 
     @authentication_required
     def open_orders(self):
@@ -209,17 +138,6 @@ class BitMEX(object):
             'orderID': orderID,
         }
         return self._curl_bitmex(path=path, postdict=postdict, verb="DELETE")
-
-    @authentication_required
-    def withdraw(self, amount, fee, address):
-        path = "user/requestWithdrawal"
-        postdict = {
-            'amount': amount,
-            'fee': fee,
-            'currency': 'XBt',
-            'address': address
-        }
-        return self._curl_bitmex(path=path, postdict=postdict, verb="POST", max_retries=0)
 
     def _curl_bitmex(self, path, query=None, postdict=None, timeout=None, verb=None, rethrow_errors=False,
                      max_retries=None):

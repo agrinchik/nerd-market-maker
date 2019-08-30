@@ -115,10 +115,6 @@ class BitMEXWebsocket():
     def current_qty(self):
         return self.position(self.symbol)['currentQty']
 
-    def market_depth(self, symbol):
-        raise NotImplementedError('orderBook is not subscribed; use askPrice and bidPrice on instrument')
-        # return self.data['orderBook25'][0]
-
     def open_orders(self, clOrdIDPrefix):
         orders = self.data['order']
         # Filter to only open orders (leavesQty > 0) and those that we actually placed
@@ -141,9 +137,6 @@ class BitMEXWebsocket():
         else:
             result = True
         return result
-
-    def recent_trades(self):
-        return self.data['trade']
 
     #
     # Lifecycle methods
@@ -218,10 +211,6 @@ class BitMEXWebsocket():
         '''On subscribe, this data will come down. Wait for it.'''
         while not {'instrument', 'trade', 'quote'} <= set(self.data):
             sleep(0.1)
-
-    def __send_command(self, command, args):
-        '''Send a raw command.'''
-        self.ws.send(json.dumps({"op": command, "args": args or []}))
 
     def __on_message(self, message):
         '''Handler for parsing WS messages.'''
