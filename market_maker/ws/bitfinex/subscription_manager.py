@@ -7,8 +7,8 @@ import json
 import asyncio
 import time
 
-from ..utils.custom_logger import CustomLogger
-from ..models import Subscription
+from market_maker.utils.bitfinex.custom_logger import CustomLogger
+from market_maker.models.bitfinex import Subscription
 
 MAX_CHANNEL_COUNT = 25
 

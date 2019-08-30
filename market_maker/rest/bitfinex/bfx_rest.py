@@ -7,10 +7,10 @@ import aiohttp
 import time
 import json
 
-from ..utils.custom_logger import CustomLogger
-from ..utils.auth import generate_auth_headers
-from ..models import Wallet, Order, Position, Trade, FundingLoan, FundingOffer
-from ..models import FundingCredit
+from market_maker.utils.bitfinex.custom_logger import CustomLogger
+from market_maker.utils.bitfinex.auth import generate_auth_headers
+from market_maker.models.bitfinex import Wallet, Order, Position, Trade, FundingLoan, FundingOffer
+from market_maker.models.bitfinex import FundingCredit
 
 
 class BfxRest:

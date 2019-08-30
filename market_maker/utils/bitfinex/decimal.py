@@ -1,5 +1,6 @@
 import decimal as dec
 
+
 class Decimal(dec.Decimal):
 
     @classmethod
