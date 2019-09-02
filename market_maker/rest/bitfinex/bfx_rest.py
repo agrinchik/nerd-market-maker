@@ -9,8 +9,7 @@ import json
 
 from market_maker.utils.bitfinex.custom_logger import CustomLogger
 from market_maker.utils.bitfinex.auth import generate_auth_headers
-from market_maker.models.bitfinex import Wallet, Order, Position, Trade, FundingLoan, FundingOffer
-from market_maker.models.bitfinex import FundingCredit
+from market_maker.models.bitfinex import Wallet, Order, Position, Trade
 
 
 class BfxRest:
@@ -172,30 +171,6 @@ class BfxRest:
         ticker = await self.fetch(endpoint)
         return ticker
 
-    async def get_derivative_status(self, symbol):
-        """
-        Gets platform information for derivative symbol.
-
-        @param derivativeSymbol string: i.e tBTCF0:USTF0
-        @return [KEY/SYMBOL, MTS, PLACEHOLDER, DERIV_PRICE, SPOT_PRICE, PLACEHOLDER, INSURANCE_FUND_BALANCE4,
-            PLACEHOLDER, PLACEHOLDER, FUNDING_ACCRUED, FUNDING_STEP, PLACEHOLDER]
-        """
-        statuses = await self.get_derivative_statuses([symbol])
-        if len(statuses) > 0:
-            return statuses[0]
-        return []
-
-    async def get_derivative_statuses(self, symbols):
-        """
-        Gets platform information for a collection of derivative symbols.
-
-        @param derivativeSymbols Array<string>: array of symbols i.e [tBTCF0:USTF0 ...] or ["ALL"]
-        @return [KEY/SYMBOL, MTS, PLACEHOLDER, DERIV_PRICE, SPOT_PRICE, PLACEHOLDER, INSURANCE_FUND_BALANCE4,
-            PLACEHOLDER, PLACEHOLDER, FUNDING_ACCRUED, FUNDING_STEP, PLACEHOLDER]
-        """
-        endpoint = "status/deriv?keys={}".format(','.join(symbols))
-        status = await self.fetch(endpoint)
-        return status
 
     ##################################################
     #               Authenticated Data               #
@@ -278,79 +253,6 @@ class BfxRest:
         raw_trades = await self.post(endpoint, params=params)
         return [Trade.from_raw_rest_trade(rt) for rt in raw_trades]
 
-    async def get_funding_offers(self, symbol):
-        """
-        Get all of the funding offers associated with API_KEY - Requires authentication.
-
-        @return Array <models.FundingOffer>
-        """
-        endpoint = "auth/r/funding/offers/{}".format(symbol)
-        offers = await self.post(endpoint)
-        return [FundingOffer.from_raw_offer(o) for o in offers]
-
-    async def get_funding_offer_history(self, symbol, start, end, limit=25):
-        """
-        Get all of the funding offers between the start and end period associated with API_KEY
-        - Requires authentication.
-
-        @param symbol string: pair symbol i.e tBTCUSD
-        @param start int: millisecond start time
-        @param end int: millisecond end time
-        @param limit int: max number of items in response
-        @return Array <models.FundingOffer>
-        """
-        endpoint = "auth/r/funding/offers/{}/hist".format(symbol)
-        params = "?start={}&end={}&limit={}".format(start, end, limit)
-        offers = await self.post(endpoint, params=params)
-        return [FundingOffer.from_raw_offer(o) for o in offers]
-
-    async def get_funding_loans(self, symbol):
-        """
-        Get all of the funding loans associated with API_KEY - Requires authentication.
-
-        @return Array <models.FundingLoan>
-        """
-        endpoint = "auth/r/funding/loans/{}".format(symbol)
-        loans = await self.post(endpoint)
-        return [FundingLoan.from_raw_loan(o) for o in loans]
-
-    async def get_funding_loan_history(self, symbol, start, end, limit=25):
-        """
-        Get all of the funding loans between the start and end period associated with API_KEY
-        - Requires authentication.
-
-        @param symbol string: pair symbol i.e tBTCUSD
-        @param start int: millisecond start time
-        @param end int: millisecond end time
-        @param limit int: max number of items in response
-        @return Array <models.FundingLoan>
-        """
-        endpoint = "auth/r/funding/loans/{}/hist".format(symbol)
-        params = "?start={}&end={}&limit={}".format(start, end, limit)
-        loans = await self.post(endpoint, params=params)
-        return [FundingLoan.from_raw_loan(o) for o in loans]
-
-    async def get_funding_credits(self, symbol):
-        endpoint = "auth/r/funding/credits/{}".format(symbol)
-        credits = await self.post(endpoint)
-        return [FundingCredit.from_raw_credit(c) for c in credits]
-
-    async def get_funding_credit_history(self, symbol, start, end, limit=25):
-        """
-        Get all of the funding credits between the start and end period associated with API_KEY
-        - Requires authentication.
-
-        @param symbol string: pair symbol i.e tBTCUSD
-        @param start int: millisecond start time
-        @param end int: millisecond end time
-        @param limit int: max number of items in response
-        @return Array <models.FundingCredit>
-        """
-        endpoint = "auth/r/funding/credits/{}/hist".format(symbol)
-        params = "?start={}&end={}&limit={}".format(start, end, limit)
-        credits = await self.post(endpoint, params=params)
-        return [FundingCredit.from_raw_credit(c) for c in credits]
-
     ##################################################
     #                    Orders                      #
     ##################################################
@@ -394,19 +296,3 @@ class BfxRest:
         endpoint = 'order/new'
         return await self.post(endpoint, data=payload)
 
-    ##################################################
-    #                   Derivatives                  #
-    ##################################################
-
-    async def set_derivative_collateral(self, symbol, collateral):
-        """
-        Update the amount of callateral used to back a derivative position.
-
-        @param symbol of the derivative i.e 'tBTCF0:USTF0'
-        @param collateral: amount of collateral/value to apply to the open position
-        """
-        endpoint = 'auth/w/deriv/collateral/set'
-        payload = {}
-        payload['symbol'] = symbol
-        payload['collateral'] = collateral
-        return await self.post(endpoint, data=payload)

@@ -12,6 +12,7 @@ from market_maker.utils.bitmex.log import log_info
 from market_maker.utils.bitmex.log import log_error
 
 from market_maker import bitmex
+from market_maker import bitfinex
 from market_maker.settings import settings
 from market_maker.utils.bitmex import constants, errors, log, math
 
@@ -37,13 +38,14 @@ class ExchangeInterface:
     def __init__(self, dry_run=False):
         self.dry_run = dry_run
         self.symbol = settings.SYMBOL
-        self.bitmex = bitmex.BitMEX(base_url=settings.BASE_URL, symbol=self.symbol,
+        '''self.xchange = bitmex.BitMEX(base_url=settings.BASE_URL, symbol=self.symbol,
                                     apiKey=settings.API_KEY, apiSecret=settings.API_SECRET,
                                     orderIDPrefix=settings.ORDERID_PREFIX, postOnly=settings.POST_ONLY,
                                     timeout=settings.TIMEOUT,
                                     retries=settings.RETRIES,
                                     retry_delay=settings.RETRY_DELAY
-                                    )
+                                    )'''
+        self.xchange = bitfinex.Bitfinex()
 
     def cancel_all_orders(self):
         if self.dry_run:
@@ -54,13 +56,13 @@ class ExchangeInterface:
 
         # In certain cases, a WS update might not make it through before we call this.
         # For that reason, we grab via HTTP to ensure we grab them all.
-        orders = self.bitmex.http_open_orders()
+        orders = self.xchange.http_open_orders()
 
         for order in orders:
             logger.info("Canceling: %s %d @ %.*f" % (order['side'], order['orderQty'], tickLog, order['price']))
 
         if len(orders):
-            self.bitmex.cancel([order['orderID'] for order in orders])
+            self.xchange.cancel([order['orderID'] for order in orders])
 
         sleep(settings.API_REST_INTERVAL)
 
@@ -72,7 +74,7 @@ class ExchangeInterface:
     def get_instrument(self, symbol=None):
         if symbol is None:
             symbol = self.symbol
-        return self.bitmex.instrument(symbol)
+        return self.xchange.instrument(symbol)
 
     def get_distance_to_avg_price_pct(self):
         result = 0
@@ -111,12 +113,12 @@ class ExchangeInterface:
     def get_margin(self):
         if self.dry_run:
             return {'marginBalance': float(settings.DRY_BTC), 'availableFunds': float(settings.DRY_BTC)}
-        return self.bitmex.funds()
+        return self.xchange.funds()
 
     def get_orders(self):
         if self.dry_run:
             return []
-        return self.bitmex.open_orders()
+        return self.xchange.open_orders()
 
     def get_highest_buy(self):
         buys = [o for o in self.get_orders() if o['side'] == 'Buy']
@@ -135,16 +137,16 @@ class ExchangeInterface:
     def get_position(self, symbol=None):
         if symbol is None:
             symbol = self.symbol
-        return self.bitmex.position(symbol)
+        return self.xchange.position(symbol)
 
     def get_ticker(self, symbol=None):
         if symbol is None:
             symbol = self.symbol
-        return self.bitmex.ticker_data(symbol)
+        return self.xchange.ticker_data(symbol)
 
     def is_open(self):
         """Check that websockets are still open."""
-        return not self.bitmex.ws.exited
+        return not self.xchange.ws.exited
 
     def check_market_open(self):
         instrument = self.get_instrument()
@@ -161,17 +163,17 @@ class ExchangeInterface:
     def amend_bulk_orders(self, orders):
         if self.dry_run:
             return orders
-        return self.bitmex.amend_bulk_orders(orders)
+        return self.xchange.amend_bulk_orders(orders)
 
     def create_bulk_orders(self, orders):
         if self.dry_run:
             return orders
-        return self.bitmex.create_bulk_orders(orders)
+        return self.xchange.create_bulk_orders(orders)
 
     def cancel_bulk_orders(self, orders):
         if self.dry_run:
             return orders
-        return self.bitmex.cancel([order['orderID'] for order in orders])
+        return self.xchange.cancel([order['orderID'] for order in orders])
 
 
 class OrderManager:
@@ -618,7 +620,7 @@ class OrderManager:
         logger.info("Shutting down. All open orders will be cancelled.")
         try:
             self.exchange.cancel_all_orders()
-            self.exchange.bitmex.exit()
+            self.exchange.xchange.exit()
         except errors.AuthenticationError as e:
             logger.info("Was not authenticated; could not cancel orders.")
         except Exception as e:
