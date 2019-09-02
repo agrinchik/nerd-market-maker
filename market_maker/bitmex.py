@@ -10,10 +10,11 @@ import logging
 from market_maker.auth.bitmex import APIKeyAuthWithExpires
 from market_maker.utils.bitmex import constants, errors
 from market_maker.ws.bitmex.ws_thread import BitMEXWebsocket
+from market_maker.exchange import BaseExchange
 
 
 # https://www.bitmex.com/api/explorer/
-class BitMEX(object):
+class BitMEX(BaseExchange):
 
     """BitMEX API Connector."""
 

@@ -148,9 +148,6 @@ class BfxWebsocket(GenericWebsocket):
             'pn': self._position_new_handler,
             'pu': self._position_update_handler,
             'pc': self._position_closed_handler,
-            'fos': self._funding_offer_snapshot_handler,
-            'fcs': self._funding_credit_snapshot_handler,
-            'fls': self._funding_load_snapshot_handler,
             'bu': self._balance_update_handler,
             'n': self._notification_handler,
             'miu': self._margin_info_update_handler,
@@ -312,18 +309,6 @@ class BfxWebsocket(GenericWebsocket):
 
     async def _position_closed_handler(self, data):
         await self.positionManager.confirm_position_closed(data)
-
-    async def _funding_offer_snapshot_handler(self, data):
-        self._emit('funding_offer_snapshot', data)
-        self.logger.info("Funding offer snapshot: {}".format(data))
-
-    async def _funding_load_snapshot_handler(self, data):
-        self._emit('funding_loan_snapshot', data[2])
-        self.logger.info("Funding loan snapshot: {}".format(data))
-
-    async def _funding_credit_snapshot_handler(self, data):
-        self._emit('funding_credit_snapshot', data[2])
-        self.logger.info("Funding credit snapshot: {}".format(data))
 
     async def _status_handler(self, data):
         sub = self.subscriptionManager.get(data[0])
