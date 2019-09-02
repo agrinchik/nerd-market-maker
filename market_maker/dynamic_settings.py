@@ -154,7 +154,7 @@ RISK_PROFILE_CONFIGURATION = [
         "id": "RP1",
         "risk_level": 80,
         "max_drawdown_pct": 0.1,
-        "working_range_pct": 0.02,
+        "working_range_pct": 0.01,
         "max_number_dca_orders": 40
     },
     {
