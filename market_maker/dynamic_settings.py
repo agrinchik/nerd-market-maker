@@ -152,52 +152,52 @@ RISK_MANAGEMENT_MATRIX = [
 RISK_PROFILE_CONFIGURATION = [
     {
         "id": "RP1",
-        "risk_level": 70,
-        "max_drawdown_pct": 0.15,
-        "working_range_pct": 0.04,
-        "max_number_dca_orders": 30
+        "risk_level": 80,
+        "max_drawdown_pct": 0.1,
+        "working_range_pct": 0.02,
+        "max_number_dca_orders": 40
     },
     {
         "id": "RP2",
-        "risk_level": 60,
-        "max_drawdown_pct": 0.285,
-        "working_range_pct": 0.06,
-        "max_number_dca_orders": 38
+        "risk_level": 70,
+        "max_drawdown_pct": 0.145,
+        "working_range_pct": 0.04,
+        "max_number_dca_orders": 29
     },
     {
         "id": "RP3",
-        "risk_level": 50,
-        "max_drawdown_pct": 0.48,
-        "working_range_pct": 0.08,
-        "max_number_dca_orders": 48
+        "risk_level": 60,
+        "max_drawdown_pct": 0.225,
+        "working_range_pct": 0.06,
+        "max_number_dca_orders": 30
     },
     {
         "id": "RP4",
-        "risk_level": 40,
-        "max_drawdown_pct": 0.90,
-        "working_range_pct": 0.12,
-        "max_number_dca_orders": 60
+        "risk_level": 50,
+        "max_drawdown_pct": 0.36,
+        "working_range_pct": 0.08,
+        "max_number_dca_orders": 36
     },
     {
         "id": "RP5",
-        "risk_level": 30,
-        "max_drawdown_pct": 1.5,
-        "working_range_pct": 0.16,
-        "max_number_dca_orders": 75
+        "risk_level": 40,
+        "max_drawdown_pct": 0.675,
+        "working_range_pct": 0.12,
+        "max_number_dca_orders": 45
     },
     {
         "id": "RP6",
-        "risk_level": 20,
-        "max_drawdown_pct": 2.25,
-        "working_range_pct": 0.20,
-        "max_number_dca_orders": 90
+        "risk_level": 30,
+        "max_drawdown_pct": 1.14,
+        "working_range_pct": 0.16,
+        "max_number_dca_orders": 57
     },
     {
         "id": "RP7",
-        "risk_level": 10,
-        "max_drawdown_pct": 5.00,
-        "working_range_pct": 0.40,
-        "max_number_dca_orders": 100
+        "risk_level": 20,
+        "max_drawdown_pct": 1.70,
+        "working_range_pct": 0.20,
+        "max_number_dca_orders": 68
     }
 ]
 
