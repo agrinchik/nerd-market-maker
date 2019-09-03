@@ -45,7 +45,7 @@ class ExchangeInterface:
                                     retries=settings.RETRIES,
                                     retry_delay=settings.RETRY_DELAY
                                     )'''
-        self.xchange = bitfinex.Bitfinex()
+        self.xchange = bitfinex.Bitfinex(symbol=self.symbol)
 
     def cancel_all_orders(self):
         if self.dry_run:
