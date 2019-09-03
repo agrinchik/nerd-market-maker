@@ -48,6 +48,21 @@ def _parse_candle(cData, symbol, tf):
         'tf': tf
     }
 
+def _parse_ticker(cData, symbol):
+    return {
+        'bid': cData[0],
+        'bid_size': cData[1],
+        'ask': cData[2],
+        'ask_size': cData[3],
+        'daily_change': cData[4],
+        'daily_change_perc': cData[5],
+        'last_price': cData[6],
+        'volume': cData[7],
+        'high': cData[8],
+        'low': cData[9],
+        'symbol': symbol
+    }
+
 
 def _parse_trade_snapshot_item(tData, symbol):
     return {
@@ -148,6 +163,9 @@ class BfxWebsocket(GenericWebsocket):
             'pn': self._position_new_handler,
             'pu': self._position_update_handler,
             'pc': self._position_closed_handler,
+            'fos': self._funding_offer_snapshot_handler,
+            'fcs': self._funding_credit_snapshot_handler,
+            'fls': self._funding_load_snapshot_handler,
             'bu': self._balance_update_handler,
             'n': self._notification_handler,
             'miu': self._margin_info_update_handler,
@@ -182,6 +200,8 @@ class BfxWebsocket(GenericWebsocket):
             # candles do not have an event
             if subscription.channel_name == 'candles':
                 await self._candle_handler(data)
+            if subscription.channel_name == 'ticker':
+                await self._ticker_handler(data)
             if subscription.channel_name == 'book':
                 await self._order_book_handler(data, raw_message_str)
             if subscription.channel_name == 'trades':
@@ -310,6 +330,18 @@ class BfxWebsocket(GenericWebsocket):
     async def _position_closed_handler(self, data):
         await self.positionManager.confirm_position_closed(data)
 
+    async def _funding_offer_snapshot_handler(self, data):
+        self._emit('funding_offer_snapshot', data)
+        self.logger.info("Funding offer snapshot: {}".format(data))
+
+    async def _funding_load_snapshot_handler(self, data):
+        self._emit('funding_loan_snapshot', data[2])
+        self.logger.info("Funding loan snapshot: {}".format(data))
+
+    async def _funding_credit_snapshot_handler(self, data):
+        self._emit('funding_credit_snapshot', data[2])
+        self.logger.info("Funding credit snapshot: {}".format(data))
+
     async def _status_handler(self, data):
         sub = self.subscriptionManager.get(data[0])
         symbol = sub.symbol
@@ -356,6 +388,25 @@ class BfxWebsocket(GenericWebsocket):
             candle = _parse_candle(
                 data[1], subscription.symbol, subscription.timeframe)
             self._emit('new_candle', candle)
+
+    async def _ticker_handler(self, data):
+        subscription = self.subscriptionManager.get(data[0])
+        # if ticker data is empty
+        if data[1] == []:
+            return
+        if type(data[1][0]) is list:
+            # Process the batch of seed tickers on
+            # websocket subscription
+            tickersSnapshot = data[1]
+            tickersSnapshot.reverse()
+            for t in tickersSnapshot:
+                ticker = _parse_ticker(
+                    t, subscription.symbol)
+                self._emit('ticker_snapshot', ticker)
+        else:
+            ticker = _parse_ticker(
+                data[1], subscription.symbol)
+            self._emit('new_ticker', ticker)
 
     async def _order_book_handler(self, data, orig_raw_message):
         obInfo = data[1]

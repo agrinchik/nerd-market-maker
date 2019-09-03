@@ -17,16 +17,13 @@ import json
 import base64
 import uuid
 import logging
-from market_maker.auth.bitmex import APIKeyAuthWithExpires
-from market_maker.utils.bitmex import constants, errors
-from market_maker.ws.bitmex.ws_thread import BitMEXWebsocket
 from market_maker.exchange import BaseExchange
 
 REST_HOST = 'https://api.bitfinex.com/v2'
 WS_HOST = 'wss://api.bitfinex.com/ws/2'
 
-API_KEY="N7njew120ceMMs2kb6r5LVuETYj01N1AlUynANN8oqG"
-API_SECRET="Hxzbf58cqT2ZvO76oTjXHWjum5finUC9F3gvOwSOY3D"
+API_KEY = "uDz5norSMZU5nnEIzhSvj7iJVgDDYoALPOYJPemBS3a"
+API_SECRET = "E33kaSB9AwN3NhrtAj157z3H4xP2pyupooPfbutU2Ld"
 
 class BitfinexClient:
     """
@@ -42,26 +39,33 @@ class BitfinexClient:
                             logLevel=logLevel, *args, **kwargs)
 
 
+bfx = BitfinexClient(
+    API_KEY=API_KEY,
+    API_SECRET=API_SECRET,
+    logLevel='INFO'
+)
+
 # https://docs.bitfinex.com/v2/docs/ws-general
 class Bitfinex(BaseExchange):
 
     """Bitfinex API Connector.
        The connector exposes rest and websocket objects
     """
+    def __init__(self, symbol=None):
+        super().__init__()
+        self.symbol = symbol
 
-    def __init__(self):
-        self.bfx = BitfinexClient(
-          API_KEY=API_KEY,
-          API_SECRET=API_SECRET,
-          logLevel='INFO'
-        )
+        bfx.ws.on('connected', self.start)
+        bfx.ws.run()
 
-        self.bfx.ws.on('connected', self.start)
-        self.bfx.ws.run()
+    @bfx.ws.on('error')
+    def log_error(err):
+        print("Error: {}".format(err))
 
     async def start(self):
         # await bfx.ws.subscribe('candles', 'tBTCUSD', timeframe='1m')
-        await self.bfx.ws.subscribe('trades', 'tBTCUSD')
+        # await self.bfx.ws.subscribe('trades', 'tBTCUSD')
+        await self.bfx.ws.subscribe('ticker', self.symbol)
 
     def __del__(self):
         self.exit()
