@@ -4,8 +4,8 @@ Module used to house all of the functions/classes used to handle orders
 
 import time
 import asyncio
+import logging
 
-from market_maker.utils.bitfinex.custom_logger import CustomLogger
 from market_maker.models.bitfinex import Order
 
 
@@ -26,7 +26,7 @@ class OrderManager:
         self.pending_order_confirm_callbacks = {}
         self.pending_update_confirm_callbacks = {}
         self.pending_cancel_confirm_callbacks = {}
-        self.logger = CustomLogger('BfxOrderManager', logLevel=logLevel)
+        self.logger = logging.getLogger('root')
 
     def get_open_orders(self):
         return list(self.open_orders.values())
@@ -39,12 +39,9 @@ class OrderManager:
 
     async def confirm_order_closed(self, raw_ws_data):
         order = Order.from_raw_order(raw_ws_data[2])
-        order.set_open_state(False)
-        if order.id in self.open_orders:
-            del self.open_orders[order.id]
-        if not order.is_confirmed():
-            order.set_confirmed()
-            self.bfxapi._emit('order_confirmed', order)
+        if order["orderID"] in self.open_orders:
+            del self.open_orders["orderID"]
+        self.bfxapi._emit('order_confirmed', order)
         await self._execute_callback(order, self.pending_order_confirm_callbacks)
         await self._execute_callback(order, self.pending_cancel_confirm_callbacks)
         await self._execute_callback(order, self.pending_update_confirm_callbacks)
@@ -61,23 +58,19 @@ class OrderManager:
         self.open_orders = {}
         for raw_order in osData:
             order = Order.from_raw_order(raw_order)
-            order.set_open_state(True)
-            self.open_orders[order.id] = order
+            self.open_orders["orderID"] = order
         self.bfxapi._emit('order_snapshot', self.get_open_orders())
 
     async def confirm_order_update(self, raw_ws_data):
         order = Order.from_raw_order(raw_ws_data[2])
-        order.set_open_state(True)
-        self.open_orders[order.id] = order
+        self.open_orders["orderID"] = order
         await self._execute_callback(order, self.pending_update_confirm_callbacks)
         self.logger.info("Order update: {}".format(order))
         self.bfxapi._emit('order_update', order)
 
     async def confirm_order_new(self, raw_ws_data):
         order = Order.from_raw_order(raw_ws_data[2])
-        order.set_open_state(True)
-        self.open_orders[order.id] = order
-        order.set_confirmed()
+        self.open_orders["orderID"] = order
         self.bfxapi._emit('order_confirmed', order)
         await self._execute_callback(order, self.pending_order_confirm_callbacks)
         self.logger.info("Order new: {}".format(order))

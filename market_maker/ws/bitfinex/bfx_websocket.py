@@ -14,6 +14,7 @@ from .order_manager import OrderManager
 from .position_manager import PositionManager
 from market_maker.utils.bitfinex.auth import generate_auth_payload
 from market_maker.models.bitfinex import Order, Trade, OrderBook
+from .wsdata_storage import WsData_Storage
 
 
 class Flags:
@@ -148,6 +149,7 @@ class BfxWebsocket(GenericWebsocket):
         self.orderManager = OrderManager(self, logLevel=logLevel)
         self.wallets = WalletManager()
         self.positionManager = PositionManager(self, logLevel=logLevel)
+        self.wsdata = WsData_Storage()
 
         self._WS_DATA_HANDLERS = {
             'tu': self._trade_update_handler,
@@ -214,6 +216,7 @@ class BfxWebsocket(GenericWebsocket):
 
     async def _system_info_handler(self, socketId, data):
         self.logger.info(data)
+        self.wsdata.put_info(data)
         if data.get('serverId', None):
             # connection has been established
             await self.on_open(socketId)
@@ -402,10 +405,12 @@ class BfxWebsocket(GenericWebsocket):
             for t in tickersSnapshot:
                 ticker = _parse_ticker(
                     t, subscription.symbol)
+                self.wsdata.put_ticker(subscription.symbol, ticker)
                 self._emit('ticker_snapshot', ticker)
         else:
             ticker = _parse_ticker(
                 data[1], subscription.symbol)
+            self.wsdata.put_ticker(subscription.symbol, ticker)
             self._emit('new_ticker', ticker)
 
     async def _order_book_handler(self, data, orig_raw_message):
@@ -587,3 +592,6 @@ class BfxWebsocket(GenericWebsocket):
 
     async def cancel_order_multi(self, *args, **kwargs):
         return await self.orderManager.cancel_order_multi(*args, **kwargs)
+
+    def is_data_initialized(self):
+        return self.wsdata.is_initialized() and len(self.wallets.get_wallets()) > 0

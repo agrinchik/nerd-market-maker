@@ -4,40 +4,46 @@ a websocket client and a rest interface client
 """
 from __future__ import absolute_import
 
-import asyncio
-
 from .ws.bitfinex.bfx_websocket import BfxWebsocket
-from .rest.bitfinex.bfx_rest import BfxRest
+from market_maker.utils.bitfinex.decimal_to_precision import decimal_to_precision
+from market_maker.utils.bitfinex.decimal_to_precision import precision_from_string
+from market_maker.utils.bitfinex.decimal_to_precision import DECIMAL_PLACES, TRUNCATE, ROUND, ROUND_UP, ROUND_DOWN
+from market_maker.utils.bitfinex.decimal_to_precision import number_to_string
+from market_maker.utils.bitmex.math import toNearest
+from future.utils import iteritems
+from market_maker.settings import settings
+from market_maker.models.bitfinex import Order
+from market_maker.rest.bitfinex import ClientV1 as Client1
+from market_maker.rest.bitfinex import ClientV2 as Client2
+from market_maker.utils.bitmex import errors
 
-"""Bitfinex API Connector."""
 import requests
-import time
+from time import sleep
 import datetime
 import json
 import base64
 import uuid
 import logging
+import decimal
+import time
 from market_maker.exchange import BaseExchange
 
-REST_HOST = 'https://api.bitfinex.com/v2'
 WS_HOST = 'wss://api.bitfinex.com/ws/2'
 
-API_KEY = "uDz5norSMZU5nnEIzhSvj7iJVgDDYoALPOYJPemBS3a"
-API_SECRET = "E33kaSB9AwN3NhrtAj157z3H4xP2pyupooPfbutU2Ld"
+API_KEY = "DvG4Fhfr7J7QuHQMdXicqCd5w0970dkN94A5qMgGBvD"
+API_SECRET = "X96D8w1EdpSrMQvhoTq0WFSEmb4i1SdtiOAmuZcsiSu"
 
 class BitfinexClient:
     """
     The Bitfinex client exposes REST and websocket objects
     """
-    def __init__(self, API_KEY=None, API_SECRET=None, rest_host=REST_HOST,
-                 ws_host=WS_HOST, create_event_emitter=None, logLevel='INFO', dead_man_switch=False,
-                 ws_capacity=25, *args, **kwargs):
+    def __init__(self, API_KEY=None, API_SECRET=None, ws_host=WS_HOST, create_event_emitter=None, logLevel='INFO',
+                 dead_man_switch=False, ws_capacity=25, *args, **kwargs):
+        self.rest1 = Client1(API_KEY, API_SECRET)
+        self.rest2 = Client2(API_KEY, API_SECRET)
         self.ws = BfxWebsocket(API_KEY=API_KEY, API_SECRET=API_SECRET, host=ws_host,
                                logLevel=logLevel, dead_man_switch=dead_man_switch,
                                ws_capacity=ws_capacity, create_event_emitter=create_event_emitter, *args, **kwargs)
-        self.rest = BfxRest(API_KEY=API_KEY, API_SECRET=API_SECRET, host=rest_host,
-                            logLevel=logLevel, *args, **kwargs)
-
 
 bfx = BitfinexClient(
     API_KEY=API_KEY,
@@ -52,20 +58,50 @@ class Bitfinex(BaseExchange):
        The connector exposes rest and websocket objects
     """
     def __init__(self, symbol=None):
+        self.logger = logging.getLogger('root')
+
         super().__init__()
         self.symbol = symbol
 
         bfx.ws.on('connected', self.start)
         bfx.ws.run()
 
+        self.logger.info('Connected to WS. Waiting for data images, this may take a moment...')
+
+        # Connected. Wait for snapshots
+        self.__wait_for_symbol(symbol)
+        self.logger.info('********* Got all market data. Starting! *********')
+
+    def __wait_for_symbol(self, symbol):
+        '''On subscribe, this data will come down. Wait for it.'''
+        while not bfx.ws.is_data_initialized():
+            self.logger.info('__wait_for_symbol ....')
+            sleep(0.4)
+
     @bfx.ws.on('error')
     def log_error(err):
         print("Error: {}".format(err))
 
+    def get_tick_size(self, instrument):
+        bid = number_to_string(instrument['bid'])
+        bid_precision = precision_from_string(bid)
+        ask = number_to_string(instrument['ask'])
+        ask_precision = precision_from_string(ask)
+        high = number_to_string(instrument['high'])
+        high_precision = precision_from_string(high)
+        low = number_to_string(instrument['low'])
+        low_precision = precision_from_string(low)
+        precision = max(bid_precision, ask_precision, high_precision, low_precision)
+        if precision == 0:
+            return 1
+        else:
+            return round(pow(10, -precision), precision)
+
     async def start(self):
         # await bfx.ws.subscribe('candles', 'tBTCUSD', timeframe='1m')
         # await self.bfx.ws.subscribe('trades', 'tBTCUSD')
-        await self.bfx.ws.subscribe('ticker', self.symbol)
+        await bfx.ws.subscribe('ticker', self.symbol)
+        self.logger.info('START - subscribed!')
 
     def __del__(self):
         self.exit()
@@ -77,39 +113,51 @@ class Bitfinex(BaseExchange):
     # Public methods
     #
     def ticker_data(self, symbol=None):
-        """Get ticker data."""
-        if symbol is None:
-            symbol = self.symbol
-        return self.ws.get_ticker(symbol)
+        '''Return a ticker object. Generated from instrument.'''
+        instrument = self.instrument(symbol)
+
+        bid = instrument['bid'] or instrument['last_price']
+        ask = instrument['ask'] or instrument['last_price']
+        ticker = {
+            "last": instrument['last_price'],
+            "buy": bid,
+            "sell": ask,
+            "mid": (bid + ask) / 2
+        }
+
+        # The instrument has a tickSize. Use it to round values.
+        return {k: toNearest(float(v or 0), instrument['tickSize']) for k, v in iteritems(ticker)}
 
     def instrument(self, symbol):
         """Get an instrument's details."""
-        return self.ws.get_instrument(symbol)
+        instrument = bfx.ws.wsdata.get_ticker(symbol)
+        if instrument is None:
+            raise Exception("Unable to find instrument with symbol: " + symbol)
+        # Turn the 'tickSize' into 'tickLog' for use in rounding
+        # http://stackoverflow.com/a/6190291/832202
+        instrument['tickSize'] = self.get_tick_size(instrument)
+        instrument['tickLog'] = decimal.Decimal(str(instrument['tickSize'])).as_tuple().exponent * -1
+        return instrument
 
-    #
-    # Authentication required methods
-    #
-    def authentication_required(fn):
-        """Annotation for methods that require auth."""
-        def wrapped(self, *args, **kwargs):
-            if not (self.apiKey):
-                msg = "You must be authenticated to use this method"
-                raise errors.AuthenticationError(msg)
-            else:
-                return fn(self, *args, **kwargs)
-        return wrapped
-
-    @authentication_required
     def funds(self):
         """Get your current balance."""
-        return self.ws.funds()
+        wallets = bfx.ws.wallets.get_wallets()
+        quote_currency = self.symbol[-3:]
+        for w in wallets:
+            if w.type == "margin" and w.currency == quote_currency:
+                return {'walletBalance': w.balance, 'marginBalance': 0}
 
-    @authentication_required
+        return {'walletBalance': 0, 'marginBalance': 0}
+
     def position(self, symbol):
         """Get your open position."""
-        return self.ws.position(symbol)
+        position = bfx.ws.positionManager.get_open_positions().get(symbol)
+        if position is None:
+            # No position found; stub it
+            return {'avgCostPrice': 0, 'avgEntryPrice': 0, 'currentQty': 0, 'symbol': symbol}
 
-    @authentication_required
+        return {'avgCostPrice': 0, 'avgEntryPrice': position.base_price, 'currentQty': position.amount, 'symbol': symbol}
+
     def create_bulk_orders(self, orders):
         """Create multiple orders."""
         for order in orders:
@@ -119,184 +167,21 @@ class Bitfinex(BaseExchange):
                 order['execInst'] = 'ParticipateDoNotInitiate'
         return self._curl_bitmex(path='order/bulk', postdict={'orders': orders}, verb='POST', max_retries=self.max_retries)
 
-    @authentication_required
     def amend_bulk_orders(self, orders):
         """Amend multiple orders."""
         # Note rethrow; if this fails, we want to catch it and re-tick
         return self._curl_bitmex(path='order/bulk', postdict={'orders': orders}, verb='PUT', rethrow_errors=True, max_retries=self.max_retries)
 
-    @authentication_required
     def open_orders(self):
         """Get open orders."""
-        return self.ws.open_orders(self.orderIDPrefix)
+        return bfx.ws.orderManager.get_open_orders()
 
-    @authentication_required
     def http_open_orders(self):
-        """Get open orders via HTTP. Used on close to ensure we catch them all."""
-        path = "order"
-        orders = self._curl_bitmex(
-            path=path,
-            query={
-                'filter': json.dumps({'ordStatus.isTerminated': False, 'symbol': self.symbol}),
-                'count': 500
-            },
-            verb="GET"
-        )
-        # Only return orders that start with our clOrdID prefix.
-        return [o for o in orders if str(o['clOrdID']).startswith(self.orderIDPrefix)]
+        raw_orders = bfx.rest2.active_orders(self.symbol)
+        return [Order.from_raw_order(o) for o in raw_orders]
 
-    @authentication_required
-    def cancel(self, orderID):
-        """Cancel an existing order."""
-        path = "order"
-        postdict = {
-            'orderID': orderID,
-        }
-        return self._curl_bitmex(path=path, postdict=postdict, verb="DELETE")
+    def cancel_orders(self, orders):
+        """Cancel existing orders."""
+        order_ids = [o.id for o in orders]
+        return bfx.rest1.delete_multiple_orders(order_ids)
 
-    def _curl_bitmex(self, path, query=None, postdict=None, timeout=None, verb=None, rethrow_errors=False,
-                     max_retries=None):
-        """Send a request to BitMEX Servers."""
-        # Handle URL
-        url = self.base_url + path
-
-        if timeout is None:
-            timeout = self.timeout
-
-        # Default to POST if data is attached, GET otherwise
-        if not verb:
-            verb = 'POST' if postdict else 'GET'
-
-        # By default don't retry POST or PUT. Retrying GET/DELETE is okay because they are idempotent.
-        # In the future we could allow retrying PUT, so long as 'leavesQty' is not used (not idempotent),
-        # or you could change the clOrdID (set {"clOrdID": "new", "origClOrdID": "old"}) so that an amend
-        # can't erroneously be applied twice.
-        if max_retries is None:
-            max_retries = 0 if verb in ['POST', 'PUT'] else self.max_retries
-
-        # Auth: API Key/Secret
-        auth = APIKeyAuthWithExpires(self.apiKey, self.apiSecret)
-
-        def exit_or_throw(e):
-            if rethrow_errors:
-                raise e
-            else:
-                exit(1)
-
-        def retry():
-            self.retries += 1
-            if self.retries > max_retries:
-                raise Exception("Max retry amount of {} on {} ({}) hit, raising.".format(max_retries, path, json.dumps(postdict or '')))
-            time.sleep(self.retry_delay)
-            return self._curl_bitmex(path, query, postdict, timeout, verb, rethrow_errors, max_retries)
-
-        # Make the request
-        response = None
-        try:
-            self.logger.info("Sending CURL request to %s: %s" % (url, json.dumps(postdict or query or '')))
-            req = requests.Request(verb, url, json=postdict, auth=auth, params=query)
-            prepped = self.session.prepare_request(req)
-            response = self.session.send(prepped, timeout=timeout)
-            #ratelimit_remaining = response.headers['X-RateLimit-Remaining']
-            #log_info(self.logger, "CURL request: {}, X-RateLimit-Remaining={}".format(url, ratelimit_remaining), True)
-            # Make non-200s throw
-            response.raise_for_status()
-
-        except requests.exceptions.HTTPError as e:
-            if response is None:
-                raise e
-
-            # 401 - Auth error. This is fatal.
-            if response.status_code == 401:
-                self.logger.error("API Key or Secret incorrect, please check and restart.")
-                self.logger.error("Error: " + response.text)
-                if postdict:
-                    self.logger.error(postdict)
-                # Always exit, even if rethrow_errors, because this is fatal
-                exit(1)
-
-            # 404, can be thrown if order canceled or does not exist.
-            elif response.status_code == 404:
-                if verb == 'DELETE':
-                    self.logger.error("Order not found: %s" % postdict['orderID'])
-                    return
-                self.logger.error("Unable to contact the BitMEX API (404). " +
-                                  "Request: %s \n %s" % (url, json.dumps(postdict)))
-                exit_or_throw(e)
-
-            # 429, ratelimit; cancel orders & wait until X-RateLimit-Reset
-            elif response.status_code == 429:
-                self.logger.error("Ratelimited on current request. Sleeping, then trying again. Try fewer " +
-                                  "order pairs or contact support@bitmex.com to raise your limits. " +
-                                  "Request: %s \n %s" % (url, json.dumps(postdict)))
-
-                # Figure out how long we need to wait.
-                ratelimit_reset = response.headers['X-RateLimit-Reset']
-                to_sleep = int(ratelimit_reset) - int(time.time())
-                reset_str = datetime.datetime.fromtimestamp(int(ratelimit_reset)).strftime('%X')
-
-                # We're ratelimited, and we may be waiting for a long time. Cancel orders.
-                self.logger.warning("Canceling all known orders in the meantime.")
-                self.cancel([o['orderID'] for o in self.open_orders()])
-
-                self.logger.error("Your ratelimit will reset at %s. Sleeping for %d seconds." % (reset_str, to_sleep))
-                time.sleep(to_sleep)
-
-                # Retry the request.
-                return retry()
-
-            # 503 - BitMEX temporary downtime, likely due to a deploy. Try again
-            elif response.status_code == 503:
-                self.logger.warning("Unable to contact the BitMEX API (503), retrying. " +
-                                    "Request: %s \n %s" % (url, json.dumps(postdict)))
-                time.sleep(3)
-                return retry()
-
-            elif response.status_code == 400:
-                error = response.json()['error']
-                message = error['message'].lower() if error else ''
-
-                # Duplicate clOrdID: that's fine, probably a deploy, go get the order(s) and return it
-                if 'duplicate clordid' in message:
-                    orders = postdict['orders'] if 'orders' in postdict else postdict
-
-                    IDs = json.dumps({'clOrdID': [order['clOrdID'] for order in orders]})
-                    orderResults = self._curl_bitmex('/order', query={'filter': IDs}, verb='GET')
-
-                    for i, order in enumerate(orderResults):
-                        if (
-                                order['orderQty'] != abs(postdict['orderQty']) or
-                                order['side'] != ('Buy' if postdict['orderQty'] > 0 else 'Sell') or
-                                order['price'] != postdict['price'] or
-                                order['symbol'] != postdict['symbol']):
-                            raise Exception('Attempted to recover from duplicate clOrdID, but order returned from API ' +
-                                            'did not match POST.\nPOST data: %s\nReturned order: %s' % (
-                                                json.dumps(orders[i]), json.dumps(order)))
-                    # All good
-                    return orderResults
-
-                elif 'insufficient available balance' in message:
-                    self.logger.error('Account out of funds. The message: %s' % error['message'])
-                    exit_or_throw(Exception('Insufficient Funds'))
-
-
-            # If we haven't returned or re-raised yet, we get here.
-            self.logger.error("Unhandled Error: %s: %s" % (e, response.text))
-            self.logger.error("Endpoint was: %s %s: %s" % (verb, path, json.dumps(postdict)))
-            exit_or_throw(e)
-
-        except requests.exceptions.Timeout as e:
-            # Timeout, re-run this request
-            self.logger.warning("Timed out on request: %s (%s), retrying..." % (path, json.dumps(postdict or '')))
-            return retry()
-
-        except requests.exceptions.ConnectionError as e:
-            self.logger.warning("Unable to contact the BitMEX API (%s). Please check the URL. Retrying. " +
-                                "Request: %s %s \n %s" % (e, url, json.dumps(postdict)))
-            time.sleep(1)
-            return retry()
-
-        # Reset retry counter on success
-        self.retries = 0
-
-        return response.json()

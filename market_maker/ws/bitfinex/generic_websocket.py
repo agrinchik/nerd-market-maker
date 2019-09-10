@@ -7,10 +7,12 @@ import websockets
 import socket
 import json
 import time
+import logging
 from threading import Thread
+from market_maker.utils.log import log_error
+import os
 
 from pyee import EventEmitter
-from market_maker.utils.bitfinex.custom_logger import CustomLogger
 
 # websocket exceptions
 from websockets.exceptions import ConnectionClosed
@@ -71,7 +73,7 @@ class GenericWebsocket:
 
     def __init__(self, host, logLevel='INFO', max_retries=5, create_event_emitter=None):
         self.host = host
-        self.logger = CustomLogger('BfxWebsocket', logLevel=logLevel)
+        self.logger = logging.getLogger('root')
         # overide 'error' event to stop it raising an exception
         # self.events.on('error', self.on_error)
         self.ws = None
@@ -146,6 +148,9 @@ class GenericWebsocket:
                 await self._connect(s)
                 retries = 0
             except (ConnectionClosed, socket.error) as e:
+                if isinstance(e, ConnectionClosed) and e.code == 1006:
+                    log_error(self.logger, "Bitfinex Websocket exception occurred: {}. The NerdMarketMaker bot will be restarted.".format(e.code), True)
+                    os._exit(1)
                 self.sockets[sId].set_disconnected()
                 self._emit('disconnected')
                 if (not self.attempt_retry):

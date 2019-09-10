@@ -46,6 +46,6 @@ class BaseExchange(object):
         pass
 
     @abstractmethod
-    def cancel(self, orderID):
+    def cancel_orders(self, orders):
         pass
 

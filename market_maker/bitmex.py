@@ -61,6 +61,19 @@ class BitMEX(BaseExchange):
     #
     # Public methods
     #
+
+    def check_if_orderbook_empty(self, symbol):
+        """This function checks whether the order book is empty"""
+        instrument = self.instrument(symbol)
+        if instrument['midPrice'] is None:
+            raise errors.MarketEmptyError("Orderbook is empty, cannot quote")
+
+    def check_market_open(self, symbol):
+        instrument = self.instrument(symbol)
+        if instrument["state"] != "Open" and instrument["state"] != "Closed":
+            raise errors.MarketClosedError("The instrument %s is not open. State: %s" %
+                                           (self.symbol, instrument["state"]))
+
     def ticker_data(self, symbol=None):
         """Get ticker data."""
         if symbol is None:
@@ -131,11 +144,11 @@ class BitMEX(BaseExchange):
         return [o for o in orders if str(o['clOrdID']).startswith(self.orderIDPrefix)]
 
     @authentication_required
-    def cancel(self, orderID):
-        """Cancel an existing order."""
+    def cancel_orders(self, orders):
+        """Cancel existing orders."""
         path = "order"
         postdict = {
-            'orderID': orderID,
+            'orderID': [o.get('orderID') for o in orders],
         }
         return self._curl_bitmex(path=path, postdict=postdict, verb="DELETE")
 
