@@ -6,8 +6,8 @@ subscriptions
 import json
 import asyncio
 import time
+import logging
 
-from market_maker.utils.bitfinex.custom_logger import CustomLogger
 from market_maker.models.bitfinex import Subscription
 
 MAX_CHANNEL_COUNT = 25
@@ -20,7 +20,7 @@ class SubscriptionManager:
         self.subscriptions_subid = {}
         self.unsubscribe_callbacks = {}
         self.bfxapi = bfxapi
-        self.logger = CustomLogger('BfxSubscriptionManager', logLevel=logLevel)
+        self.logger = logging.getLogger('root')
 
     def get_sub_count_by_socket(self, socket_id):
         count = 0

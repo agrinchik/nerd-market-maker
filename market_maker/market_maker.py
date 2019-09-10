@@ -8,13 +8,13 @@ import random
 import requests
 import atexit
 import signal
-from market_maker.utils.bitmex.log import log_info
-from market_maker.utils.bitmex.log import log_error
+from market_maker.utils.log import log_info
+from market_maker.utils.log import log_error
 
-from market_maker import bitmex
 from market_maker import bitfinex
 from market_maker.settings import settings
-from market_maker.utils.bitmex import constants, errors, log, math
+from market_maker.utils.bitmex import constants, errors, math
+from market_maker.utils import log
 
 from market_maker.dynamic_settings import DynamicSettings
 
@@ -62,9 +62,10 @@ class ExchangeInterface:
             logger.info("Canceling: %s %d @ %.*f" % (order['side'], order['orderQty'], tickLog, order['price']))
 
         if len(orders):
-            self.xchange.cancel([order['orderID'] for order in orders])
-
-        sleep(settings.API_REST_INTERVAL)
+            logger.info("Cancelling all orders: {}".format(orders))
+            result = self.xchange.cancel_orders(orders)
+            logger.info("Cancelling all orders result={}".format(result))
+            sleep(settings.API_REST_INTERVAL)
 
     def get_delta(self, symbol=None):
         if symbol is None:
@@ -189,7 +190,7 @@ class OrderManager:
         if settings.DRY_RUN:
             logger.info("Initializing dry run. Orders printed below represent what would be posted to BitMEX.")
         else:
-            logger.info("Order Manager initializing, connecting to BitMEX. Live run: executing real trades.")
+            logger.info("Order Manager initializing, connecting to exchange. Live run: executing real trades.")
 
         self.start_time = datetime.now()
         self.instrument = self.exchange.get_instrument()

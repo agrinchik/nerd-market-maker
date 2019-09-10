@@ -3,7 +3,6 @@ Module used to describe all of the different data types
 """
 
 import time
-import datetime
 
 class OrderType:
     """
@@ -108,115 +107,48 @@ class Order:
     Side = OrderSide()
     Flags = OrderFlags()
 
-    def __init__(self, oid, gid, cid, symbol, mts_create, mts_update, amount,
-                 amount_orig, o_type, typePrev, flags, status, price, price_avg,
-                 price_trailing, price_aux_limit, notfiy, place_id):
-        self.id = oid # pylint: disable=invalid-name
-        self.gid = gid
-        self.cid = cid
-        self.symbol = symbol
-        self.mts_create = mts_create
-        self.mts_update = mts_update
-        self.amount = amount
-        self.amount_orig = amount_orig
-        if self.amount_orig > 0:
-            self.amount_filled = amount_orig - amount
-        else:
-            self.amount_filled = -(abs(amount_orig) - abs(amount))
-        self.type = o_type
-        self.type_prev = typePrev
-        self.flags = flags
-        self.status = status
-        self.price = price
-        self.price_avg = price_avg
-        self.price_trailing = price_trailing
-        self.price_aux_limit = price_aux_limit
-        self.notfiy = notfiy
-        self.place_id = place_id
-        self.tag = ""
-        self.fee = 0
-        self.is_pending_bool = True
-        self.is_confirmed_bool = False
-        self.is_open_bool = False
-
-        self.date = datetime.datetime.fromtimestamp(mts_create/1000.0)
-        # if cancelled then priceAvg wont exist
-        if price_avg:
-            # check if order is taker or maker
-            if self.type in LIMIT_ORDERS:
-                self.fee = (price_avg * abs(self.amount_filled)) * 0.001
-            else:
-                self.fee = (price_avg * abs(self.amount_filled)) * 0.002
+    def __init__(self):
+        pass
 
     @staticmethod
     def from_raw_order(raw_order):
         """
         Parse a raw order object into an Order oject
 
-        @return Order
+        @return order dict
         """
-        oid = raw_order[OrderClosedModel.ID]
-        gid = raw_order[OrderClosedModel.GID]
-        cid = raw_order[OrderClosedModel.CID]
-        symbol = raw_order[OrderClosedModel.SYMBOL]
-        mts_create = raw_order[OrderClosedModel.MTS_CREATE]
-        mts_update = raw_order[OrderClosedModel.MTS_UPDATE]
-        amount = raw_order[OrderClosedModel.AMOUNT]
-        amount_orig = raw_order[OrderClosedModel.AMOUNT_ORIG]
-        o_type = raw_order[OrderClosedModel.TYPE]
-        type_prev = raw_order[OrderClosedModel.TYPE_PREV]
-        flags = raw_order[OrderClosedModel.FLAGS]
-        status = raw_order[OrderClosedModel.STATUS]
-        price = raw_order[OrderClosedModel.PRICE]
-        price_avg = raw_order[OrderClosedModel.PRICE_AVG]
-        price_trailing = raw_order[OrderClosedModel.PRICE_TRAILING]
-        price_aux_limit = raw_order[OrderClosedModel.PRICE_AUX_LIMIT]
-        notfiy = raw_order[OrderClosedModel.NOTIFY]
-        place_id = raw_order[OrderClosedModel.PLACE_ID]
-
-        return Order(oid, gid, cid, symbol, mts_create, mts_update, amount,
-                     amount_orig, o_type, type_prev, flags, status, price, price_avg,
-                     price_trailing, price_aux_limit, notfiy, place_id)
-
-    def set_confirmed(self):
-        """
-        Set the state of the order to be confirmed
-        """
-        self.is_pending_bool = False
-        self.is_confirmed_bool = True
-
-    def set_open_state(self, is_open):
-        """
-        Set the is_open state of the order
-        """
-        self.is_open_bool = is_open
-
-    def is_open(self):
-        """
-        Check if the order is still open
-
-        @return bool: Ture if order open else False
-        """
-        return self.is_open_bool
-
-    def is_pending(self):
-        """
-        Check if the state of the order is still pending
-
-        @return bool: True if is pending else False
-        """
-        return self.is_pending_bool
-
-    def is_confirmed(self):
-        """
-        Check if the order has been confirmed by the bitfinex api
-
-        @return bool: True if has been confirmed else False
-        """
-        return self.is_confirmed_bool
-
-    def __str__(self):
-        ''' Allow us to print the Order object in a pretty format '''
-        text = "Order <'{}' amount_orig={} amount_filled={} mts_create={} status='{}' id={}>"
-        return text.format(self.symbol, self.amount_orig, self.amount_filled,
-                           self.mts_create, self.status, self.id)
+        return {
+            "orderID": raw_order[OrderClosedModel.ID],
+            "clOrdID": raw_order[OrderClosedModel.CID],
+            #"clOrdLinkID": "string",
+            #"account": 0,
+            "symbol": raw_order[OrderClosedModel.SYMBOL],
+            "side": ('Buy' if raw_order[OrderClosedModel.AMOUNT] > 0 else 'Sell'),
+            #"simpleOrderQty": 0,
+            "orderQty": raw_order[OrderClosedModel.AMOUNT],
+            "price": raw_order[OrderClosedModel.PRICE],
+            #"displayQty": 0,
+            #"stopPx": 0,
+            #"pegOffsetValue": 0,
+            #"pegPriceType": "string",
+            #"currency": "string",
+            #"settlCurrency": "string",
+            "ordType": raw_order[OrderClosedModel.TYPE],
+            #"timeInForce": "string",
+            #"execInst": "string",
+            #"contingencyType": "string",
+            #"exDestination": "string",
+            "ordStatus": raw_order[OrderClosedModel.STATUS],
+            #"triggered": "string",
+            "workingIndicator": True,
+            #"ordRejReason": "string",
+            #"simpleLeavesQty": 0,
+            "leavesQty": raw_order[OrderClosedModel.AMOUNT_ORIG],
+            #"simpleCumQty": 0,
+            #"cumQty": 0,
+            #"avgPx": 0,
+            #"multiLegReportingType": "string",
+            #"text": "string",
+            "transactTime": raw_order[OrderClosedModel.MTS_CREATE],
+            "timestamp": raw_order[OrderClosedModel.MTS_UPDATE]
+        }
