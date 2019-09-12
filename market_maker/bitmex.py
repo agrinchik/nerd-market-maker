@@ -11,6 +11,9 @@ from market_maker.auth.bitmex import APIKeyAuthWithExpires
 from market_maker.utils.bitmex import constants, errors
 from market_maker.ws.bitmex.ws_thread import BitMEXWebsocket
 from market_maker.exchange import BaseExchange
+from market_maker.exchange import ExchangeInfo
+
+BASE_URL = "https://www.bitmex.com/api/v1/"
 
 
 # https://www.bitmex.com/api/explorer/
@@ -18,20 +21,16 @@ class BitMEX(BaseExchange):
 
     """BitMEX API Connector."""
 
-    def __init__(self, base_url=None, symbol=None, apiKey=None, apiSecret=None,
+    def __init__(self, symbol=None,
                  orderIDPrefix='mm_bitmex_', shouldWSAuth=True, postOnly=False, timeout=7,
                  retries=24, retry_delay=5):
         """Init connector."""
         self.logger = logging.getLogger('root')
-        self.base_url = base_url
+        self.base_url = BASE_URL
         self.symbol = symbol
         self.postOnly = postOnly
-        if (apiKey is None):
-            raise Exception("Please set an API key and Secret to get started. See " +
-                            "https://github.com/BitMEX/sample-market-maker/#getting-started for more information."
-                            )
-        self.apiKey = apiKey
-        self.apiSecret = apiSecret
+        self.apiKey = ExchangeInfo.get_apikey()
+        self.apiSecret = ExchangeInfo.get_apisecret()
         if len(orderIDPrefix) > 13:
             raise ValueError("settings.ORDERID_PREFIX must be at most 13 characters long!")
         self.orderIDPrefix = orderIDPrefix
@@ -46,7 +45,7 @@ class BitMEX(BaseExchange):
 
         # Create websocket for streaming data
         self.ws = BitMEXWebsocket()
-        self.ws.connect(base_url, symbol, shouldAuth=shouldWSAuth)
+        self.ws.connect(self.base_url, symbol, shouldAuth=shouldWSAuth)
 
         self.timeout = timeout
         self.max_retries = retries
@@ -79,6 +78,10 @@ class BitMEX(BaseExchange):
         if symbol is None:
             symbol = self.symbol
         return self.ws.get_ticker(symbol)
+
+    def is_open(self):
+        """Check that websockets are still open."""
+        return not self.ws.exited
 
     def instrument(self, symbol):
         """Get an instrument's details."""

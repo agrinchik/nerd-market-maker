@@ -51,17 +51,15 @@ def _parse_candle(cData, symbol, tf):
 
 def _parse_ticker(cData, symbol):
     return {
-        'bid': cData[0],
-        'bid_size': cData[1],
-        'ask': cData[2],
-        'ask_size': cData[3],
-        'daily_change': cData[4],
-        'daily_change_perc': cData[5],
-        'last_price': cData[6],
+        'bidPrice': cData[0],
+        'askPrice': cData[2],
+        'midPrice': (cData[0] + cData[2]) / 2,
+        'lastPrice': cData[6],
         'volume': cData[7],
-        'high': cData[8],
-        'low': cData[9],
-        'symbol': symbol
+        'highPrice': cData[8],
+        'lowPrice': cData[9],
+        'symbol': symbol,
+        'state': 'Open'
     }
 
 
@@ -131,7 +129,7 @@ class BfxWebsocket(GenericWebsocket):
         20061: 'Websocket server resync complete'
     }
 
-    def __init__(self, API_KEY=None, API_SECRET=None, host='wss://api-pub.bitfinex.com/ws/2',
+    def __init__(self, API_KEY=None, API_SECRET=None, host=None,
                  manageOrderBooks=False, dead_man_switch=False, ws_capacity=25, logLevel='INFO', parse_float=float,
                  *args, **kwargs):
         self.API_KEY = API_KEY

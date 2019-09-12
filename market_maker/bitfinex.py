@@ -16,7 +16,9 @@ from market_maker.models.bitfinex import Order
 from market_maker.rest.bitfinex import ClientV1 as Client1
 from market_maker.rest.bitfinex import ClientV2 as Client2
 from market_maker.utils.bitmex import errors
+from market_maker.exchange import ExchangeInfo
 
+import math
 import requests
 from time import sleep
 import datetime
@@ -46,8 +48,8 @@ class BitfinexClient:
                                ws_capacity=ws_capacity, create_event_emitter=create_event_emitter, *args, **kwargs)
 
 bfx = BitfinexClient(
-    API_KEY=API_KEY,
-    API_SECRET=API_SECRET,
+    API_KEY=ExchangeInfo.get_apikey(),
+    API_SECRET=ExchangeInfo.get_apisecret(),
     logLevel='INFO'
 )
 
@@ -83,19 +85,20 @@ class Bitfinex(BaseExchange):
         print("Error: {}".format(err))
 
     def get_tick_size(self, instrument):
-        bid = number_to_string(instrument['bid'])
-        bid_precision = precision_from_string(bid)
-        ask = number_to_string(instrument['ask'])
-        ask_precision = precision_from_string(ask)
-        high = number_to_string(instrument['high'])
-        high_precision = precision_from_string(high)
-        low = number_to_string(instrument['low'])
-        low_precision = precision_from_string(low)
-        precision = max(bid_precision, ask_precision, high_precision, low_precision)
+        bid_price = number_to_string(instrument['bidPrice'])
+        bid_precision = precision_from_string(bid_price)
+        ask_price = number_to_string(instrument['askPrice'])
+        ask_precision = precision_from_string(ask_price)
+        last_price = number_to_string(instrument['lastPrice'])
+        last_precision = precision_from_string(last_price)
+        precision = max(bid_precision, ask_precision, last_precision)
         if precision == 0:
-            return 1
+            return 0
         else:
-            return round(pow(10, -precision), precision)
+            if instrument['lastPrice'] > 1 and precision > 5:
+                return 5 - (int(math.log10(instrument['lastPrice'])) + 1)
+            else:
+                return round(pow(10, -precision), precision)
 
     async def start(self):
         # await bfx.ws.subscribe('candles', 'tBTCUSD', timeframe='1m')
@@ -116,10 +119,10 @@ class Bitfinex(BaseExchange):
         '''Return a ticker object. Generated from instrument.'''
         instrument = self.instrument(symbol)
 
-        bid = instrument['bid'] or instrument['last_price']
-        ask = instrument['ask'] or instrument['last_price']
+        bid = instrument['bidPrice'] or instrument['lastPrice']
+        ask = instrument['askPrice'] or instrument['lastPrice']
         ticker = {
-            "last": instrument['last_price'],
+            "last": instrument['lastPrice'],
             "buy": bid,
             "sell": ask,
             "mid": (bid + ask) / 2
@@ -127,6 +130,10 @@ class Bitfinex(BaseExchange):
 
         # The instrument has a tickSize. Use it to round values.
         return {k: toNearest(float(v or 0), instrument['tickSize']) for k, v in iteritems(ticker)}
+
+    def is_open(self):
+        """Check that websockets are still open."""
+        return not bfx.ws.is_disconnected_socket()
 
     def instrument(self, symbol):
         """Get an instrument's details."""

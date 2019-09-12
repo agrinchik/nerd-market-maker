@@ -49,57 +49,107 @@ class Position:
     META string
     """
 
-    def __init__(self, symbol, status, amount, b_price, m_funding, m_funding_type,
-                 profit_loss, profit_loss_perc, l_price, lev, oid, mts_create, mts_update, type, collateral, collateral_min, meta_json):
-        self.symbol = symbol
-        self.status = status
-        self.amount = amount
-        self.base_price = b_price
-        self.margin_funding = m_funding
-        self.margin_funding_type = m_funding_type
-        self.profit_loss = profit_loss
-        self.profit_loss_percentage = profit_loss_perc
-        self.liquidation_price = l_price
-        self.leverage = lev
-        self.id = oid
-        self.mts_create = mts_create
-        self.mts_update = mts_update
-        self.type = type
-        self.collateral = collateral
-        self.collateral_min = collateral_min
-        self.meta_json = meta_json
+    def __init__(self):
+        pass
 
     @staticmethod
     def from_raw_position(raw_position):
         """
         Parse a raw position object into a Position object
 
-        @return Position
+        @return position dict
         """
-        symbol = raw_position[PositionModel.SYMBOL]
-        status = raw_position[PositionModel.STATUS]
-        amount = raw_position[PositionModel.AMOUNT]
-        b_price = raw_position[PositionModel.BASE_PRICE]
-        m_funding = raw_position[PositionModel.MARGIN_FUNDING]
-        m_funding_type = raw_position[PositionModel.MARGIN_FUNDING_TYPE]
-        profit_loss = raw_position[PositionModel.PL]
-        profit_loss_perc = raw_position[PositionModel.PL_PERC]
-        l_price = raw_position[PositionModel.PRICE_LIQ]
-        lev = raw_position[PositionModel.LEVERAGE]
-        oid = raw_position[PositionModel.ID]
-        mts_create = raw_position[PositionModel.MTS_CREATE]
-        mts_update = raw_position[PositionModel.MTS_UPDATE]
-        otype = raw_position[PositionModel.TYPE]
-        collateral = raw_position[PositionModel.COLLATERAL]
-        collateral_min = raw_position[PositionModel.COLLATERAL_MIN]
-        meta_json = raw_position[PositionModel.META]
+        return {
+            #"account": 0,
+            "symbol": raw_position[PositionModel.SYMBOL],
+            #"currency": "string",
+            #"underlying": "string",
+            #"quoteCurrency": "string",
+            #"commission": 0,
+            #"initMarginReq": 0,
+            #"maintMarginReq": 0,
+            #"riskLimit": 0,
+            "leverage": raw_position[PositionModel.LEVERAGE],
+            "crossMargin": True,
+            #"deleveragePercentile": 0,
+            #"rebalancedPnl": 0,
+            #"prevRealisedPnl": 0,
+            #"prevUnrealisedPnl": 0,
+            #"prevClosePrice": 0,
+            "openingTimestamp": raw_position[PositionModel.MTS_CREATE],
+            #"openingQty": 0,
+            #"openingCost": 0,
+            #"openingComm": 0,
+            #"openOrderBuyQty": 0,
+            #"openOrderBuyCost": 0,
+            #"openOrderBuyPremium": 0,
+            #"openOrderSellQty": 0,
+            #"openOrderSellCost": 0,
+            #"openOrderSellPremium": 0,
+            #"execBuyQty": 0,
+            #"execBuyCost": 0,
+            #"execSellQty": 0,
+            #"execSellCost": 0,
+            #"execQty": 0,
+            #"execCost": 0,
+            #"execComm": 0,
+            "currentTimestamp": raw_position[PositionModel.MTS_UPDATE],
+            "currentQty": raw_position[PositionModel.AMOUNT],
+            #"currentCost": 0,
+            #"currentComm": 0,
+            #"realisedCost": 0,
+            #"unrealisedCost": 0,
+            #"grossOpenCost": 0,
+            #"grossOpenPremium": 0,
+            #"grossExecCost": 0,
+            "isOpen": True,
+            #"markPrice": 0,
+            #"markValue": 0,
+            #"riskValue": 0,
+            #"homeNotional": 0,
+            #"foreignNotional": 0,
+            #"posState": "string",
+            #"posCost": 0,
+            #"posCost2": 0,
+            #"posCross": 0,
+            #"posInit": 0,
+            #"posComm": 0,
+            #"posLoss": 0,
+            #"posMargin": 0,
+            #"posMaint": 0,
+            #"posAllowance": 0,
+            #"taxableMargin": 0,
+            #"initMargin": 0,
+            #"maintMargin": 0,
+            #"sessionMargin": 0,
+            #"targetExcessMargin": 0,
+            #"varMargin": 0,
+            #"realisedGrossPnl": 0,
+            #"realisedTax": 0,
+            #"realisedPnl": 0,
+            #"unrealisedGrossPnl": 0,
+            #"longBankrupt": 0,
+            #"shortBankrupt": 0,
+            #"taxBase": 0,
+            #"indicativeTaxRate": 0,
+            #"indicativeTax": 0,
+            #"unrealisedTax": 0,
+            #"unrealisedPnl": 0,
+            #"unrealisedPnlPcnt": 0,
+            #"unrealisedRoePcnt": 0,
+            #"simpleQty": 0,
+            #"simpleCost": 0,
+            #"simpleValue": 0,
+            #"simplePnl": 0,
+            #"simplePnlPcnt": 0,
+            #"avgCostPrice": 0,
+            "avgEntryPrice": raw_position[PositionModel.BASE_PRICE],
+            #"breakEvenPrice": 0,
+            #"marginCallPrice": 0,
+            #"liquidationPrice": 0,
+            #"bankruptPrice": 0,
+            "timestamp": raw_position[PositionModel.MTS_UPDATE],
+            #"lastPrice": 0,
+            #"lastValue": 0
+        }
 
-        return Position(symbol, status, amount, b_price, m_funding, m_funding_type,
-                        profit_loss, profit_loss_perc, l_price, lev, oid, mts_create,
-                        mts_update, otype, collateral, collateral_min, meta_json)
-
-    def __str__(self):
-        ''' Allow us to print the Trade object in a pretty format '''
-        text = "Position id={}, '{}' {} x {} <status='{}' pl={}>"
-        return text.format(self.id, self.symbol, self.base_price, self.amount,
-                           self.status, self.profit_loss)
