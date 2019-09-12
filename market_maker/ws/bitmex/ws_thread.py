@@ -7,7 +7,7 @@ from time import sleep
 import json
 import decimal
 import logging
-from market_maker.utils.bitmex import constants
+from market_maker.utils.bitmex.utils import XBt_to_XBT
 from market_maker.utils.log import log_error, log_info
 from market_maker.settings import settings
 from market_maker.auth.bitmex.APIKeyAuth import generate_expires, generate_signature
@@ -17,9 +17,8 @@ from future.utils import iteritems
 from future.standard_library import hooks
 with hooks():  # Python 2/3 compat
     from urllib.parse import urlparse, urlunparse
+from market_maker.exchange import ExchangeInfo
 
-def XBt_to_XBT(XBt):
-    return float(XBt) / constants.XBt_TO_XBT
 
 
 # Connects to BitMEX websocket for streaming realtime data.
@@ -110,7 +109,10 @@ class BitMEXWebsocket():
         return {k: toNearest(float(v or 0), instrument['tickSize']) for k, v in iteritems(ticker)}
 
     def funds(self):
-        return self.data['margin'][0]
+        margin = self.data['margin'][0]
+        margin["walletBalance"] = XBt_to_XBT(margin["walletBalance"])
+        margin["marginBalance"] = XBt_to_XBT(margin["marginBalance"])
+        return margin
 
     def current_qty(self):
         return self.position(self.symbol)['currentQty']
@@ -198,7 +200,7 @@ class BitMEXWebsocket():
         return [
             "api-expires: " + str(nonce),
             "api-signature: " + generate_signature(settings.API_SECRET, 'GET', '/realtime', nonce, ''),
-            "api-key:" + settings.API_KEY
+            "api-key:" + ExchangeInfo.get_apikey()
         ]
 
     def __wait_for_account(self):

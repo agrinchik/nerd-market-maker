@@ -43,6 +43,9 @@ class Socket():
     def set_disconnected(self):
         self.isConnected = False
 
+    def is_disconnected(self):
+        return self.isConnected is False
+
     def set_authenticated(self):
         self.isAuthenticated = True
 
@@ -137,6 +140,12 @@ class GenericWebsocket:
             if self.sockets[socketId].isAuthenticated:
                 return self.sockets[socketId]
         return None
+
+    def is_disconnected_socket(self):
+        for socketId in self.sockets:
+            if self.sockets[socketId].is_disconnected():
+                return True
+        return False
 
     async def _run_socket(self):
         retries = 0

@@ -5,5 +5,8 @@ def toNearest(num, tickSize):
        out of numbers: e.g. toNearest(401.46, 0.01) -> 401.46, whereas processing is
        normally with floats would give you 401.46000000000004.
        Use this after adding/subtracting/multiplying numbers."""
-    tickDec = Decimal(str(tickSize))
-    return float((Decimal(round(num / tickSize, 0)) * tickDec))
+    if tickSize > 0:
+        tickDec = Decimal(str(tickSize))
+        return float((Decimal(round(num / tickSize, 0)) * tickDec))
+    else:
+        return num

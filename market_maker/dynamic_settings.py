@@ -1,18 +1,24 @@
 import logging
-from market_maker.utils.bitmex.utils import XBt_to_XBT
 import datetime
 from datetime import timedelta
 from market_maker.utils.log import log_info
 from market_maker.settings import settings
+from market_maker.exchange import ExchangeInfo
 
-DEFAULT_POSITION_MARGIN_TO_WALLET_RATIO_PCT = 0.0386
-DEFAULT_ORDER_MARGIN_TO_WALLET_RATIO_PCT = 0.0386
-DEFAULT_LEVERAGE = 100
-DEFAULT_INITIAL_MARGIN_BASE_PCT = 0.01
-DEFAULT_TAKER_FEE_PCT = 0.00075
 DEFAULT_MIN_SPREAD_ADJUSTMENT_FACTOR = 0.6
 DEFAULT_RELIST_INTERVAL_ADJUSTMENT_FACTOR = 1.2
-DEFAULT_MIN_POSITION_SHORTS_ADJUSTMENT_FACTOR = 1.4
+
+BITMEX_DEFAULT_POSITION_MARGIN_TO_WALLET_RATIO_PCT = 0.0386
+BITMEX_DEFAULT_ORDER_MARGIN_TO_WALLET_RATIO_PCT = 0.0386
+BITMEX_DEFAULT_LEVERAGE = 100
+BITMEX_DEFAULT_INITIAL_MARGIN_BASE_PCT = 0.01
+BITMEX_DEFAULT_TAKER_FEE_PCT = 0.00075
+BITMEX_DEFAULT_MIN_POSITION_SHORTS_ADJUSTMENT_FACTOR = 1.4
+
+BITFINEX_DEFAULT_MAINTENANCE_RATIO_PCT = 0.15
+BITFINEX_DISTANCE_TO_LIQUIDATION_PRICE_PCT = 0.25
+BITFINEX_TOTAL_POSITION_MARGIN_ADJUST_RATIO = 0.9
+BITFINEX_DEFAULT_LEVERAGE = 3.33333333
 
 PARAMS_UPDATE_INTERVAL = 300  # 5 minutes
 
@@ -240,13 +246,13 @@ class DynamicSettings(object):
         self.logger = logging.getLogger('root')
         self.exchange = exchange
 
-        self.position_margin_pct = DEFAULT_POSITION_MARGIN_TO_WALLET_RATIO_PCT
-        self.order_margin_pct = DEFAULT_ORDER_MARGIN_TO_WALLET_RATIO_PCT
+        self.position_margin_pct = 0
+        self.order_margin_pct = 0
         self.position_margin_amount = 0
         self.order_margin_amount = 0
-        self.default_leverage = DEFAULT_LEVERAGE
-        self.initial_margin_base_pct = DEFAULT_INITIAL_MARGIN_BASE_PCT
-        self.taker_fee_pct = DEFAULT_TAKER_FEE_PCT
+        self.default_leverage = 0
+        self.initial_margin_base_pct = 0
+        self.taker_fee_pct = 0
         self.max_possible_position_margin = 0
         self.max_drawdown_pct = 0
         self.working_range_pct = 0
@@ -266,12 +272,15 @@ class DynamicSettings(object):
         self.params_last_update = datetime.datetime.now() - timedelta(days=1000)
         self.curr_risk_profile_id = ""
         self.curr_risk_level = 1000000
+        self.bitfinex_maintenance_ratio_pct = 0
+        self.bitfinex_distance_to_liquidation_price_pct = 0
+        self.bitfinex_total_position_margin_adjust_ratio = 0
 
     def initialize_params(self):
         ticker = self.exchange.get_ticker()
         ticker_last_price = ticker["last"]
         margin = self.exchange.get_margin()
-        wallet_balance_XBT = XBt_to_XBT(margin["walletBalance"])
+        wallet_balance = margin["walletBalance"]
         position = self.exchange.get_position()
         current_qty = position['currentQty']
         avg_entry_price = position['avgEntryPrice']
@@ -280,12 +289,14 @@ class DynamicSettings(object):
         deposit_load_pct = self.get_deposit_load_pct(running_qty)
         risk_profile = self.get_risk_profile(distance_to_avg_price_pct, deposit_load_pct)
 
-        self.update_dynamic_params(wallet_balance_XBT, ticker_last_price, risk_profile)
+        self.update_dynamic_params(wallet_balance, ticker_last_price, risk_profile)
         self.update_settings_value("MIN_POSITION", self.min_position)
         self.update_settings_value("MAX_POSITION", self.max_position)
 
         self.curr_risk_profile_id = ""
         self.curr_risk_level = 1000000
+
+        self.log_params()
 
     def update_settings_value(self, key, value):
         if settings[key] != value:
@@ -323,7 +334,7 @@ class DynamicSettings(object):
         ticker = self.exchange.get_ticker()
         ticker_last_price = ticker["last"]
         margin = self.exchange.get_margin()
-        wallet_balance_XBT = XBt_to_XBT(margin["walletBalance"])
+        wallet_balance = margin["walletBalance"]
         running_qty = self.exchange.get_delta()
         position = self.exchange.get_position()
         current_qty = position['currentQty']
@@ -341,7 +352,7 @@ class DynamicSettings(object):
         is_risk_profile_changed_flag = True if risk_profile_id != self.curr_risk_profile_id and (current_qty == 0 or current_qty != 0 and risk_level < self.curr_risk_level) else False
 
         if is_params_exceeded_update_interval_flag is True and is_risk_profile_changed_flag is True:
-            self.update_dynamic_params(wallet_balance_XBT, ticker_last_price, risk_profile)
+            self.update_dynamic_params(wallet_balance, ticker_last_price, risk_profile)
             self.params_last_update = curr_time
             log_info(self.logger, "Dynamic parameters have been updated!", True)
             result = True
@@ -352,24 +363,54 @@ class DynamicSettings(object):
         return result
 
     def update_dynamic_params(self, last_wallet_balance, ticker_last_price, risk_profile):
-        self.curr_risk_profile_id = risk_profile["id"]
-        self.curr_risk_level = risk_profile["risk_level"]
-        self.max_drawdown_pct = risk_profile["max_drawdown_pct"]
-        self.working_range_pct = risk_profile["working_range_pct"]
-        self.max_number_dca_orders = risk_profile["max_number_dca_orders"]
-        self.interval_pct = round(self.max_drawdown_pct / self.max_number_dca_orders, 8)
-        self.min_spread_pct = round(self.interval_pct * 2 * DEFAULT_MIN_SPREAD_ADJUSTMENT_FACTOR, 8)
-        self.relist_interval_pct = round(self.interval_pct * DEFAULT_RELIST_INTERVAL_ADJUSTMENT_FACTOR, 8)
-        self.order_pairs = int(round(self.working_range_pct / self.interval_pct))
+        if ExchangeInfo.is_bitmex():
+            self.position_margin_pct = BITMEX_DEFAULT_POSITION_MARGIN_TO_WALLET_RATIO_PCT
+            self.order_margin_pct = BITMEX_DEFAULT_ORDER_MARGIN_TO_WALLET_RATIO_PCT
+            self.default_leverage = BITMEX_DEFAULT_LEVERAGE
+            self.initial_margin_base_pct = BITMEX_DEFAULT_INITIAL_MARGIN_BASE_PCT
+            self.taker_fee_pct = BITMEX_DEFAULT_TAKER_FEE_PCT
+            self.curr_risk_profile_id = risk_profile["id"]
+            self.curr_risk_level = risk_profile["risk_level"]
+            self.max_drawdown_pct = risk_profile["max_drawdown_pct"]
+            self.working_range_pct = risk_profile["working_range_pct"]
+            self.max_number_dca_orders = risk_profile["max_number_dca_orders"]
+            self.interval_pct = round(self.max_drawdown_pct / self.max_number_dca_orders, 8)
+            self.min_spread_pct = round(self.interval_pct * 2 * DEFAULT_MIN_SPREAD_ADJUSTMENT_FACTOR, 8)
+            self.relist_interval_pct = round(self.interval_pct * DEFAULT_RELIST_INTERVAL_ADJUSTMENT_FACTOR, 8)
+            self.order_pairs = int(round(self.working_range_pct / self.interval_pct))
 
-        self.position_margin_amount = round(last_wallet_balance * self.position_margin_pct, 8)
-        self.order_margin_amount = round(last_wallet_balance * self.order_margin_pct, 8)
-        self.max_possible_position_margin = round(self.position_margin_amount * self.default_leverage * ticker_last_price)
-        self.min_position = round(-1 * self.max_possible_position_margin * DEFAULT_MIN_POSITION_SHORTS_ADJUSTMENT_FACTOR)
-        self.max_position = round(self.max_possible_position_margin)
-        self.order_step_size = self.get_order_step_size(last_wallet_balance)
-        self.order_start_size = round(self.max_possible_position_margin / self.max_number_dca_orders - self.order_step_size * (self.max_number_dca_orders - 1) / 2)
-        self.deposit_load_intensity = round(self.order_start_size / (100 * self.interval_pct), 8)
+            self.position_margin_amount = round(last_wallet_balance * self.position_margin_pct, 8)
+            self.order_margin_amount = round(last_wallet_balance * self.order_margin_pct, 8)
+            self.max_possible_position_margin = round(self.position_margin_amount * self.default_leverage * ticker_last_price)
+            self.min_position = round(-1 * self.max_possible_position_margin * BITMEX_DEFAULT_MIN_POSITION_SHORTS_ADJUSTMENT_FACTOR)
+            self.max_position = round(self.max_possible_position_margin)
+            self.order_step_size = self.get_order_step_size(last_wallet_balance)
+            self.order_start_size = round(self.max_possible_position_margin / self.max_number_dca_orders - self.order_step_size * (self.max_number_dca_orders - 1) / 2)
+            self.deposit_load_intensity = round(self.order_start_size / (100 * self.interval_pct), 8)
+
+        elif ExchangeInfo.is_bitfinex():
+            self.curr_risk_profile_id = risk_profile["id"]
+            self.curr_risk_level = risk_profile["risk_level"]
+            self.max_drawdown_pct = risk_profile["max_drawdown_pct"]
+            self.working_range_pct = risk_profile["working_range_pct"]
+            self.max_number_dca_orders = risk_profile["max_number_dca_orders"]
+            self.interval_pct = round(self.max_drawdown_pct / self.max_number_dca_orders, 8)
+            self.min_spread_pct = round(self.interval_pct * 2 * DEFAULT_MIN_SPREAD_ADJUSTMENT_FACTOR, 8)
+            self.relist_interval_pct = round(self.interval_pct * DEFAULT_RELIST_INTERVAL_ADJUSTMENT_FACTOR, 8)
+            self.order_pairs = int(round(self.working_range_pct / self.interval_pct))
+
+            self.bitfinex_maintenance_ratio_pct = BITFINEX_DEFAULT_MAINTENANCE_RATIO_PCT
+            self.bitfinex_distance_to_liquidation_price_pct = BITFINEX_DISTANCE_TO_LIQUIDATION_PRICE_PCT
+            self.bitfinex_total_position_margin_adjust_ratio = BITFINEX_TOTAL_POSITION_MARGIN_ADJUST_RATIO
+            self.position_margin_pct = (1 - self.bitfinex_distance_to_liquidation_price_pct) * self.bitfinex_total_position_margin_adjust_ratio / (1 - self.bitfinex_maintenance_ratio_pct)
+            self.position_margin_amount = round(last_wallet_balance * self.position_margin_pct, 8)
+            self.default_leverage = BITFINEX_DEFAULT_LEVERAGE
+            self.max_possible_position_margin = round(self.position_margin_amount * self.default_leverage)
+            self.min_position = round(-1 * self.max_possible_position_margin / ticker_last_price, 8)
+            self.max_position = round(self.max_possible_position_margin / ticker_last_price, 8)
+            self.order_step_size = self.get_order_step_size(last_wallet_balance)
+            self.order_start_size = round(self.max_possible_position_margin / (ticker_last_price * self.max_number_dca_orders) - self.order_step_size * (self.max_number_dca_orders - 1) / 2, 8)
+            self.deposit_load_intensity = round(self.order_start_size * ticker_last_price / (100 * self.interval_pct), 2)
 
     def get_risk_profile(self, distance_to_avg_price_pct, deposit_load_pct):
         for rmm_entry in RISK_MANAGEMENT_MATRIX:
@@ -388,11 +429,8 @@ class DynamicSettings(object):
         raise Exception("Unable to retrieve risk profile configuration for the following parameters: distance_to_avg_price_pct={}, deposit_load_pct={}".format(distance_to_avg_price_pct, deposit_load_pct))
 
     def get_order_step_size(self, last_wallet_balance):
-        if last_wallet_balance < 0.2:
-            return 0
-        else:
-            # TODO: Reimplement later
-            return 0
+        # TODO: Reimplement later
+        return 0
 
     def append_log_text(self, str, txt):
         return str + txt + "\n"
@@ -402,13 +440,7 @@ class DynamicSettings(object):
 
     def log_params(self):
         txt = self.append_log_text("",  "Current parameters:")
-        #txt = self.append_log_text(txt, "position_margin_pct = {}".format(self.get_pct_value(self.position_margin_pct)))
-        #txt = self.append_log_text(txt, "order_margin_pct = {}".format(self.get_pct_value(self.order_margin_pct)))
-        #txt = self.append_log_text(txt, "position_margin_amount = {}".format(self.position_margin_amount))
-        #txt = self.append_log_text(txt, "order_margin_amount = {}".format(self.order_margin_amount))
-        #txt = self.append_log_text(txt, "default_leverage = {}".format(self.default_leverage))
-        #txt = self.append_log_text(txt, "initial_margin_base_pct = {}".format(self.get_pct_value(self.initial_margin_base_pct)))
-        #txt = self.append_log_text(txt, "taker_fee_pct = {}".format(self.get_pct_value(self.taker_fee_pct)))
+        txt = self.append_log_text(txt, "default_leverage = {}".format(self.default_leverage))
         txt = self.append_log_text(txt, "max_possible_position_margin = {}".format(self.max_possible_position_margin))
         txt = self.append_log_text(txt, "max_drawdown_pct = {}".format(self.get_pct_value(self.max_drawdown_pct)))
         txt = self.append_log_text(txt, "working_range_pct = {}".format(self.get_pct_value(self.working_range_pct)))
@@ -423,7 +455,8 @@ class DynamicSettings(object):
         txt = self.append_log_text(txt, "order_pairs = {}".format(self.order_pairs))
         txt = self.append_log_text(txt, "distance_to_avg_price_pct = {}%".format(round(self.distance_to_avg_price_pct, 2)))
         txt = self.append_log_text(txt, "deposit_load_pct = {}%".format(round(self.deposit_load_pct, 2)))
-        txt = self.append_log_text(txt, "deposit_load_intensity (USD/1% interval) = {}".format(self.deposit_load_intensity))
+        txt = self.append_log_text(txt, "deposit_load_intensity (USD/1% interval) = ${}".format(self.deposit_load_intensity))
         txt = self.append_log_text(txt, "curr_risk_profile_id = {}".format(self.curr_risk_profile_id))
         txt = self.append_log_text(txt, "curr_risk_level (1-100) = {}".format(self.curr_risk_level))
+
         log_info(self.logger, txt, True)

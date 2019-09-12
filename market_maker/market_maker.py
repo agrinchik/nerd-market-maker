@@ -11,18 +11,14 @@ import signal
 from market_maker.utils.log import log_info
 from market_maker.utils.log import log_error
 
+from market_maker import bitmex
 from market_maker import bitfinex
 from market_maker.settings import settings
 from market_maker.utils.bitmex import constants, errors, math
 from market_maker.utils import log
+from market_maker.exchange import ExchangeInfo
 
 from market_maker.dynamic_settings import DynamicSettings
-
-from market_maker.utils.bitmex.utils import XBt_to_XBT
-
-# Used for reloading the bot - saves modified times of key files
-watched_files_mtimes = [(f, getmtime(f)) for f in settings.WATCHED_FILES]
-
 
 #
 # Helpers
@@ -38,14 +34,20 @@ class ExchangeInterface:
     def __init__(self, dry_run=False):
         self.dry_run = dry_run
         self.symbol = settings.SYMBOL
-        '''self.xchange = bitmex.BitMEX(base_url=settings.BASE_URL, symbol=self.symbol,
-                                    apiKey=settings.API_KEY, apiSecret=settings.API_SECRET,
+        self.xchange = self.create_exchange_interface()
+
+    def create_exchange_interface(self):
+        result = None
+        if ExchangeInfo.is_bitmex() is True:
+            result = bitmex.BitMEX(symbol=self.symbol,
                                     orderIDPrefix=settings.ORDERID_PREFIX, postOnly=settings.POST_ONLY,
                                     timeout=settings.TIMEOUT,
                                     retries=settings.RETRIES,
-                                    retry_delay=settings.RETRY_DELAY
-                                    )'''
-        self.xchange = bitfinex.Bitfinex(symbol=self.symbol)
+                                    retry_delay=settings.RETRY_DELAY)
+        elif ExchangeInfo.is_bitfinex() is True:
+            result = bitfinex.Bitfinex(symbol=self.symbol)
+
+        return result
 
     def cancel_all_orders(self):
         if self.dry_run:
@@ -147,7 +149,7 @@ class ExchangeInterface:
 
     def is_open(self):
         """Check that websockets are still open."""
-        return not self.xchange.ws.exited
+        return self.xchange.is_open()
 
     def check_market_open(self):
         instrument = self.get_instrument()
@@ -236,24 +238,18 @@ class OrderManager:
         self.check_stop_trading()
         self.dynamic_settings.initialize_params()
 
-        # Create orders and converge.
-        self.place_orders()
-
     def print_status(self, send_to_telegram):
         """Print the current MM status."""
 
         margin = self.exchange.get_margin()
         position = self.exchange.get_position()
-        ticker = self.exchange.get_ticker()
-        last_price = ticker["last"]
         self.running_qty = self.exchange.get_delta()
         tickLog = self.exchange.get_instrument()['tickLog']
-        wallet_balance_XBT = XBt_to_XBT(margin["walletBalance"])
-        wallet_balance_USD = wallet_balance_XBT * last_price
-        self.start_XBt = margin["marginBalance"]
+        wallet_balance = margin["walletBalance"]
+        margin_balance = margin["marginBalance"]
 
-        combined_msg = "\nWallet Balance: %.8f ($%.2f)\n" % (wallet_balance_XBT, wallet_balance_USD)
-        combined_msg += "Margin Balance: %.8f\n" % XBt_to_XBT(self.start_XBt)
+        combined_msg = "\nWallet Balance: {}\n".format(wallet_balance)
+        combined_msg += "Margin Balance: {}\n".format(margin_balance)
         combined_msg += "Contract Position: {} ({}%)\n".format(self.running_qty, round(self.get_deposit_load_pct(self.running_qty), 2))
         if settings.CHECK_POSITION_LIMITS:
             combined_msg += "Position limits: %d/%d\n" % (settings.MIN_POSITION, settings.MAX_POSITION)
@@ -298,7 +294,7 @@ class OrderManager:
 
     def check_stop_trading(self):
         margin = self.exchange.get_margin()
-        curr_wallet_balance = XBt_to_XBT(margin["walletBalance"])
+        curr_wallet_balance = margin["walletBalance"]
         cached_wallet_balance = self.get_cached_wallet_balance()
         capital_drawdown_pct = abs(100 * (curr_wallet_balance - cached_wallet_balance) / cached_wallet_balance)
         if curr_wallet_balance > cached_wallet_balance:
@@ -633,8 +629,6 @@ class OrderManager:
         while True:
             logger.info("*" * 400)
 
-            sleep(settings.LOOP_INTERVAL)
-
             # This will restart on very short downtime, but if it's longer,
             # the MM will crash entirely as it is unable to connect to the WS on boot.
             if not self.check_connection():
@@ -647,8 +641,10 @@ class OrderManager:
             self.print_status(False)  # Print skew, delta, etc
             self.check_suspend_trading()
             self.check_stop_trading()
-            self.dynamic_settings.update_app_settings()
+            self.update_app_settings()
             self.place_orders()  # Creates desired orders and converges to existing orders
+
+            sleep(settings.LOOP_INTERVAL)
 
     def restart(self):
         logger.info("Restarting the market maker...")
