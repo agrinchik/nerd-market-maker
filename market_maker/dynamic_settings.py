@@ -349,7 +349,7 @@ class DynamicSettings(object):
         risk_level = risk_profile["risk_level"]
 
         is_params_exceeded_update_interval_flag = params_seconds_from_last_update >= PARAMS_UPDATE_INTERVAL
-        is_risk_profile_changed_flag = True if risk_profile_id != self.curr_risk_profile_id and (current_qty == 0 or current_qty != 0 and risk_level < self.curr_risk_level) else False
+        is_risk_profile_changed_flag = True if risk_profile_id != self.curr_risk_profile_id else False
 
         if is_params_exceeded_update_interval_flag is True and is_risk_profile_changed_flag is True:
             self.update_dynamic_params(wallet_balance, ticker_last_price, risk_profile)
