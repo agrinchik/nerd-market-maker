@@ -398,6 +398,8 @@ class DynamicSettings(object):
             self.min_spread_pct = round(self.interval_pct * 2 * DEFAULT_MIN_SPREAD_ADJUSTMENT_FACTOR, 8)
             self.relist_interval_pct = round(self.interval_pct * DEFAULT_RELIST_INTERVAL_ADJUSTMENT_FACTOR, 8)
             self.order_pairs = int(round(self.working_range_pct / self.interval_pct))
+            if self.order_pairs > 5:
+                self.order_pairs = 5
 
             self.bitfinex_maintenance_ratio_pct = BITFINEX_DEFAULT_MAINTENANCE_RATIO_PCT
             self.bitfinex_distance_to_liquidation_price_pct = BITFINEX_DISTANCE_TO_LIQUIDATION_PRICE_PCT

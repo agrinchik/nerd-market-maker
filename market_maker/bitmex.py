@@ -237,7 +237,7 @@ class BitMEX(BaseExchange):
                 reset_str = datetime.datetime.fromtimestamp(int(ratelimit_reset)).strftime('%X')
 
                 # We're ratelimited, and we may be waiting for a long time. Cancel orders.
-                self.logger.warning("Canceling all known orders in the meantime.")
+                self.logger.warning("Cancelling all known orders in the meantime.")
                 self.cancel([o['orderID'] for o in self.open_orders()])
 
                 self.logger.error("Your ratelimit will reset at %s. Sleeping for %d seconds." % (reset_str, to_sleep))

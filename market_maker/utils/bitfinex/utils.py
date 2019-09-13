@@ -70,3 +70,8 @@ def order_symbol(symbol, capital=True):
         return "f{}".format(_symbol)
 
     return symbol
+
+
+def strip_trade_symbol(symbol):
+    if symbol[0] == "t" or symbol[0] == "f":
+        return symbol[1:]
