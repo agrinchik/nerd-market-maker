@@ -346,7 +346,6 @@ class DynamicSettings(object):
         params_seconds_from_last_update = (curr_time - self.params_last_update).total_seconds()
         risk_profile = self.get_risk_profile(self.distance_to_avg_price_pct, self.deposit_load_pct)
         risk_profile_id = risk_profile["id"]
-        risk_level = risk_profile["risk_level"]
 
         is_params_exceeded_update_interval_flag = params_seconds_from_last_update >= PARAMS_UPDATE_INTERVAL
         is_risk_profile_changed_flag = True if risk_profile_id != self.curr_risk_profile_id else False
