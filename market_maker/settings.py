@@ -6,7 +6,6 @@ import sys
 import argparse
 
 from market_maker.utils.bitmex.dotdict import dotdict
-import market_maker._settings_base as baseSettings
 
 
 def import_path(fullpath):
@@ -51,7 +50,6 @@ userSettings = import_path(os.path.join('.', settings_filename))
 
 # Assemble settings.
 settings = {}
-settings.update(vars(baseSettings))
 settings.update(vars(userSettings))
 
 # Main export

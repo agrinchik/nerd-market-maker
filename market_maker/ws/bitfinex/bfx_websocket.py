@@ -80,6 +80,7 @@ def _parse_trade(tData, symbol):
         'symbol': symbol
     }
 
+
 def _parse_deriv_status_update(sData, symbol):
     return {
             'symbol': symbol,
@@ -96,6 +97,27 @@ def _parse_deriv_status_update(sData, symbol):
             'funding_step': sData[9],
             # placeholder
         }
+
+
+def _parse_margin_info_base_calc(calc_name, miData):
+    return {
+        'user_pl': miData[0],
+        'user_swaps': miData[1],
+        'margin_balance': miData[2],
+        'margin_net': miData[3],
+        'margin_required': miData[4],
+        'calc_name': calc_name
+    }
+
+
+def _parse_margin_info_symbol_calc(calc_name, miData):
+    return {
+        'tradable_balance': miData[0],
+        'gross_balance': miData[1],
+        'buy': miData[2],
+        'sell': miData[3],
+        'calc_name': calc_name
+    }
 
 
 class BfxWebsocket(GenericWebsocket):
@@ -129,9 +151,10 @@ class BfxWebsocket(GenericWebsocket):
         20061: 'Websocket server resync complete'
     }
 
-    def __init__(self, API_KEY=None, API_SECRET=None, host=None,
+    def __init__(self, symbol, API_KEY=None, API_SECRET=None, host=None,
                  manageOrderBooks=False, dead_man_switch=False, ws_capacity=25, logLevel='INFO', parse_float=float,
                  *args, **kwargs):
+        self.symbol = symbol
         self.API_KEY = API_KEY
         self.API_SECRET = API_SECRET
         self.manageOrderBooks = manageOrderBooks
@@ -280,6 +303,17 @@ class BfxWebsocket(GenericWebsocket):
 
     async def _margin_info_update_handler(self, data):
         self._emit('margin_info_update', data)
+        data_arr = data[2]
+        symbol = data_arr[0]
+        if symbol == "base":
+            calc_name = symbol
+            calc = _parse_margin_info_base_calc(calc_name, data_arr[1])
+            self.wsdata.put_margin_info(symbol, calc)
+        else:
+            calc_name = "sym_{}".format(data_arr[1])
+            calc = _parse_margin_info_base_calc(calc_name, data_arr[2])
+            self.wsdata.put_margin_info(calc_name, calc)
+
         self.logger.info("Margin info update: {}".format(data))
 
     async def _funding_info_update_handler(self, data):
@@ -476,7 +510,7 @@ class BfxWebsocket(GenericWebsocket):
         # enable order book checksums
         if self.manageOrderBooks:
             await self.enable_flag(Flags.CHECKSUM)
-        await self.enable_calculations("tBTCUSD", "BTC", "USD")
+        await self.enable_calculations(self.symbol)
         # set any existing subscriptions to not subscribed
         self.subscriptionManager.set_unsubscribed_by_socket(socket_id)
         # re-subscribe to existing channels
@@ -523,7 +557,9 @@ class BfxWebsocket(GenericWebsocket):
             if socket.isConnected:
                 await socket.ws.send(json.dumps(payload))
 
-    async def enable_calculations(self, symbol, base_curr, quote_curr):
+    async def enable_calculations(self, symbol):
+        base_curr = symbol[:-3]
+        quote_curr = symbol[-3:]
         payload = [
             0,
             "calc",

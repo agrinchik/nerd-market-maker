@@ -81,6 +81,11 @@ class ExchangeInfo(object):
             raise Exception("Unable to resolve exchange name: {}".format(exchange_str))
 
     @staticmethod
+    def get_exchange_name():
+        exchange_str = settings.EXCHANGE
+        return exchange_str
+
+    @staticmethod
     def is_bitmex():
         exchange_id = ExchangeInfo.resolve_exchange()
         return exchange_id == BITMEX

@@ -5,29 +5,21 @@ a websocket client and a rest interface client
 from __future__ import absolute_import
 
 from .ws.bitfinex.bfx_websocket import BfxWebsocket
-from market_maker.utils.bitfinex.decimal_to_precision import decimal_to_precision
 from market_maker.utils.bitfinex.decimal_to_precision import precision_from_string
-from market_maker.utils.bitfinex.decimal_to_precision import DECIMAL_PLACES, TRUNCATE, ROUND, ROUND_UP, ROUND_DOWN
 from market_maker.utils.bitfinex.decimal_to_precision import number_to_string
 from market_maker.utils.bitmex.math import toNearest
 from future.utils import iteritems
-from market_maker.settings import settings
-from market_maker.models.bitfinex import Order
+from market_maker.models.bitfinex import Order, OrderType
 from market_maker.rest.bitfinex import ClientV1 as Client1
 from market_maker.rest.bitfinex import ClientV2 as Client2
-from market_maker.utils.bitmex import errors
 from market_maker.exchange import ExchangeInfo
+from market_maker.settings import settings
+from market_maker.utils.bitfinex.utils import strip_trade_symbol
 
 import math
-import requests
 from time import sleep
-import datetime
-import json
-import base64
-import uuid
 import logging
 import decimal
-import time
 from market_maker.exchange import BaseExchange
 
 WS_HOST = 'wss://api.bitfinex.com/ws/2'
@@ -39,15 +31,17 @@ class BitfinexClient:
     """
     The Bitfinex client exposes REST and websocket objects
     """
-    def __init__(self, API_KEY=None, API_SECRET=None, ws_host=WS_HOST, create_event_emitter=None, logLevel='INFO',
+    def __init__(self, symbol=None, API_KEY=None, API_SECRET=None, ws_host=WS_HOST, create_event_emitter=None, logLevel='INFO',
                  dead_man_switch=False, ws_capacity=25, *args, **kwargs):
         self.rest1 = Client1(API_KEY, API_SECRET)
         self.rest2 = Client2(API_KEY, API_SECRET)
-        self.ws = BfxWebsocket(API_KEY=API_KEY, API_SECRET=API_SECRET, host=ws_host,
+        self.ws = BfxWebsocket(symbol=symbol, API_KEY=API_KEY, API_SECRET=API_SECRET, host=ws_host,
                                logLevel=logLevel, dead_man_switch=dead_man_switch,
                                ws_capacity=ws_capacity, create_event_emitter=create_event_emitter, *args, **kwargs)
 
+
 bfx = BitfinexClient(
+    symbol=settings.SYMBOL,
     API_KEY=ExchangeInfo.get_apikey(),
     API_SECRET=ExchangeInfo.get_apisecret(),
     logLevel='INFO'
@@ -147,12 +141,16 @@ class Bitfinex(BaseExchange):
         return instrument
 
     def funds(self):
-        """Get your current balance."""
+        """Get wallet balance."""
         wallets = bfx.ws.wallets.get_wallets()
         quote_currency = self.symbol[-3:]
         for w in wallets:
             if w.type == "margin" and w.currency == quote_currency:
-                return {'walletBalance': w.balance, 'marginBalance': 0}
+                """Get margin balance."""
+                walletBalance = w.balance
+                calc_base_margin_info = bfx.ws.wsdata.get_margin_info("base")
+                marginBalance = calc_base_margin_info["margin_net"] if calc_base_margin_info is not None else 0
+                return {'walletBalance': walletBalance, 'marginBalance': marginBalance}
 
         return {'walletBalance': 0, 'marginBalance': 0}
 
@@ -163,21 +161,31 @@ class Bitfinex(BaseExchange):
             # No position found; stub it
             return {'avgCostPrice': 0, 'avgEntryPrice': 0, 'currentQty': 0, 'symbol': symbol}
 
-        return {'avgCostPrice': 0, 'avgEntryPrice': position.base_price, 'currentQty': position.amount, 'symbol': symbol}
+        return position
 
     def create_bulk_orders(self, orders):
+        self.logger.info('Creating multiple orders: {}'.format(orders))
+        new_orders = []
         """Create multiple orders."""
         for order in orders:
-            order['clOrdID'] = self.orderIDPrefix + base64.b64encode(uuid.uuid4().bytes).decode('utf8').rstrip('=\n')
-            order['symbol'] = self.symbol
-            if self.postOnly:
-                order['execInst'] = 'ParticipateDoNotInitiate'
-        return self._curl_bitmex(path='order/bulk', postdict={'orders': orders}, verb='POST', max_retries=self.max_retries)
+            new_order = {
+                "symbol": strip_trade_symbol(self.symbol),
+                "amount": str(order["orderQty"]),
+                "price": str(order["price"]),
+                "exchange": ExchangeInfo.get_exchange_name(),
+                "side": order['side'].lower(),
+                "type": OrderType.LIMIT.lower()
+            }
+            new_orders.append(new_order)
+
+        return bfx.rest1.place_multiple_orders(new_orders)
 
     def amend_bulk_orders(self, orders):
         """Amend multiple orders."""
-        # Note rethrow; if this fails, we want to catch it and re-tick
-        return self._curl_bitmex(path='order/bulk', postdict={'orders': orders}, verb='PUT', rethrow_errors=True, max_retries=self.max_retries)
+        self.logger.info('Amending multiple orders: cancelling and creating new orders: {}'.format(orders))
+        self.cancel_orders(orders)
+        sleep(settings.API_REST_INTERVAL)
+        return self.create_bulk_orders(orders)
 
     def open_orders(self):
         """Get open orders."""
@@ -189,6 +197,7 @@ class Bitfinex(BaseExchange):
 
     def cancel_orders(self, orders):
         """Cancel existing orders."""
-        order_ids = [o.id for o in orders]
+        self.logger.info('Cancelling multiple orders: {}'.format(orders))
+        order_ids = [o["orderID"] for o in orders]
         return bfx.rest1.delete_multiple_orders(order_ids)
 

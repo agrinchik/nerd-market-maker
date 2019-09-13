@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+
 def toNearest(num, tickSize):
     """Given a number, round it to the nearest tick. Very useful for sussing float error
        out of numbers: e.g. toNearest(401.46, 0.01) -> 401.46, whereas processing is
@@ -9,4 +10,12 @@ def toNearest(num, tickSize):
         tickDec = Decimal(str(tickSize))
         return float((Decimal(round(num / tickSize, 0)) * tickDec))
     else:
-        return num
+        return int(num)
+
+
+def roundQuantity(qty):
+    # TODO: Reimplement later
+    if qty < 1:
+        return round(qty, 5)
+    else:
+        return int(qty)
