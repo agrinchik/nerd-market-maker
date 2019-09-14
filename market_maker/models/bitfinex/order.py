@@ -72,6 +72,18 @@ class OrderFlags:
     OCO = 16384
 
 
+class OrderStatus:
+    """
+    Enum used to describe all of the different order statuses
+    """
+    ACTIVE = 'ACTIVE'
+    EXECUTED = 'EXECUTED'
+    PARTIALLY_FILLED = 'PARTIALLY FILLED'
+    CANCELED = 'CANCELED'
+    RSN_DUST = 'RSN_DUST'
+    RSN_PAUSE = 'RSN_PAUSE'
+
+
 def now_in_mills():
     """
     Gets the current time in milliseconds
@@ -123,7 +135,7 @@ class Order:
             #"clOrdLinkID": "string",
             #"account": 0,
             "symbol": raw_order[OrderClosedModel.SYMBOL],
-            "side": ('Buy' if raw_order[OrderClosedModel.AMOUNT] > 0 else 'Sell'),
+            "side": ('Buy' if raw_order[OrderClosedModel.AMOUNT_ORIG] > 0 else 'Sell'),
             #"simpleOrderQty": 0,
             "orderQty": abs(raw_order[OrderClosedModel.AMOUNT_ORIG]),
             "price": raw_order[OrderClosedModel.PRICE],
@@ -152,3 +164,19 @@ class Order:
             "transactTime": raw_order[OrderClosedModel.MTS_CREATE],
             "timestamp": raw_order[OrderClosedModel.MTS_UPDATE]
         }
+
+    @staticmethod
+    def get_order_status(order):
+        status_str = order["ordStatus"]
+        if OrderStatus.ACTIVE in status_str:
+            return OrderStatus.ACTIVE
+        if OrderStatus.EXECUTED in status_str:
+            return OrderStatus.EXECUTED
+        if OrderStatus.PARTIALLY_FILLED in status_str:
+            return OrderStatus.PARTIALLY_FILLED
+        if OrderStatus.CANCELED in status_str:
+            return OrderStatus.CANCELED
+        if OrderStatus.RSN_DUST in status_str:
+            return OrderStatus.RSN_DUST
+        if OrderStatus.RSN_PAUSE in status_str:
+            return OrderStatus.RSN_PAUSE

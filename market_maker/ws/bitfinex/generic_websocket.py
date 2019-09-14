@@ -78,7 +78,6 @@ class GenericWebsocket:
         self.host = host
         self.logger = logging.getLogger('root')
         # overide 'error' event to stop it raising an exception
-        # self.events.on('error', self.on_error)
         self.ws = None
         self.max_retries = max_retries
         self.attempt_retry = True
@@ -86,10 +85,34 @@ class GenericWebsocket:
         # start seperate process for the even emitter
         create_ee = create_event_emitter or _start_event_worker
         self.events = create_ee()
+        self.events.on('error', self.on_error)
+
+    def handle_exception(self, loop, context):
+        # context["message"] will always be there; but context["exception"] may not
+        msg = context.get("exception", context["message"])
+        logging.info(f"Caught exception: {msg}")
+        logging.info("Shutting down...")
+        asyncio.create_task(self.shutdown(loop))
+
+    async def shutdown(self, loop, signal=None):
+        """Cleanup tasks tied to the service's shutdown."""
+        if signal:
+            logging.info(f"Received exit signal {signal.name}...")
+        logging.info("Closing database connections")
+        logging.info("Nacking outstanding messages")
+        tasks = [t for t in asyncio.all_tasks() if t is not
+                 asyncio.current_task()]
+
+        [task.cancel() for task in tasks]
+
+        logging.info(f"Cancelling {len(tasks)} outstanding tasks")
+        await asyncio.gather(*tasks, return_exceptions=True)
+        logging.info("Shutdown ...")
+        loop.stop()
 
     def run(self):
         """
-        Starte the websocket connection. This functions spawns the initial socket
+        Start the websocket connection. This functions spawns the initial socket
         thread and connection.
         """
         self._start_new_socket()
@@ -203,7 +226,7 @@ class GenericWebsocket:
         """
         On websocket error print and fire event
         """
-        self.logger.error(error)
+        self.logger.info("!!! on_error(): {}".format(error))
 
     async def on_close(self):
         """

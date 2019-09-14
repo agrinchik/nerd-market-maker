@@ -130,15 +130,12 @@ class BitMEXWebsocket():
             return {'avgCostPrice': 0, 'avgEntryPrice': 0, 'currentQty': 0, 'symbol': symbol}
         return pos[0]
 
-    def is_position_partial_close(self, order_side):
-        result = True
+    def is_position_partial_close(self, curr_position, order_side):
         is_order_long = True if order_side == "Buy" else False
-        curr_position = self.current_qty()
         if curr_position == 0 or curr_position > 0 and is_order_long is True or curr_position < 0 and is_order_long is False:
-            result = False
+            return False
         else:
-            result = True
-        return result
+            return True
 
     #
     # Lifecycle methods
@@ -273,18 +270,16 @@ class BitMEXWebsocket():
                         if table == 'order':
                             is_canceled = 'ordStatus' in updateData and updateData['ordStatus'] == 'Canceled'
                             if 'cumQty' in updateData and not is_canceled:
+                                curr_position = self.current_qty()
+                                is_position_partial_close = self.is_position_partial_close(curr_position, item['side'])
                                 contExecuted = updateData['cumQty'] - item['cumQty']
-                                if contExecuted > 0:
-                                    instrument = self.get_instrument(item['symbol'])
-                                    is_position_partial_close = self.is_position_partial_close(item['side'])
+                                if curr_position != 0:
                                     if is_position_partial_close is False:
-                                        log_info(self.logger, "Execution (position increase): %s %d Contracts of %s at %.*f" %
-                                             (item['side'], contExecuted, item['symbol'],
-                                              instrument['tickLog'], item['price']), True)
+                                        log_info(self.logger, "Execution (position increase): {} {} Contracts of {} at {}".format(item['side'], contExecuted, item['symbol'], item['price']), True)
                                     else:
-                                        log_info(self.logger, "Execution (position partial close): %s %d Contracts of %s at %.*f" %
-                                             (item['side'], contExecuted, item['symbol'],
-                                              instrument['tickLog'], item['price']), True)
+                                        log_info(self.logger, "Execution (position partial close): {} {} Contracts of {} at {}".format(item['side'], contExecuted, item['symbol'], item['price']), True)
+                                else:
+                                    log_info(self.logger, "Execution (position fully closed): {} {} Contracts of {} at {}".format(item['side'], contExecuted, item['symbol'], item['price']), True)
 
                         # Update this item.
                         item.update(updateData)
