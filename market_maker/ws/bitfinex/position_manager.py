@@ -27,8 +27,7 @@ class PositionManager:
         for raw_position in psData:
             position = Position.from_raw_position(raw_position)
             self.open_positions[position["symbol"]] = position
-            self.logger.info("Position={}".format(position))
-        self.logger.info("Position snapshot: {}".format(raw_ws_data))
+            self.logger.info("Position snapshot={}".format(position))
         self.bfxapi._emit('position_snapshot', self.get_open_positions())
 
     async def confirm_position_new(self, raw_ws_data):

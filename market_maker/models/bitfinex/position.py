@@ -53,6 +53,13 @@ class Position:
         pass
 
     @staticmethod
+    def get_list_value(data_list, index, default_value):
+        result = data_list[index]
+        if result is None:
+            result = default_value
+        return result
+
+    @staticmethod
     def from_raw_position(raw_position):
         """
         Parse a raw position object into a Position object
@@ -69,14 +76,14 @@ class Position:
             #"initMarginReq": 0,
             #"maintMarginReq": 0,
             #"riskLimit": 0,
-            "leverage": raw_position[PositionModel.LEVERAGE],
+            "leverage": Position.get_list_value(raw_position, PositionModel.LEVERAGE, 0),
             "crossMargin": False,
             #"deleveragePercentile": 0,
             #"rebalancedPnl": 0,
             #"prevRealisedPnl": 0,
             #"prevUnrealisedPnl": 0,
             #"prevClosePrice": 0,
-            "openingTimestamp": raw_position[PositionModel.MTS_CREATE],
+            "openingTimestamp": Position.get_list_value(raw_position, PositionModel.MTS_CREATE, 0),
             #"openingQty": 0,
             #"openingCost": 0,
             #"openingComm": 0,
@@ -93,7 +100,7 @@ class Position:
             #"execQty": 0,
             #"execCost": 0,
             #"execComm": 0,
-            "currentTimestamp": raw_position[PositionModel.MTS_UPDATE],
+            "currentTimestamp": Position.get_list_value(raw_position, PositionModel.MTS_UPDATE, 0),
             "currentQty": raw_position[PositionModel.AMOUNT],
             #"currentCost": 0,
             #"currentComm": 0,
@@ -143,12 +150,12 @@ class Position:
             #"simplePnl": 0,
             #"simplePnlPcnt": 0,
             #"avgCostPrice": 0,
-            "avgEntryPrice": raw_position[PositionModel.BASE_PRICE],
+            "avgEntryPrice": Position.get_list_value(raw_position, PositionModel.BASE_PRICE, 0),
             #"breakEvenPrice": 0,
             #"marginCallPrice": 0,
-            "liquidationPrice": raw_position[PositionModel.PRICE_LIQ],
+            "liquidationPrice": Position.get_list_value(raw_position, PositionModel.PRICE_LIQ, 0),
             #"bankruptPrice": 0,
-            "timestamp": raw_position[PositionModel.MTS_UPDATE],
+            "timestamp": Position.get_list_value(raw_position, PositionModel.MTS_UPDATE, 0),
             #"lastPrice": 0,
             #"lastValue": 0
         }

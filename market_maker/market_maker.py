@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 from time import sleep
 import sys
+import os
 import datetime
 from datetime import datetime
 import requests
@@ -162,7 +163,7 @@ class ExchangeInterface:
         return self.xchange.cancel_orders(orders)
 
 
-class OrderManager:
+class MarketMakerManager:
     def __init__(self):
         self.exchange = ExchangeInterface()
         # Once exchange is created, register exit handler that will always cancel orders
@@ -224,12 +225,11 @@ class OrderManager:
         margin = self.exchange.get_margin()
         position = self.exchange.get_position()
         self.running_qty = self.exchange.get_delta()
-        tickLog = self.exchange.get_instrument()['tickLog']
         wallet_balance = margin["walletBalance"]
         margin_balance = margin["marginBalance"]
 
-        combined_msg = "\nWallet Balance: {}\n".format(wallet_balance)
-        combined_msg += "Margin Balance: {}\n".format(margin_balance)
+        combined_msg = "\nWallet Balance:  {:.8f}\n".format(wallet_balance)
+        combined_msg += "Margin Balance:  {:.8f}\n".format(margin_balance)
         combined_msg += "Contract Position: {} ({}%)\n".format(self.running_qty, round(self.get_deposit_load_pct(self.running_qty), 2))
         if settings.CHECK_POSITION_LIMITS:
             combined_msg += "Position limits: {}/{}\n".format(settings.MIN_POSITION, settings.MAX_POSITION)
@@ -281,7 +281,7 @@ class OrderManager:
             self.store_wallet_balance(curr_wallet_balance)
         elif capital_drawdown_pct > settings.STOP_TRADING_CAPITAL_STOPLOSS_PCT:
             log_info(logger, "CRITICAL: current wallet balance drawdown has exceeded capital stop-loss value ({}%)! Shutting down the NerdMarketMaker!".format(settings.STOP_TRADING_CAPITAL_STOPLOSS_PCT), True)
-            self.exit(settings.STOP_TRADING_CAPITAL_STOPLOSS_EXIT_STATUS_CODE)
+            self.exit(settings.FORCE_STOP_EXIT_STATUS_CODE)
 
     def get_ticker(self):
         ticker = self.exchange.get_ticker()
@@ -617,13 +617,13 @@ class OrderManager:
     def restart(self):
         logger.info("Restarting the market maker...")
         #os.execv(sys.executable, [sys.executable] + sys.argv)
-        raise ForceRestartException("The NerdMarketMaker bot will be restarted")
+        raise ForceRestartException("NerdMarketMaker bot will be restarted")
 
 
 def run():
     log_info(logger, 'Nerd Market Maker %s\n' % constants.VERSION, True)
 
-    om = OrderManager()
+    om = MarketMakerManager()
     # Try/except just keeps ctrl-c from printing an ugly stacktrace
     try:
         om.run_loop()
@@ -632,4 +632,6 @@ def run():
     except SystemExit as se:
         sys.exit(se.code)
     except Exception as e:
-        log_error(logger, "Unexpected exception! {}".format(e), True)
+        log_error(logger, "UNEXPECTED EXCEPTION! {}\nNerdMarketMaker bot will be terminated".format(e), True)
+        os._exit(settings.FORCE_STOP_EXIT_STATUS_CODE)
+
