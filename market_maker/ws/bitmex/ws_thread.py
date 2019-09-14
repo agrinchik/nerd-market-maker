@@ -275,11 +275,11 @@ class BitMEXWebsocket():
                                 contExecuted = updateData['cumQty'] - item['cumQty']
                                 if curr_position != 0:
                                     if is_position_partial_close is False:
-                                        log_info(self.logger, "Execution (position increase): {} {} Contracts of {} at {}".format(item['side'], contExecuted, item['symbol'], item['price']), True)
+                                        log_info(self.logger, "Execution (position increase): {} {} contracts of {} at {}".format(item['side'], contExecuted, item['symbol'], item['price']), True)
                                     else:
-                                        log_info(self.logger, "Execution (position partial close): {} {} Contracts of {} at {}".format(item['side'], contExecuted, item['symbol'], item['price']), True)
+                                        log_info(self.logger, "Execution (position partial close): {} {} contracts of {} at {}".format(item['side'], contExecuted, item['symbol'], item['price']), True)
                                 else:
-                                    log_info(self.logger, "Execution (position fully closed): {} {} Contracts of {} at {}".format(item['side'], contExecuted, item['symbol'], item['price']), True)
+                                    log_info(self.logger, "Execution (position fully closed): {} {} contracts of {} at {}".format(item['side'], contExecuted, item['symbol'], item['price']), True)
 
                         # Update this item.
                         item.update(updateData)
