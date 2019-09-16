@@ -441,23 +441,15 @@ class DynamicSettings(object):
 
     def log_params(self):
         txt = self.append_log_text("",  "Current parameters:")
-        txt = self.append_log_text(txt, "default_leverage = {}".format(self.default_leverage))
         txt = self.append_log_text(txt, "max_possible_position_margin = {}".format(self.max_possible_position_margin))
-        txt = self.append_log_text(txt, "max_drawdown_pct = {}".format(self.get_pct_value(self.max_drawdown_pct)))
-        txt = self.append_log_text(txt, "working_range_pct = {}".format(self.get_pct_value(self.working_range_pct)))
-        txt = self.append_log_text(txt, "max_number_dca_orders = {}".format(self.max_number_dca_orders))
         txt = self.append_log_text(txt, "interval_pct = {}".format(self.get_pct_value(self.interval_pct)))
-        txt = self.append_log_text(txt, "min_spread_pct = {}".format(self.get_pct_value(self.min_spread_pct)))
-        txt = self.append_log_text(txt, "relist_interval_pct = {}".format(self.get_pct_value(self.relist_interval_pct)))
         txt = self.append_log_text(txt, "min_position = {}".format(self.min_position))
         txt = self.append_log_text(txt, "max_position = {}".format(self.max_position))
-        txt = self.append_log_text(txt, "order_step_size = {}".format(self.order_step_size))
         txt = self.append_log_text(txt, "order_start_size = {}".format(self.order_start_size))
         txt = self.append_log_text(txt, "order_pairs = {}".format(self.order_pairs))
         txt = self.append_log_text(txt, "distance_to_avg_price_pct = {}%".format(round(self.distance_to_avg_price_pct, 2)))
         txt = self.append_log_text(txt, "deposit_load_pct = {}%".format(round(self.deposit_load_pct, 2)))
         txt = self.append_log_text(txt, "deposit_load_intensity (USD/1% interval) = ${}".format(self.deposit_load_intensity))
         txt = self.append_log_text(txt, "curr_risk_profile_id = {}".format(self.curr_risk_profile_id))
-        txt = self.append_log_text(txt, "curr_risk_level (1-100) = {}".format(self.curr_risk_level))
 
         log_info(self.logger, txt, True)

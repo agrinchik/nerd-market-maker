@@ -178,7 +178,9 @@ class Bitfinex(BaseExchange):
             }
             new_orders.append(new_order)
 
-        return bfx.rest1.place_multiple_orders(new_orders)
+        response = bfx.rest1.place_multiple_orders(new_orders)
+        self.logger.info('Creating multiple orders - response: {}'.format(response))
+        return response
 
     def amend_bulk_orders(self, orders):
         """Amend multiple orders."""

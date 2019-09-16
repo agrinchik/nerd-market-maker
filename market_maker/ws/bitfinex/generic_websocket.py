@@ -7,10 +7,12 @@ import websockets
 import socket
 import json
 import time
+import signal
 import logging
 from threading import Thread
 from market_maker.utils.log import log_error
 import os
+from market_maker.settings import settings
 
 from pyee import EventEmitter
 
@@ -85,30 +87,31 @@ class GenericWebsocket:
         # start seperate process for the even emitter
         create_ee = create_event_emitter or _start_event_worker
         self.events = create_ee()
-        self.events.on('error', self.on_error)
+        #self.events.on('error', self.on_error)
+
+    def set_exception_handling(self, loop):
+        # May want to catch other signals too
+        #signals = (signal.SIGHUP, signal.SIGTERM, signal.SIGINT)
+        #for ss in signals:
+        #    loop.add_signal_handler(
+        #        ss, lambda s=ss: asyncio.create_task(self.shutdown(loop, signal=s)))
+        # comment out the line below to see how unhandled exceptions behave
+        loop.set_exception_handler(self.handle_exception)
 
     def handle_exception(self, loop, context):
         # context["message"] will always be there; but context["exception"] may not
-        msg = context.get("exception", context["message"])
-        logging.info(f"Caught exception: {msg}")
-        logging.info("Shutting down...")
-        asyncio.create_task(self.shutdown(loop))
+        msg = context.get("message")
+        self.logger.info("Caught exception: {}".format(msg))
 
-    async def shutdown(self, loop, signal=None):
-        """Cleanup tasks tied to the service's shutdown."""
-        if signal:
-            logging.info(f"Received exit signal {signal.name}...")
-        logging.info("Closing database connections")
-        logging.info("Nacking outstanding messages")
-        tasks = [t for t in asyncio.all_tasks() if t is not
-                 asyncio.current_task()]
-
-        [task.cancel() for task in tasks]
-
-        logging.info(f"Cancelling {len(tasks)} outstanding tasks")
-        await asyncio.gather(*tasks, return_exceptions=True)
-        logging.info("Shutdown ...")
-        loop.stop()
+        if msg == "Fatal error on SSL transport":
+            log_error(self.logger, "Bitfinex Websocket exception occurred: {}. The NerdMarketMaker bot will be restarted.".format(msg), True)
+            os._exit(settings.FORCE_STOP_EXIT_STATUS_CODE)
+        if msg == "Fatal read error on socket transport":
+            log_error(self.logger, "Unexpected Bitfinex Websocket exception occurred: {}. The NerdMarketMaker bot will be stopped.".format(msg), False)
+            os._exit(1)
+        else:
+            log_error(self.logger, "Unexpected Bitfinex Websocket exception occurred: {}. The NerdMarketMaker bot will be stopped.".format(msg), True)
+            os._exit(1)
 
     def run(self):
         """
@@ -127,6 +130,7 @@ class GenericWebsocket:
         if not socketId:
             socketId = len(self.sockets)
         def start_loop(loop):
+            self.set_exception_handling(worker_loop)
             asyncio.set_event_loop(loop)
             loop.run_until_complete(self._run_socket())
         worker_loop = asyncio.new_event_loop()
@@ -180,9 +184,6 @@ class GenericWebsocket:
                 await self._connect(s)
                 retries = 0
             except (ConnectionClosed, socket.error) as e:
-                if isinstance(e, ConnectionClosed) and e.code == 1006:
-                    log_error(self.logger, "Bitfinex Websocket exception occurred: {}. The NerdMarketMaker bot will be restarted.".format(e.code), True)
-                    os._exit(1)
                 self.sockets[sId].set_disconnected()
                 self._emit('disconnected')
                 if (not self.attempt_retry):
@@ -193,6 +194,8 @@ class GenericWebsocket:
                 self.logger.info("Waiting 5 seconds before retrying...")
                 await asyncio.sleep(5)
                 self.logger.info("Reconnect attempt {}/{}".format(retries, self.max_retries))
+
+
         self.logger.info("Unable to connect to websocket.")
         self._emit('stopped')
 
