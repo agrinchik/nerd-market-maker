@@ -595,7 +595,7 @@ class MarketMakerManager:
 
     def run_loop(self):
         while True:
-            logger.info("*" * 400)
+            logger.info("*" * 100)
 
             # This will restart on very short downtime, but if it's longer,
             # the MM will crash entirely as it is unable to connect to the WS on boot.

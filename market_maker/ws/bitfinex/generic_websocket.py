@@ -120,19 +120,18 @@ class GenericWebsocket:
         """
         self._start_new_socket()
 
-    def get_task_executable(self):
-        """
-        Get the run indefinitely asyncio task
-        """
-        return self._run_socket()
-
     def _start_new_socket(self, socketId=None):
         if not socketId:
             socketId = len(self.sockets)
+
         def start_loop(loop):
-            self.set_exception_handling(worker_loop)
-            asyncio.set_event_loop(loop)
-            loop.run_until_complete(self._run_socket())
+            try:
+                self.set_exception_handling(worker_loop)
+                asyncio.set_event_loop(loop)
+                loop.run_until_complete(self._run_socket())
+            except Exception as e:
+                self.logger.info("!!! Caught exception: {}".format(e))
+
         worker_loop = asyncio.new_event_loop()
         worker = Thread(target=start_loop, args=(worker_loop,))
         worker.start()
