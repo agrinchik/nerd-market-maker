@@ -293,7 +293,7 @@ class DynamicSettings(object):
         self.update_settings_value("MIN_POSITION", self.min_position)
         self.update_settings_value("MAX_POSITION", self.max_position)
 
-        self.curr_risk_profile_id = ""
+        self.curr_risk_profile_id = "N/A"
         self.curr_risk_level = 1000000
 
         self.log_params()
