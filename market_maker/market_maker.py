@@ -632,6 +632,6 @@ def run():
     except SystemExit as se:
         sys.exit(se.code)
     except Exception as e:
-        log_error(logger, "UNEXPECTED EXCEPTION! {}\nNerdMarketMaker bot will be terminated".format(e), True)
+        log_error(logger, "UNEXPECTED EXCEPTION! {}\nNerdMarketMaker bot will be terminated.".format(e), True)
         os._exit(settings.FORCE_STOP_EXIT_STATUS_CODE)
 
