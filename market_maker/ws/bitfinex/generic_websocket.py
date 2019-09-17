@@ -105,13 +105,13 @@ class GenericWebsocket:
 
         if msg == "Fatal error on SSL transport":
             log_error(self.logger, "Bitfinex Websocket exception occurred: {}. The NerdMarketMaker bot will be restarted.".format(msg), True)
-            os._exit(settings.FORCE_STOP_EXIT_STATUS_CODE)
+            os._exit(1)
         if msg == "Fatal read error on socket transport":
             log_error(self.logger, "Unexpected Bitfinex Websocket exception occurred: {}. The NerdMarketMaker bot will be stopped.".format(msg), False)
-            os._exit(1)
+            os._exit(settings.FORCE_STOP_EXIT_STATUS_CODE)
         else:
             log_error(self.logger, "Unexpected Bitfinex Websocket exception occurred: {}. The NerdMarketMaker bot will be stopped.".format(msg), True)
-            os._exit(1)
+            os._exit(settings.FORCE_STOP_EXIT_STATUS_CODE)
 
     def run(self):
         """
