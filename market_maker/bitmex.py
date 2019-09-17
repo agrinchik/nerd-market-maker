@@ -7,6 +7,7 @@ import json
 import base64
 import uuid
 import logging
+from market_maker.settings import settings
 from market_maker.auth.bitmex import APIKeyAuthWithExpires
 from market_maker.utils.bitmex import constants, errors
 from market_maker.ws.bitmex.ws_thread import BitMEXWebsocket
@@ -182,7 +183,7 @@ class BitMEX(BaseExchange):
             if rethrow_errors:
                 raise e
             else:
-                exit(1)
+                exit(settings.FORCE_RESTART_EXIT_STATUS_CODE)
 
         def retry():
             self.retries += 1
@@ -214,7 +215,7 @@ class BitMEX(BaseExchange):
                 if postdict:
                     self.logger.error(postdict)
                 # Always exit, even if rethrow_errors, because this is fatal
-                exit(1)
+                exit(settings.FORCE_RESTART_EXIT_STATUS_CODE)
 
             # 404, can be thrown if order canceled or does not exist.
             elif response.status_code == 404:

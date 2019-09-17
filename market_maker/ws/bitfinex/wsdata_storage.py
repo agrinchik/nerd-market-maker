@@ -1,7 +1,10 @@
 
+import logging
+
 class WsData_Storage:
 
     def __init__(self):
+        self.logger = logging.getLogger('root')
         self.tickers = {}
         self.candles = {}
         self.trades = {}
@@ -25,6 +28,9 @@ class WsData_Storage:
 
     def get_margin_info(self, calc_name):
         return self.margin_info.get(calc_name)
+
+    def get_symbol_margin_info(self, symbol):
+        return self.margin_info.get("sym_{}".format(symbol))
 
     def is_initialized(self):
         return len(self.tickers.keys()) > 0 and len(self.info.keys()) > 0  # TODO: Add other criteria
