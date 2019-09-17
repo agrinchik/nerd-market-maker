@@ -50,6 +50,7 @@ class OrderManager:
         self.bfxapi._emit('order_snapshot', self.get_open_orders())
 
     async def confirm_order_new(self, raw_ws_data):
+        self.logger.info("confirm_order_new(): raw_ws_data={}".format(raw_ws_data))
         order = Order.from_raw_order(raw_ws_data[2])
         self.open_orders[order["orderID"]] = order
         self.bfxapi._emit('order_confirmed', order)
@@ -57,6 +58,7 @@ class OrderManager:
         self.bfxapi._emit('order_new', order)
 
     async def confirm_order_update(self, raw_ws_data):
+        self.logger.info("confirm_order_update(): raw_ws_data={}".format(raw_ws_data))
         order = Order.from_raw_order(raw_ws_data[2])
         orderId = order["orderID"]
         self.log_order_execution(self.open_orders[orderId], order)
@@ -65,14 +67,15 @@ class OrderManager:
         self.bfxapi._emit('order_update', order)
 
     async def confirm_order_closed(self, raw_ws_data):
+        self.logger.info("confirm_order_closed(): raw_ws_data={}".format(raw_ws_data))
         order = Order.from_raw_order(raw_ws_data[2])
         orderId = order["orderID"]
-        self.log_order_execution(self.open_orders[orderId], order)
         if orderId in self.open_orders:
+            self.log_order_execution(self.open_orders[orderId], order)
             del self.open_orders[orderId]
-        self.bfxapi._emit('order_confirmed', order)
-        self.logger.info("Order closed: {}".format(order))
-        self.bfxapi._emit('order_closed', order)
+            self.bfxapi._emit('order_confirmed', order)
+            self.logger.info("Order closed: {}".format(order))
+            self.bfxapi._emit('order_closed', order)
 
     def log_order_execution(self, order, update_order):
         # Log order execution

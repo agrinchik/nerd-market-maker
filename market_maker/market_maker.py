@@ -49,7 +49,6 @@ class ExchangeInterface:
 
     def cancel_all_orders(self):
         logger.info("Resetting current position. Cancelling all existing orders.")
-        tickLog = self.get_instrument()['tickLog']
 
         # In certain cases, a WS update might not make it through before we call this.
         # For that reason, we grab via HTTP to ensure we grab them all.
@@ -285,13 +284,13 @@ class MarketMakerManager:
 
     def get_ticker(self):
         ticker = self.exchange.get_ticker()
-        tickLog = self.exchange.get_instrument()['tickLog']
+        tickSize = self.instrument['tickSize']
 
         # Set up our buy & sell positions as the smallest possible unit above and below the current spread
         # and we'll work out from there. That way we always have the best price but we don't kill wide
         # and potentially profitable spreads.
-        self.start_position_buy = ticker["buy"] + self.instrument['tickSize']
-        self.start_position_sell = ticker["sell"] - self.instrument['tickSize']
+        self.start_position_buy = ticker["buy"] + tickSize
+        self.start_position_sell = ticker["sell"] - tickSize
 
         # If we're maintaining spreads and we already have orders in place,
         # make sure they're not ours. If they are, we need to adjust, otherwise we'll
@@ -498,7 +497,7 @@ class MarketMakerManager:
                     return self.place_orders()
                 else:
                     log_error(logger, "Unknown error on amend: %s. Exiting" % errorObj, True)
-                    sys.exit(1)
+                    sys.exit(settings.FORCE_RESTART_EXIT_STATUS_CODE)
 
         if len(to_create) > 0:
             combined_msg = "Creating %d orders:\n" % (len(to_create))
@@ -605,11 +604,11 @@ class MarketMakerManager:
                 sleep(RESTART_TIMEOUT)
                 self.restart()
 
+            self.update_app_settings()
             self.sanity_check()  # Ensures health of mm - several cut-out points here
             self.print_status(False)  # Print skew, delta, etc
             self.check_suspend_trading()
             self.check_stop_trading()
-            self.update_app_settings()
             self.place_orders()  # Creates desired orders and converges to existing orders
 
             sleep(settings.LOOP_INTERVAL)
@@ -628,7 +627,7 @@ def run():
     try:
         om.run_loop()
     except (ForceRestartException, KeyboardInterrupt) as fe:
-        sys.exit(1)
+        sys.exit(settings.FORCE_RESTART_EXIT_STATUS_CODE)
     except SystemExit as se:
         sys.exit(se.code)
     except Exception as e:

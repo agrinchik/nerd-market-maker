@@ -191,37 +191,37 @@ RISK_PROFILE_CONFIGURATION = [
     {
         "id": "RP1",
         "risk_level": 75,
-        "max_drawdown_pct": 0.15,
-        "working_range_pct": 0.015,
-        "max_number_dca_orders": 60
+        "max_drawdown_pct": 0.075,
+        "working_range_pct": 0.005,
+        "max_number_dca_orders": 75
     },
     {
         "id": "RP2",
         "risk_level": 70,
-        "max_drawdown_pct": 0.15,
-        "working_range_pct": 0.04,
-        "max_number_dca_orders": 30
+        "max_drawdown_pct": 0.075,
+        "working_range_pct": 0.005,
+        "max_number_dca_orders": 75
     },
     {
         "id": "RP3",
         "risk_level": 60,
-        "max_drawdown_pct": 0.285,
-        "working_range_pct": 0.06,
-        "max_number_dca_orders": 38
+        "max_drawdown_pct": 0.075,
+        "working_range_pct": 0.005,
+        "max_number_dca_orders": 75
     },
     {
         "id": "RP4",
         "risk_level": 50,
-        "max_drawdown_pct": 0.48,
-        "working_range_pct": 0.08,
-        "max_number_dca_orders": 48
+        "max_drawdown_pct": 0.075,
+        "working_range_pct": 0.005,
+        "max_number_dca_orders": 75
     },
     {
         "id": "RP5",
         "risk_level": 40,
-        "max_drawdown_pct": 0.90,
-        "working_range_pct": 0.12,
-        "max_number_dca_orders": 60
+        "max_drawdown_pct": 0.075,
+        "working_range_pct": 0.005,
+        "max_number_dca_orders": 75
     },
     {
         "id": "RP6",
@@ -443,6 +443,7 @@ class DynamicSettings(object):
         txt = self.append_log_text("",  "Current parameters:")
         txt = self.append_log_text(txt, "max_possible_position_margin = {}".format(self.max_possible_position_margin))
         txt = self.append_log_text(txt, "interval_pct = {}".format(self.get_pct_value(self.interval_pct)))
+        txt = self.append_log_text(txt, "min_spread_pct = {}".format(self.get_pct_value(self.min_spread_pct)))
         txt = self.append_log_text(txt, "min_position = {}".format(self.min_position))
         txt = self.append_log_text(txt, "max_position = {}".format(self.max_position))
         txt = self.append_log_text(txt, "order_start_size = {}".format(self.order_start_size))

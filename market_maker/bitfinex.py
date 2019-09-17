@@ -15,12 +15,15 @@ from market_maker.rest.bitfinex import ClientV2 as Client2
 from market_maker.exchange import ExchangeInfo
 from market_maker.settings import settings
 from market_maker.utils.bitfinex.utils import strip_trade_symbol
+from market_maker.dynamic_settings import BITFINEX_DEFAULT_LEVERAGE
 
 import math
 from time import sleep
 import logging
 import decimal
 from market_maker.exchange import BaseExchange
+
+
 
 WS_HOST = 'wss://api.bitfinex.com/ws/2'
 
@@ -104,7 +107,8 @@ class Bitfinex(BaseExchange):
         self.exit()
 
     def exit(self):
-        self.ws.exit()
+        #TODO: Reimplement
+        pass
 
     #
     # Public methods
@@ -123,7 +127,9 @@ class Bitfinex(BaseExchange):
         }
 
         # The instrument has a tickSize. Use it to round values.
-        return {k: toNearest(float(v or 0), instrument['tickSize']) for k, v in iteritems(ticker)}
+        result = {k: toNearest(float(v or 0), instrument['tickSize']) for k, v in iteritems(ticker)}
+        self.logger.info('Ticker: {}'.format(result))
+        return result
 
     def is_open(self):
         """Check that websockets are still open."""
@@ -140,6 +146,10 @@ class Bitfinex(BaseExchange):
         instrument['tickLog'] = decimal.Decimal(str(instrument['tickSize'])).as_tuple().exponent * -1
         return instrument
 
+    def calculate_margin_balance(self, symbol):
+        symbol_margin_info = bfx.ws.wsdata.get_symbol_margin_info(symbol)
+        return symbol_margin_info["user_pl"] / BITFINEX_DEFAULT_LEVERAGE if symbol_margin_info is not None else 0
+
     def funds(self):
         """Get wallet balance."""
         wallets = bfx.ws.wallets.get_wallets()
@@ -148,8 +158,7 @@ class Bitfinex(BaseExchange):
             if w.type == "margin" and w.currency == quote_currency:
                 """Get margin balance."""
                 walletBalance = w.balance
-                calc_base_margin_info = bfx.ws.wsdata.get_margin_info("base")
-                marginBalance = calc_base_margin_info["margin_net"] if calc_base_margin_info is not None else 0
+                marginBalance = self.calculate_margin_balance(self.symbol)
                 return {'walletBalance': walletBalance, 'marginBalance': marginBalance}
 
         return {'walletBalance': 0, 'marginBalance': 0}

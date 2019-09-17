@@ -7,7 +7,6 @@ import websockets
 import socket
 import json
 import time
-import signal
 import logging
 from threading import Thread
 from market_maker.utils.log import log_error
@@ -101,11 +100,11 @@ class GenericWebsocket:
     def handle_exception(self, loop, context):
         # context["message"] will always be there; but context["exception"] may not
         msg = context.get("message")
-        self.logger.info("Caught exception: {}".format(msg))
+        self.logger.info("handle_exception(): Exception occurred: {}, Message={}".format(context["exception"], msg))
 
         if msg == "Fatal error on SSL transport":
             log_error(self.logger, "Bitfinex Websocket exception occurred: {}. The NerdMarketMaker bot will be restarted.".format(msg), True)
-            os._exit(1)
+            os._exit(settings.FORCE_RESTART_EXIT_STATUS_CODE)
         if msg == "Fatal read error on socket transport":
             log_error(self.logger, "Unexpected Bitfinex Websocket exception occurred: {}. The NerdMarketMaker bot will be stopped.".format(msg), False)
             os._exit(settings.FORCE_STOP_EXIT_STATUS_CODE)
@@ -130,7 +129,8 @@ class GenericWebsocket:
                 asyncio.set_event_loop(loop)
                 loop.run_until_complete(self._run_socket())
             except Exception as e:
-                self.logger.info("!!! Caught exception: {}".format(e))
+                log_error(self.logger, "!!! Unexpected exception, the NerdMarketMaker bot will be stopped. Exception: {}".format(e), True)
+                os._exit(settings.FORCE_STOP_EXIT_STATUS_CODE)
 
         worker_loop = asyncio.new_event_loop()
         worker = Thread(target=start_loop, args=(worker_loop,))
