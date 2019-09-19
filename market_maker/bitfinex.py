@@ -105,9 +105,6 @@ class Bitfinex(BaseExchange):
         await bfx.ws.subscribe('ticker', self.symbol)
         self.logger.info('START - subscribed!')
 
-    def __del__(self):
-        self.exit()
-
     def exit(self):
         #TODO: Reimplement
         pass
