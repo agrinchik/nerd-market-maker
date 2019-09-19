@@ -191,37 +191,37 @@ RISK_PROFILE_CONFIGURATION = [
     {
         "id": "RP1",
         "risk_level": 75,
-        "max_drawdown_pct": 0.075,
-        "working_range_pct": 0.005,
-        "max_number_dca_orders": 75
+        "max_drawdown_pct": 0.15,
+        "working_range_pct": 0.015,
+        "max_number_dca_orders": 60
     },
     {
         "id": "RP2",
         "risk_level": 70,
-        "max_drawdown_pct": 0.075,
-        "working_range_pct": 0.005,
-        "max_number_dca_orders": 75
+        "max_drawdown_pct": 0.15,
+        "working_range_pct": 0.04,
+        "max_number_dca_orders": 30
     },
     {
         "id": "RP3",
         "risk_level": 60,
-        "max_drawdown_pct": 0.075,
-        "working_range_pct": 0.005,
-        "max_number_dca_orders": 75
+        "max_drawdown_pct": 0.285,
+        "working_range_pct": 0.06,
+        "max_number_dca_orders": 38
     },
     {
         "id": "RP4",
         "risk_level": 50,
-        "max_drawdown_pct": 0.075,
-        "working_range_pct": 0.005,
-        "max_number_dca_orders": 75
+        "max_drawdown_pct": 0.48,
+        "working_range_pct": 0.08,
+        "max_number_dca_orders": 48
     },
     {
         "id": "RP5",
         "risk_level": 40,
-        "max_drawdown_pct": 0.075,
-        "working_range_pct": 0.005,
-        "max_number_dca_orders": 75
+        "max_drawdown_pct": 0.90,
+        "working_range_pct": 0.12,
+        "max_number_dca_orders": 60
     },
     {
         "id": "RP6",
