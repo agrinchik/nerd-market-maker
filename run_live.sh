@@ -19,6 +19,6 @@ while true
         break
     else
         echo "NerdMarketMaker has finished and will be restarted: status code="$?
-        sleep 10
+        sleep 5
     fi
 done

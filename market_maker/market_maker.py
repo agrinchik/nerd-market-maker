@@ -229,7 +229,7 @@ class MarketMakerManager:
 
         combined_msg = "\nWallet Balance:  {:.8f}\n".format(wallet_balance)
         combined_msg += "Margin Balance:  {:.8f}\n".format(margin_balance)
-        combined_msg += "Contract Position: {} ({}%)\n".format(self.running_qty, round(self.get_deposit_load_pct(self.running_qty), 2))
+        combined_msg += "Position: {} ({}%)\n".format(self.running_qty, round(self.get_deposit_load_pct(self.running_qty), 2))
         if settings.CHECK_POSITION_LIMITS:
             combined_msg += "Position limits: {:.8f}/{:.8f}\n".format(settings.MIN_POSITION, settings.MAX_POSITION)
         if position['currentQty'] != 0:
