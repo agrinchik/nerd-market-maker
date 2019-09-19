@@ -509,7 +509,6 @@ class BfxWebsocket(GenericWebsocket):
         # enable order book checksums
         if self.manageOrderBooks:
             await self.enable_flag(Flags.CHECKSUM)
-        await self.enable_calculations(self.symbol)
         # set any existing subscriptions to not subscribed
         self.subscriptionManager.set_unsubscribed_by_socket(socket_id)
         # re-subscribe to existing channels
