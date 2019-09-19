@@ -50,6 +50,7 @@ bfx = BitfinexClient(
     logLevel='INFO'
 )
 
+
 # https://docs.bitfinex.com/v2/docs/ws-general
 class Bitfinex(BaseExchange):
 
@@ -79,7 +80,8 @@ class Bitfinex(BaseExchange):
 
     @bfx.ws.on('error')
     def log_error(err):
-        print("Error: {}".format(err))
+        logger = logging.getLogger('root')
+        logger.info("Error: {}".format(err))
 
     def get_tick_size(self, instrument):
         bid_price = number_to_string(instrument['bidPrice'])
