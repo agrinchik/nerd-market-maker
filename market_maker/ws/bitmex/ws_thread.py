@@ -110,8 +110,8 @@ class BitMEXWebsocket():
 
     def funds(self):
         margin = self.data['margin'][0]
-        margin["walletBalance"] = XBt_to_XBT(margin["walletBalance"])
-        margin["marginBalance"] = XBt_to_XBT(margin["marginBalance"])
+        #margin["walletBalance"] = XBt_to_XBT(margin["walletBalance"])
+        #margin["marginBalance"] = XBt_to_XBT(margin["marginBalance"])
         return margin
 
     def current_qty(self):
@@ -196,7 +196,7 @@ class BitMEXWebsocket():
         nonce = generate_expires()
         return [
             "api-expires: " + str(nonce),
-            "api-signature: " + generate_signature(settings.API_SECRET, 'GET', '/realtime', nonce, ''),
+            "api-signature: " + generate_signature(ExchangeInfo.get_apisecret(), 'GET', '/realtime', nonce, ''),
             "api-key:" + ExchangeInfo.get_apikey()
         ]
 

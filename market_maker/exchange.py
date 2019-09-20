@@ -96,6 +96,13 @@ class ExchangeInfo(object):
         return exchange_id == BITFINEX
 
     @staticmethod
+    def get_baseurl():
+        if ExchangeInfo.is_bitmex():
+            return settings.BITMEX_BASE_URL
+        if ExchangeInfo.is_bitfinex():
+            raise Exception("Not implemented")
+
+    @staticmethod
     def get_apikey():
         if ExchangeInfo.is_bitmex():
             return settings.BITMEX_API_KEY
