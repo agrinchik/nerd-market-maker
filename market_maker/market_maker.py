@@ -629,12 +629,12 @@ def run():
     try:
         om.run_loop()
     except ForceRestartException as fe:
-        os._exit(settings.FORCE_RESTART_EXIT_STATUS_CODE)
+        om.exit(settings.FORCE_RESTART_EXIT_STATUS_CODE)
     except KeyboardInterrupt as ki:
-        os._exit(settings.FORCE_STOP_EXIT_STATUS_CODE)
+        om.exit(settings.FORCE_STOP_EXIT_STATUS_CODE)
     except SystemExit as se:
-        os._exit(se.code)
+        om.exit(se.code)
     except Exception as e:
         log_error(logger, "UNEXPECTED EXCEPTION! {}\nNerdMarketMaker bot will be terminated.".format(e), True)
-        os._exit(settings.FORCE_STOP_EXIT_STATUS_CODE)
+        om.exit(settings.FORCE_STOP_EXIT_STATUS_CODE)
 
