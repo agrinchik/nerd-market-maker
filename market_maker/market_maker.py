@@ -590,7 +590,7 @@ class MarketMakerManager:
         except Exception as e:
             logger.info("Unable to cancel orders: %s" % e)
 
-        sys.exit(status)
+        os._exit(status)
 
     def run_loop(self):
         while True:

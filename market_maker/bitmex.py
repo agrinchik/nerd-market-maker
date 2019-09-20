@@ -14,8 +14,6 @@ from market_maker.ws.bitmex.ws_thread import BitMEXWebsocket
 from market_maker.exchange import BaseExchange
 from market_maker.exchange import ExchangeInfo
 
-BASE_URL = "https://www.bitmex.com/api/v1/"
-
 
 # https://www.bitmex.com/api/explorer/
 class BitMEX(BaseExchange):
@@ -27,7 +25,7 @@ class BitMEX(BaseExchange):
                  retries=24, retry_delay=5):
         """Init connector."""
         self.logger = logging.getLogger('root')
-        self.base_url = BASE_URL
+        self.base_url = ExchangeInfo.get_baseurl()
         self.symbol = symbol
         self.postOnly = postOnly
         self.apiKey = ExchangeInfo.get_apikey()

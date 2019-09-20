@@ -14,11 +14,13 @@ echo Executing NerdMarketMaker in TEST environment ...
 
 while true
     do ./marketmaker
-    if [ $? -eq 99 ]; then
+    st=$?
+    echo $st
+    if [ "$st" -eq "99" ]; then
         echo "NerdMarketMaker has finished with status code=99 and the bash script will be terminated!"
         break
     else
-        echo "NerdMarketMaker has finished and will be restarted: status code="$?
+        echo "NerdMarketMaker has finished and will be restarted: status code="$st
         sleep 5
     fi
 done
