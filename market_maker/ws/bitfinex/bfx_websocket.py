@@ -293,7 +293,7 @@ class BfxWebsocket(GenericWebsocket):
         # [0,"wu",["exchange","USD",89134.66933283,0]]
         uw = self.wallets._update_from_event(data)
         self._emit('wallet_update', uw)
-        self.logger.info("Wallet update: {}".format(uw))
+        self.logger.debug("Wallet update: {}".format(uw))
 
     async def _heart_beat_handler(self, data):
         self.logger.debug("Heartbeat - {}".format(self.host))
@@ -311,7 +311,7 @@ class BfxWebsocket(GenericWebsocket):
             calc = _parse_margin_info_base_calc(calc_name, data_arr[2])
             self.wsdata.put_margin_info(calc_name, calc)
 
-        self.logger.info("Margin info update: {}".format(data))
+        self.logger.debug("Margin info update: {}".format(data))
 
     async def _funding_info_update_handler(self, data):
         self._emit('funding_info_update', data)
