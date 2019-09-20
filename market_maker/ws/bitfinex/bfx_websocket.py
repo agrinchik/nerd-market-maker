@@ -442,7 +442,7 @@ class BfxWebsocket(GenericWebsocket):
                 data[1], subscription.symbol)
             self.wsdata.put_ticker(self.symbol, ticker)
             self._emit('new_ticker', ticker)
-        self.logger.info("_ticker_handler(): New ticker for the {} symbol: {}".format(self.symbol, self.wsdata.get_ticker(self.symbol)))
+        self.logger.debug("_ticker_handler(): New ticker for the {} symbol: {}".format(self.symbol, self.wsdata.get_ticker(self.symbol)))
         await self.enable_calculations(self.symbol)
 
     async def _order_book_handler(self, data, orig_raw_message):
@@ -573,7 +573,7 @@ class BfxWebsocket(GenericWebsocket):
             ]
         ]
         # enable on all sockets
-        self.logger.info("Sending \"calc\" message for the symbols: margin_base, {}, {}...".format("margin_sym_{}".format(symbol), "position_{}".format(symbol)))
+        self.logger.debug("Sending \"calc\" message for the symbols: margin_base, {}, {}...".format("margin_sym_{}".format(symbol), "position_{}".format(symbol)))
         for socket in self.sockets.values():
             if socket.isConnected:
                 await socket.ws.send(json.dumps(payload))
