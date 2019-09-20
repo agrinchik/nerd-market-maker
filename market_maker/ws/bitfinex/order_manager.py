@@ -43,7 +43,7 @@ class OrderManager:
         self.bfxapi._emit('order_snapshot', self.get_open_orders())
 
     async def confirm_order_new(self, raw_ws_data):
-        self.logger.info("confirm_order_new(): raw_ws_data={}".format(raw_ws_data))
+        self.logger.debug("confirm_order_new(): raw_ws_data={}".format(raw_ws_data))
         order = Order.from_raw_order(raw_ws_data[2])
         self.open_orders[order["orderID"]] = order
         self.bfxapi._emit('order_confirmed', order)
@@ -51,7 +51,7 @@ class OrderManager:
         self.bfxapi._emit('order_new', order)
 
     async def confirm_order_update(self, raw_ws_data):
-        self.logger.info("confirm_order_update(): raw_ws_data={}".format(raw_ws_data))
+        self.logger.debug("confirm_order_update(): raw_ws_data={}".format(raw_ws_data))
         order = Order.from_raw_order(raw_ws_data[2])
         orderId = order["orderID"]
         self.log_order_execution(self.open_orders[orderId], order)
@@ -60,7 +60,7 @@ class OrderManager:
         self.bfxapi._emit('order_update', order)
 
     async def confirm_order_closed(self, raw_ws_data):
-        self.logger.info("confirm_order_closed(): raw_ws_data={}".format(raw_ws_data))
+        self.logger.debug("confirm_order_closed(): raw_ws_data={}".format(raw_ws_data))
         order = Order.from_raw_order(raw_ws_data[2])
         orderId = order["orderID"]
         if orderId in self.open_orders:
@@ -74,7 +74,7 @@ class OrderManager:
         return self.bfxapi.positionManager.get_open_positions().get(self.bfxapi.symbol)
 
     def get_order_close_position_status(self, position_qty, order_side, order_price):
-        self.logger.info("get_order_close_position_status(): curr_position={}, order_side={}, order_price={}".format(position_qty, order_side, order_price))
+        self.logger.debug("get_order_close_position_status(): curr_position={}, order_side={}, order_price={}".format(position_qty, order_side, order_price))
         is_order_long = True if order_side == "Buy" else False
         order_price_with_sign = order_price if is_order_long is True else -order_price
         if position_qty == 0 or position_qty == -order_price_with_sign:
