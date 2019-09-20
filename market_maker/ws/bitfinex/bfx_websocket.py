@@ -379,6 +379,7 @@ class BfxWebsocket(GenericWebsocket):
         symbol = sub.symbol
         status_type = sub.key.split(":")[0]
         rstatus = data[1]
+        status = None
         if status_type == "deriv":
             status = _parse_deriv_status_update(rstatus, symbol)
         if status:

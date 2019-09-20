@@ -129,8 +129,8 @@ class GenericWebsocket:
                 asyncio.set_event_loop(loop)
                 loop.run_until_complete(self._run_socket())
             except Exception as e:
-                log_error(self.logger, "!!! Unexpected exception, the NerdMarketMaker bot will be stopped. Exception: {}".format(e), True)
-                os._exit(settings.FORCE_STOP_EXIT_STATUS_CODE)
+                log_error(self.logger, "Unexpected exception, the NerdMarketMaker bot will be restarted. Exception: {}".format(e), True)
+                os._exit(settings.FORCE_RESTART_EXIT_STATUS_CODE)
 
         worker_loop = asyncio.new_event_loop()
         worker = Thread(target=start_loop, args=(worker_loop,))

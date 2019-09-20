@@ -127,7 +127,7 @@ class Bitfinex(BaseExchange):
 
         # The instrument has a tickSize. Use it to round values.
         result = {k: toNearest(float(v or 0), instrument['tickSize']) for k, v in iteritems(ticker)}
-        self.logger.info('Ticker: {}'.format(result))
+        self.logger.debug('Ticker: {}'.format(result))
         return result
 
     def is_open(self):
@@ -143,6 +143,7 @@ class Bitfinex(BaseExchange):
         # http://stackoverflow.com/a/6190291/832202
         instrument['tickSize'] = self.get_tick_size(instrument)
         instrument['tickLog'] = decimal.Decimal(str(instrument['tickSize'])).as_tuple().exponent * -1
+        self.logger.debug('instrument(): instrument={}'.format(instrument))
         return instrument
 
     def calculate_margin_balance(self, symbol):
