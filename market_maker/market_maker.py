@@ -617,7 +617,6 @@ class MarketMakerManager:
 
     def restart(self):
         logger.info("Restarting the market maker...")
-        #os.execv(sys.executable, [sys.executable] + sys.argv)
         raise ForceRestartException("NerdMarketMaker bot will be restarted")
 
 
