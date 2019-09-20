@@ -109,10 +109,11 @@ class BitMEXWebsocket():
         return {k: toNearest(float(v or 0), instrument['tickSize']) for k, v in iteritems(ticker)}
 
     def funds(self):
-        margin = self.data['margin'][0]
-        #margin["walletBalance"] = XBt_to_XBT(margin["walletBalance"])
-        #margin["marginBalance"] = XBt_to_XBT(margin["marginBalance"])
-        return margin
+        margin_dict = self.data['margin'][0]
+        margin_dict_copy = margin_dict.copy()
+        margin_dict_copy["walletBalance"] = XBt_to_XBT(margin_dict["walletBalance"])
+        margin_dict_copy["marginBalance"] = XBt_to_XBT(margin_dict["marginBalance"])
+        return margin_dict_copy
 
     def current_qty(self):
         return self.position(self.symbol)['currentQty']

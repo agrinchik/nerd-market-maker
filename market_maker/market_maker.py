@@ -226,16 +226,18 @@ class MarketMakerManager:
         self.running_qty = self.exchange.get_delta()
         wallet_balance = margin["walletBalance"]
         margin_balance = margin["marginBalance"]
+        instrument = self.exchange.get_instrument(position["symbol"])
+        tickLog = instrument["tickLog"]
 
         combined_msg = "\nWallet Balance:  {:.8f}\n".format(wallet_balance)
         combined_msg += "Margin Balance:  {:.8f}\n".format(margin_balance)
         combined_msg += "Position: {} ({}%)\n".format(self.running_qty, round(self.get_deposit_load_pct(self.running_qty), 2))
         if settings.CHECK_POSITION_LIMITS:
-            combined_msg += "Position limits: {:.8f}/{:.8f}\n".format(settings.MIN_POSITION, settings.MAX_POSITION)
+            combined_msg += "Position limits: {}/{}\n".format(round(settings.MIN_POSITION, tickLog), round(settings.MAX_POSITION, tickLog))
         if position['currentQty'] != 0:
             combined_msg += "Avg Entry Price: {}\n".format(float(position['avgEntryPrice']))
             combined_msg += "Distance To Avg Price: {:.2f}% ({})\n".format(self.exchange.get_distance_to_avg_price_pct(), self.exchange.get_position_pnl_text_status())
-            combined_msg += "Liquidation Price: {:.8f}\n".format(float(position['liquidationPrice']))
+            combined_msg += "Liquidation Price: {}\n".format(round(float(position['liquidationPrice']), tickLog))
             combined_msg += "Distance To Liq. Price: {:.2f}%\n".format(self.exchange.get_distance_to_liq_price_pct())
         log_info(logger, combined_msg, send_to_telegram)
 
@@ -626,8 +628,10 @@ def run():
     # Try/except just keeps ctrl-c from printing an ugly stacktrace
     try:
         om.run_loop()
-    except (ForceRestartException, KeyboardInterrupt) as fe:
+    except ForceRestartException as fe:
         os._exit(settings.FORCE_RESTART_EXIT_STATUS_CODE)
+    except KeyboardInterrupt as ki:
+        os._exit(settings.FORCE_STOP_EXIT_STATUS_CODE)
     except SystemExit as se:
         os._exit(se.code)
     except Exception as e:
