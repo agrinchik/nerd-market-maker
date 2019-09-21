@@ -218,6 +218,14 @@ class MarketMakerManager:
         self.check_stop_trading()
         self.dynamic_settings.initialize_params()
 
+    def get_round_value(self, value, tick_log):
+        if value < 1 and tick_log == 0:
+            return round(value, 8)
+        elif value < 1 and tick_log > 0:
+            return round(value, 8)
+        elif value >= 1:
+            return round(value, tick_log)
+
     def print_status(self, send_to_telegram):
         """Print the current MM status."""
 
@@ -227,17 +235,17 @@ class MarketMakerManager:
         wallet_balance = margin["walletBalance"]
         margin_balance = margin["marginBalance"]
         instrument = self.exchange.get_instrument(position["symbol"])
-        tickLog = instrument["tickLog"]
+        tick_log = instrument["tickLog"]
 
-        combined_msg = "\nWallet Balance:  {:.8f}\n".format(wallet_balance)
-        combined_msg += "Margin Balance:  {:.8f}\n".format(margin_balance)
-        combined_msg += "Position: {} ({}%)\n".format(self.running_qty, round(self.get_deposit_load_pct(self.running_qty), 2))
+        combined_msg = "\nWallet Balance: {}\n".format(self.get_round_value(wallet_balance, 8))
+        combined_msg += "Margin Balance: {}\n".format(self.get_round_value(margin_balance, 8))
+        combined_msg += "Position: {} ({}%)\n".format(self.get_round_value(self.running_qty, tick_log), round(self.get_deposit_load_pct(self.running_qty), 2))
         if settings.CHECK_POSITION_LIMITS:
-            combined_msg += "Position limits: {}/{}\n".format(round(settings.MIN_POSITION, tickLog), round(settings.MAX_POSITION, tickLog))
+            combined_msg += "Position limits: {}/{}\n".format(self.get_round_value(settings.MIN_POSITION, tick_log), self.get_round_value(settings.MAX_POSITION, tick_log))
         if position['currentQty'] != 0:
-            combined_msg += "Avg Entry Price: {}\n".format(float(position['avgEntryPrice']))
+            combined_msg += "Avg Entry Price: {}\n".format(self.get_round_value(position['avgEntryPrice'], tick_log))
             combined_msg += "Distance To Avg Price: {:.2f}% ({})\n".format(self.exchange.get_distance_to_avg_price_pct(), self.exchange.get_position_pnl_text_status())
-            combined_msg += "Liquidation Price: {}\n".format(round(float(position['liquidationPrice']), tickLog))
+            combined_msg += "Liquidation Price: {}\n".format(self.get_round_value(float(position['liquidationPrice']), tick_log))
             combined_msg += "Distance To Liq. Price: {:.2f}%\n".format(self.exchange.get_distance_to_liq_price_pct())
         log_info(logger, combined_msg, send_to_telegram)
 
