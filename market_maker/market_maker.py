@@ -388,8 +388,8 @@ class MarketMakerManager:
         """Create an order object."""
 
         instrument = self.exchange.get_instrument()
-        minOrderSize = float(instrument.get("minOrderSize"))
-        quantity = math.roundQuantity(settings.ORDER_START_SIZE + ((abs(index) - 1) * settings.ORDER_STEP_SIZE), minOrderSize)
+        minOrderLog = instrument.get("minOrderLog")
+        quantity = math.roundQuantity(settings.ORDER_START_SIZE + ((abs(index) - 1) * settings.ORDER_STEP_SIZE), minOrderLog)
 
         price = self.get_price_offset(index)
 

@@ -20,7 +20,6 @@ class OrderManager:
 
     def __init__(self, bfxapi, logLevel='INFO'):
         self.bfxapi = bfxapi
-        self.pending_orders = {}
         self.open_orders = {}
 
         self.logger = logging.getLogger('root')
@@ -28,8 +27,11 @@ class OrderManager:
     def get_open_orders(self):
         return list(self.open_orders.values())
 
-    def get_pending_orders(self):
-        return list(self.pending_orders.values())
+    def add_new_multiple_orders_rest_apiv1(self, raw_rest_data):
+        for raw_order in raw_rest_data:
+            order = Order.from_raw_order_api_v1(raw_order)
+            self.open_orders[order["orderID"]] = order
+        self.logger.debug("open_orders: {}".format(self.get_open_orders()))
 
     async def build_from_order_snapshot(self, raw_ws_data):
         '''
@@ -38,36 +40,40 @@ class OrderManager:
         osData = raw_ws_data[2]
         self.open_orders = {}
         for raw_order in osData:
-            order = Order.from_raw_order(raw_order)
+            order = Order.from_raw_order_api_v2(raw_order)
             self.open_orders[order["orderID"]] = order
         self.bfxapi._emit('order_snapshot', self.get_open_orders())
+        self.logger.debug("open_orders: {}".format(self.get_open_orders()))
 
     async def confirm_order_new(self, raw_ws_data):
         self.logger.debug("confirm_order_new(): raw_ws_data={}".format(raw_ws_data))
-        order = Order.from_raw_order(raw_ws_data[2])
+        order = Order.from_raw_order_api_v2(raw_ws_data[2])
         self.open_orders[order["orderID"]] = order
         self.bfxapi._emit('order_confirmed', order)
         self.logger.info("Order new: {}".format(order))
+        self.logger.debug("open_orders: {}".format(self.get_open_orders()))
         self.bfxapi._emit('order_new', order)
 
     async def confirm_order_update(self, raw_ws_data):
         self.logger.debug("confirm_order_update(): raw_ws_data={}".format(raw_ws_data))
-        order = Order.from_raw_order(raw_ws_data[2])
+        order = Order.from_raw_order_api_v2(raw_ws_data[2])
         orderId = order["orderID"]
         self.log_order_execution(self.open_orders[orderId], order)
         self.open_orders[orderId] = order
         self.logger.info("Order update: {}".format(order))
+        self.logger.debug("open_orders: {}".format(self.get_open_orders()))
         self.bfxapi._emit('order_update', order)
 
     async def confirm_order_closed(self, raw_ws_data):
         self.logger.debug("confirm_order_closed(): raw_ws_data={}".format(raw_ws_data))
-        order = Order.from_raw_order(raw_ws_data[2])
+        order = Order.from_raw_order_api_v2(raw_ws_data[2])
         orderId = order["orderID"]
         if orderId in self.open_orders:
             self.log_order_execution(self.open_orders[orderId], order)
             del self.open_orders[orderId]
             self.bfxapi._emit('order_confirmed', order)
             self.logger.info("Order closed: {}".format(order))
+            self.logger.debug("open_orders: {}".format(self.get_open_orders()))
             self.bfxapi._emit('order_closed', order)
 
     def get_current_position(self):
