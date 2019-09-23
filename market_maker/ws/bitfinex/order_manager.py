@@ -103,10 +103,10 @@ class OrderManager:
             symbol = update_order['symbol']
             order_close_position_status = self.get_order_close_position_status(position_qty, order_side, order_price)
             if order_close_position_status == ORDER_CLOSE_POSITION_STATUS_INCREASE:
-                log_info(self.logger, "Execution (position increase): {} {} contracts of {} at {}".format(order_side, contExecuted, symbol, order_price), True)
+                log_info(self.logger, "Execution (position increase): {} {} quantity of {} at {}".format(order_side, contExecuted, symbol, order_price), True)
             elif order_close_position_status == ORDER_CLOSE_POSITION_STATUS_PARTIAL_CLOSE:
-                log_info(self.logger, "Execution (position partial close): {} {} contracts of {} at {}".format(order_side, contExecuted, symbol, order_price), True)
+                log_info(self.logger, "Execution (position partial close): {} {} quantity of {} at {}".format(order_side, contExecuted, symbol, order_price), True)
             elif order_close_position_status == ORDER_CLOSE_POSITION_STATUS_FULL_CLOSE:
-                log_info(self.logger, "Execution (position fully closed): {} {} contracts of {} at {}".format(order_side, contExecuted, symbol, order_price), True)
+                log_info(self.logger, "Execution (position fully closed): {} {} quantity of {} at {}".format(order_side, contExecuted, symbol, order_price), True)
 
 
