@@ -172,11 +172,17 @@ class Order:
             return OrderStatus.ACTIVE
         if OrderStatus.EXECUTED in status_str:
             return OrderStatus.EXECUTED
-        if OrderStatus.PARTIALLY_FILLED in status_str:
-            return OrderStatus.PARTIALLY_FILLED
         if OrderStatus.CANCELED in status_str:
             return OrderStatus.CANCELED
         if OrderStatus.RSN_DUST in status_str:
             return OrderStatus.RSN_DUST
         if OrderStatus.RSN_PAUSE in status_str:
             return OrderStatus.RSN_PAUSE
+
+    @staticmethod
+    def is_order_partially_filled(order):
+        status_str = order["ordStatus"]
+        if OrderStatus.PARTIALLY_FILLED in status_str:
+            return True
+        else:
+            return False

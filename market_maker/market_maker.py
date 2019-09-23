@@ -13,8 +13,8 @@ from market_maker.utils.log import log_error
 from market_maker import bitmex
 from market_maker import bitfinex
 from market_maker.settings import settings
-from market_maker.utils.bitmex import constants, errors, math
-from market_maker.utils import log
+from market_maker.utils.bitmex import constants, errors
+from market_maker.utils import log, math
 from market_maker.exchange import ExchangeInfo
 
 from market_maker.dynamic_settings import DynamicSettings
@@ -175,7 +175,6 @@ class MarketMakerManager:
         logger.info("Order Manager initializing, connecting to exchange. Live run: executing real trades.")
 
         self.start_time = datetime.now()
-        self.instrument = self.exchange.get_instrument()
         self.starting_qty = self.exchange.get_delta()
         self.running_qty = self.starting_qty
         self.max_wallet_balance = self.get_cached_wallet_balance()
@@ -219,11 +218,11 @@ class MarketMakerManager:
         self.dynamic_settings.initialize_params()
 
     def get_round_value(self, value, tick_log):
-        if value < 1 and tick_log == 0:
+        if abs(value) < 1 and tick_log == 0:
             return round(value, 8)
-        elif value < 1 and tick_log > 0:
+        elif abs(value) < 1 and tick_log > 0:
             return round(value, 8)
-        elif value >= 1:
+        elif abs(value) >= 1:
             return round(value, tick_log)
 
     def print_status(self, send_to_telegram):
@@ -251,13 +250,14 @@ class MarketMakerManager:
 
     def check_suspend_trading(self):
         curr_time = datetime.now()
-        ticker = self.exchange.get_ticker()
+        symbol = self.exchange.symbol
+        ticker = self.exchange.get_ticker(symbol)
         ticker_last_price = ticker["last"]
         price_change_last_checked_seconds_ago = (curr_time - self.price_change_last_check).total_seconds()
         price_change_diff_pct = abs((ticker_last_price - self.price_change_last_price) * 100 / self.price_change_last_price)
 
-        if self.is_trading_suspended is False:
-            if settings.STOP_QUOTING_CHECK_IMPULSE_PRICE_CHANGE is True:
+        if settings.STOP_QUOTING_CHECK_IMPULSE_PRICE_CHANGE is True:
+            if self.is_trading_suspended is False:
                 if self.price_change_last_price == -1:
                     self.price_change_last_check = curr_time
                     self.price_change_last_price = ticker_last_price
@@ -265,18 +265,17 @@ class MarketMakerManager:
 
                 if price_change_last_checked_seconds_ago > settings.STOP_QUOTING_PRICE_CHANGE_CHECK_TIME_PERIOD_SECONDS:
                     if price_change_diff_pct > settings.STOP_QUOTING_PRICE_CHANGE_EXCEEDED_THRESHOLD_PCT:
-                        log_info(logger, "WARNING: Trading would be SUSPENDED as in the past {} seconds the XBT last price had moved very fast and exceeded the threshold = {}%".
-                                 format(settings.STOP_QUOTING_PRICE_CHANGE_CHECK_TIME_PERIOD_SECONDS, settings.STOP_QUOTING_PRICE_CHANGE_EXCEEDED_THRESHOLD_PCT), True)
+                        log_info(logger, "WARNING: Trading would be SUSPENDED as during last {} seconds the {} price had moved very fast and exceeded the threshold = {}%.".
+                                 format(settings.STOP_QUOTING_PRICE_CHANGE_CHECK_TIME_PERIOD_SECONDS, symbol, settings.STOP_QUOTING_PRICE_CHANGE_EXCEEDED_THRESHOLD_PCT), True)
                         self.is_trading_suspended = True
                         self.exchange.cancel_all_orders()
                     self.price_change_last_check = curr_time
                     self.price_change_last_price = ticker_last_price
-        else:
-            if settings.STOP_QUOTING_CHECK_IMPULSE_PRICE_CHANGE is True:
-                if price_change_last_checked_seconds_ago > settings.STOP_QUOTING_PRICE_CHANGE_CHECK_TIME_PERIOD_SECONDS:
+            else:
+                if price_change_last_checked_seconds_ago > settings.RESUME_QUOTING_PRICE_CHANGE_CHECK_TIME_PERIOD_SECONDS:
                     if price_change_diff_pct < settings.RESUME_QUOTING_PRICE_CHANGE_WENT_BELOW_THRESHOLD_PCT:
-                        log_info(logger, "WARNING: Trading would be RESUMED as in the past {} seconds the XBT last price had changed within the threshold = {}%".
-                                 format(settings.STOP_QUOTING_PRICE_CHANGE_CHECK_TIME_PERIOD_SECONDS, settings.RESUME_QUOTING_PRICE_CHANGE_WENT_BELOW_THRESHOLD_PCT), True)
+                        log_info(logger, "WARNING: Trading would be RESUMED as during last {} seconds the {} price had moved below the threshold = {}%".
+                                 format(settings.RESUME_QUOTING_PRICE_CHANGE_CHECK_TIME_PERIOD_SECONDS, symbol, settings.RESUME_QUOTING_PRICE_CHANGE_WENT_BELOW_THRESHOLD_PCT), True)
                         self.is_trading_suspended = False
                     self.price_change_last_check = curr_time
                     self.price_change_last_price = ticker_last_price
@@ -293,8 +292,10 @@ class MarketMakerManager:
             self.exit(settings.FORCE_STOP_EXIT_STATUS_CODE)
 
     def get_ticker(self):
+        instrument = self.exchange.get_instrument()
         ticker = self.exchange.get_ticker()
-        tickSize = self.instrument['tickSize']
+        tickSize = instrument['tickSize']
+        tickLog = instrument['tickLog']
 
         # Set up our buy & sell positions as the smallest possible unit above and below the current spread
         # and we'll work out from there. That way we always have the best price but we don't kill wide
@@ -318,11 +319,12 @@ class MarketMakerManager:
 
         # Midpoint, used for simpler order placement.
         self.start_position_mid = ticker["mid"]
-        logger.info("{} Ticker: Buy: {}, Sell: {}".format(self.instrument['symbol'], ticker["buy"], ticker["sell"]))
+        logger.info("{} Ticker: Buy: {}, Sell: {}".format(instrument['symbol'], round(ticker["buy"], tickLog), round(ticker["sell"], tickLog)))
         logger.info('Start Positions: Buy: {}, Sell: {}, Mid: {}'.format(self.start_position_buy, self.start_position_sell, self.start_position_mid))
         return ticker
 
     def get_price_offset(self, index):
+        instrument = self.exchange.get_instrument()
         """Given an index (1, -1, 2, -2, etc.) return the price for that side of the book.
            Negative is a buy, positive is a sell."""
         # Maintain existing spreads for max profit
@@ -342,7 +344,7 @@ class MarketMakerManager:
             if index < 0 and start_position > self.start_position_sell:
                 start_position = self.start_position_buy
 
-        return math.toNearest(start_position * (1 + settings.INTERVAL) ** index, self.instrument['tickSize'])
+        return math.toNearest(start_position * (1 + settings.INTERVAL) ** index, instrument['tickSize'])
 
     ###
     # Orders
@@ -385,13 +387,16 @@ class MarketMakerManager:
     def prepare_order(self, index):
         """Create an order object."""
 
-        quantity = math.roundQuantity(settings.ORDER_START_SIZE + ((abs(index) - 1) * settings.ORDER_STEP_SIZE))
+        instrument = self.exchange.get_instrument()
+        minOrderSize = float(instrument.get("minOrderSize"))
+        quantity = math.roundQuantity(settings.ORDER_START_SIZE + ((abs(index) - 1) * settings.ORDER_STEP_SIZE), minOrderSize)
 
         price = self.get_price_offset(index)
 
         return {'price': price, 'orderQty': quantity, 'side': "Buy" if index < 0 else "Sell"}
 
     def prepare_order_opposite_side(self, is_long, quantity):
+        instrument = self.exchange.get_instrument()
         position = self.exchange.get_position()
         avg_entry_price = position['avgEntryPrice']
         take_profit_pct = settings.MODE2_CLOSE_FULL_POSITION_TAKE_PROFIT_PCT
@@ -399,7 +404,7 @@ class MarketMakerManager:
             price = avg_entry_price + avg_entry_price * take_profit_pct
         else:
             price = avg_entry_price - avg_entry_price * take_profit_pct
-        price = math.toNearest(price, self.instrument['tickSize'])
+        price = math.toNearest(price, instrument['tickSize'])
 
         return {'price': price, 'orderQty': quantity, 'side': "Sell" if is_long is True else "Buy"}
 
@@ -590,7 +595,7 @@ class MarketMakerManager:
         """Ensure the WS connections are still open."""
         return self.exchange.is_open()
 
-    def exit(self, status=None):
+    def exit(self, status=settings.FORCE_STOP_EXIT_STATUS_CODE):
         logger.info("Shutting down. All open orders will be cancelled.")
         try:
             self.exchange.cancel_all_orders()

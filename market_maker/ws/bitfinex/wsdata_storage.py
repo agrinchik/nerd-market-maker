@@ -1,15 +1,26 @@
 
 import logging
+from market_maker.utils.bitfinex.utils import strip_trade_symbol
 
 class WsData_Storage:
 
     def __init__(self):
         self.logger = logging.getLogger('root')
+        self.symbols_details = {}
         self.tickers = {}
         self.candles = {}
         self.trades = {}
         self.info = {}
         self.margin_info = {}
+
+    def put_symbols_details(self, symbols_details_data):
+        for symbol_details in symbols_details_data:
+            symbol = symbol_details["pair"]
+            self.symbols_details[symbol] = symbol_details
+
+    def get_symbol_details(self, symbol):
+        symbol_stripped = strip_trade_symbol(symbol).lower()
+        return self.symbols_details.get(symbol_stripped)
 
     def put_ticker(self, symbol, ticker):
         self.tickers[symbol] = ticker
