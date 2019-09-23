@@ -170,7 +170,7 @@ class Order:
             # "execInst": "string",
             # "contingencyType": "string",
             # "exDestination": "string",
-            "ordStatus": OrderStatus.EXECUTED if raw_order[OrderModelApiV1.IS_LIVE] is True else OrderStatus.CANCELED if raw_order[OrderModelApiV1.IS_CANCELED] is True else None,
+            "ordStatus": OrderStatus.ACTIVE if raw_order[OrderModelApiV1.IS_LIVE] is True else OrderStatus.CANCELED if raw_order[OrderModelApiV1.IS_CANCELED] is True else None,
             # "triggered": "string",
             # "workingIndicator": True,
             # "ordRejReason": "string",
@@ -237,15 +237,9 @@ class Order:
             return OrderStatus.EXECUTED
         if OrderStatus.CANCELED in status_str:
             return OrderStatus.CANCELED
+        if OrderStatus.PARTIALLY_FILLED in status_str:
+            return OrderStatus.PARTIALLY_FILLED
         if OrderStatus.RSN_DUST in status_str:
             return OrderStatus.RSN_DUST
         if OrderStatus.RSN_PAUSE in status_str:
             return OrderStatus.RSN_PAUSE
-
-    @staticmethod
-    def is_order_partially_filled(order):
-        status_str = order["ordStatus"]
-        if OrderStatus.PARTIALLY_FILLED in status_str:
-            return True
-        else:
-            return False
