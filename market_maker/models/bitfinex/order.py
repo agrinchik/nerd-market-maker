@@ -4,6 +4,8 @@ Module used to describe all of the different data types
 
 import time
 
+STATUS_SUCCESS_API_V1 = "success"
+
 class OrderType:
     """
     Enum used to describe all of the different order types available for use
@@ -35,7 +37,25 @@ class OrderSide:
     SELL = 'sell'
 
 
-class OrderClosedModel:
+class OrderModelApiV1:
+    ID = "id"
+    GID = "gid"
+    CID = "cid"
+    SYMBOL = "symbol"
+    MTS_CREATE = "timestamp"
+    MTS_UPDATE = "timestamp"
+    AMOUNT = "executed_amount"
+    AMOUNT_REMAINING = "remaining_amount"
+    AMOUNT_ORIG = "original_amount"
+    SIDE = "side"
+    TYPE = "type"
+    PRICE = "price"
+    PRICE_AVG = "avg_execution_price"
+    IS_LIVE = "is_live"
+    IS_CANCELED = "is_cancelled"
+
+
+class OrderModelApiV2:
     """
     Enum used ad an index match to locate the different values in a
     raw order array
@@ -123,46 +143,89 @@ class Order:
         pass
 
     @staticmethod
-    def from_raw_order(raw_order):
+    def from_raw_order_api_v1(raw_order):
         """
         Parse a raw order object into an Order oject
 
         @return order dict
         """
         return {
-            "orderID": raw_order[OrderClosedModel.ID],
-            "clOrdID": raw_order[OrderClosedModel.CID],
+            "orderID": raw_order[OrderModelApiV1.ID],
+            "clOrdID": raw_order[OrderModelApiV1.CID],
+            # "clOrdLinkID": "string",
+            # "account": 0,
+            "symbol": raw_order[OrderModelApiV1.SYMBOL],
+            "side": raw_order[OrderModelApiV1.SIDE].capitalize(),
+            # "simpleOrderQty": 0,
+            "orderQty": abs(float(raw_order[OrderModelApiV1.AMOUNT_ORIG])),
+            "price": float(raw_order[OrderModelApiV1.PRICE]),
+            # "displayQty": 0,
+            # "stopPx": 0,
+            # "pegOffsetValue": 0,
+            # "pegPriceType": "string",
+            # "currency": "string",
+            # "settlCurrency": "string",
+            "ordType": raw_order[OrderModelApiV1.TYPE],
+            # "timeInForce": "string",
+            # "execInst": "string",
+            # "contingencyType": "string",
+            # "exDestination": "string",
+            "ordStatus": OrderStatus.EXECUTED if raw_order[OrderModelApiV1.IS_LIVE] is True else OrderStatus.CANCELED if raw_order[OrderModelApiV1.IS_CANCELED] is True else None,
+            # "triggered": "string",
+            # "workingIndicator": True,
+            # "ordRejReason": "string",
+            # "simpleLeavesQty": 0,
+            "leavesQty": abs(float(raw_order[OrderModelApiV1.AMOUNT_REMAINING])),
+            # "simpleCumQty": 0,
+            "cumQty": abs(float(raw_order[OrderModelApiV1.AMOUNT])),
+            # "avgPx": 0,
+            # "multiLegReportingType": "string",
+            # "text": "string",
+            "transactTime": float(raw_order[OrderModelApiV1.MTS_CREATE]),
+            "timestamp": float(raw_order[OrderModelApiV1.MTS_UPDATE])
+        }
+
+    @staticmethod
+    def from_raw_order_api_v2(raw_order):
+        """
+        Parse a raw order object into an Order oject
+
+        @return order dict
+        """
+        return {
+            "orderID": raw_order[OrderModelApiV2.ID],
+            "clOrdID": raw_order[OrderModelApiV2.CID],
             #"clOrdLinkID": "string",
             #"account": 0,
-            "symbol": raw_order[OrderClosedModel.SYMBOL],
-            "side": ('Buy' if raw_order[OrderClosedModel.AMOUNT_ORIG] > 0 else 'Sell'),
+            "symbol": raw_order[OrderModelApiV2.SYMBOL],
+            "side": ('Buy' if raw_order[OrderModelApiV2.AMOUNT_ORIG] > 0 else 'Sell'),
             #"simpleOrderQty": 0,
-            "orderQty": abs(raw_order[OrderClosedModel.AMOUNT_ORIG]),
-            "price": raw_order[OrderClosedModel.PRICE],
+            "orderQty": abs(raw_order[OrderModelApiV2.AMOUNT_ORIG]),
+            "price": raw_order[OrderModelApiV2.PRICE],
             #"displayQty": 0,
             #"stopPx": 0,
             #"pegOffsetValue": 0,
             #"pegPriceType": "string",
             #"currency": "string",
             #"settlCurrency": "string",
-            "ordType": raw_order[OrderClosedModel.TYPE],
+            "ordType": raw_order[OrderModelApiV2.TYPE],
             #"timeInForce": "string",
             #"execInst": "string",
             #"contingencyType": "string",
             #"exDestination": "string",
-            "ordStatus": raw_order[OrderClosedModel.STATUS],
+            "ordStatus": raw_order[OrderModelApiV2.STATUS],
             #"triggered": "string",
             #"workingIndicator": True,
             #"ordRejReason": "string",
             #"simpleLeavesQty": 0,
-            "leavesQty": abs(raw_order[OrderClosedModel.AMOUNT]),
+            "leavesQty": abs(raw_order[OrderModelApiV2.AMOUNT]),
             #"simpleCumQty": 0,
-            "cumQty": abs(raw_order[OrderClosedModel.AMOUNT_ORIG]) - abs(raw_order[OrderClosedModel.AMOUNT]),
+            "cumQty": abs(raw_order[OrderModelApiV2.AMOUNT_ORIG]) - abs(raw_order[OrderModelApiV2.AMOUNT]),
             #"avgPx": 0,
             #"multiLegReportingType": "string",
             #"text": "string",
-            "transactTime": raw_order[OrderClosedModel.MTS_CREATE],
-            "timestamp": raw_order[OrderClosedModel.MTS_UPDATE]
+            "transactTime": raw_order[OrderModelApiV2.MTS_CREATE],
+            "timestamp": raw_order[OrderModelApiV2.MTS_UPDATE]
         }
 
     @staticmethod

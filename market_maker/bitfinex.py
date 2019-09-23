@@ -10,6 +10,7 @@ from market_maker.utils.bitfinex.decimal_to_precision import number_to_string
 from market_maker.utils.math import toNearest
 from future.utils import iteritems
 from market_maker.models.bitfinex import Order, OrderType
+from market_maker.models.bitfinex.order import STATUS_SUCCESS_API_V1
 from market_maker.rest.bitfinex import ClientV1 as Client1
 from market_maker.rest.bitfinex import ClientV2 as Client2
 from market_maker.exchange import ExchangeInfo
@@ -103,7 +104,7 @@ class Bitfinex(BaseExchange):
 
     def get_min_order_size(self, symbol):
         symbol_details = bfx.ws.wsdata.get_symbol_details(symbol)
-        return symbol_details["minimum_order_size"]
+        return float(symbol_details["minimum_order_size"])
 
     async def start(self):
         # await bfx.ws.subscribe('candles', 'tBTCUSD', timeframe='1m')
@@ -197,6 +198,13 @@ class Bitfinex(BaseExchange):
 
         response = bfx.rest1.place_multiple_orders(new_orders)
         self.logger.info('Creating multiple orders - response: {}'.format(response))
+        response_status = response.get("status")
+        if response_status and response_status == STATUS_SUCCESS_API_V1:
+            raw_rest_data = response.get("order_ids")
+            bfx.ws.orderManager.add_new_multiple_orders_rest_apiv1(raw_rest_data)
+        else:
+            raise Exception("Unable to create multiple orders: {}".format(response_status))
+
         return response
 
     def amend_bulk_orders(self, orders):
@@ -212,7 +220,7 @@ class Bitfinex(BaseExchange):
 
     def http_open_orders(self):
         raw_orders = bfx.rest2.active_orders(self.symbol)
-        return [Order.from_raw_order(o) for o in raw_orders]
+        return [Order.from_raw_order_api_v2(o) for o in raw_orders]
 
     def cancel_orders(self, orders):
         """Cancel existing orders."""

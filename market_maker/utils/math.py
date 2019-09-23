@@ -13,9 +13,9 @@ def toNearest(num, tickSize):
         return int(num)
 
 
-def roundQuantity(qty, minOrderSize = None):
-    if minOrderSize is not None:
-        return toNearest(qty, minOrderSize)
+def roundQuantity(qty, minOrderLog = None):
+    if minOrderLog is not None:
+        return round(qty, minOrderLog)
     else:
         if qty < 1:
             return round(qty, 5)
