@@ -7,7 +7,7 @@ from __future__ import absolute_import
 from .ws.bitfinex.bfx_websocket import BfxWebsocket
 from market_maker.utils.bitfinex.decimal_to_precision import precision_from_string
 from market_maker.utils.bitfinex.decimal_to_precision import number_to_string
-from market_maker.utils.bitmex.math import toNearest
+from market_maker.utils.math import toNearest
 from future.utils import iteritems
 from market_maker.models.bitfinex import Order, OrderType
 from market_maker.rest.bitfinex import ClientV1 as Client1
@@ -18,11 +18,10 @@ from market_maker.utils.bitfinex.utils import strip_trade_symbol
 from market_maker.dynamic_settings import BITFINEX_DEFAULT_LEVERAGE
 
 import math
+from market_maker.utils import math
 from time import sleep
 import logging
-import decimal
 from market_maker.exchange import BaseExchange
-
 
 
 WS_HOST = 'wss://api.bitfinex.com/ws/2'
@@ -72,6 +71,9 @@ class Bitfinex(BaseExchange):
         self.__wait_for_symbol(symbol)
         self.logger.info('********* Got all market data. Starting! *********')
 
+        symbols_details = bfx.rest1.symbols_details()
+        bfx.ws.wsdata.put_symbols_details(symbols_details)
+
     def __wait_for_symbol(self, symbol):
         '''On subscribe, this data will come down. Wait for it.'''
         while not bfx.ws.is_data_initialized():
@@ -98,6 +100,10 @@ class Bitfinex(BaseExchange):
                 return 5 - (int(math.log10(instrument['lastPrice'])) + 1)
             else:
                 return round(pow(10, -precision), precision)
+
+    def get_min_order_size(self, symbol):
+        symbol_details = bfx.ws.wsdata.get_symbol_details(symbol)
+        return symbol_details["minimum_order_size"]
 
     async def start(self):
         # await bfx.ws.subscribe('candles', 'tBTCUSD', timeframe='1m')
@@ -141,8 +147,10 @@ class Bitfinex(BaseExchange):
             raise Exception("Unable to find instrument with symbol: " + symbol)
         # Turn the 'tickSize' into 'tickLog' for use in rounding
         # http://stackoverflow.com/a/6190291/832202
-        instrument['tickSize'] = self.get_tick_size(instrument)
-        instrument['tickLog'] = decimal.Decimal(str(instrument['tickSize'])).as_tuple().exponent * -1
+        instrument["tickSize"] = self.get_tick_size(instrument)
+        instrument["tickLog"] = math.get_decimal_digits_number(instrument['tickSize'])
+        instrument["minOrderSize"] = self.get_min_order_size(symbol)
+        instrument["minOrderLog"] = math.get_decimal_digits_number(instrument['minOrderSize'])
         self.logger.debug('instrument(): instrument={}'.format(instrument))
         return instrument
 

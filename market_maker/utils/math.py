@@ -13,9 +13,15 @@ def toNearest(num, tickSize):
         return int(num)
 
 
-def roundQuantity(qty):
-    # TODO: Reimplement later
-    if qty < 1:
-        return round(qty, 5)
+def roundQuantity(qty, minOrderSize = None):
+    if minOrderSize is not None:
+        return toNearest(qty, minOrderSize)
     else:
-        return int(qty)
+        if qty < 1:
+            return round(qty, 5)
+        else:
+            return int(qty)
+
+
+def get_decimal_digits_number(decimal_val):
+    return Decimal(str(decimal_val)).as_tuple().exponent * -1
