@@ -231,15 +231,15 @@ class Order:
     @staticmethod
     def get_order_status(order):
         status_str = order["ordStatus"]
-        if OrderStatus.ACTIVE in status_str:
+        if status_str.startswith(OrderStatus.ACTIVE):
             return OrderStatus.ACTIVE
-        if OrderStatus.EXECUTED in status_str:
+        if status_str.startswith(OrderStatus.EXECUTED):
             return OrderStatus.EXECUTED
-        if OrderStatus.CANCELED in status_str:
+        if status_str.startswith(OrderStatus.CANCELED):
             return OrderStatus.CANCELED
-        if OrderStatus.PARTIALLY_FILLED in status_str:
+        if status_str.startswith(OrderStatus.PARTIALLY_FILLED):
             return OrderStatus.PARTIALLY_FILLED
-        if OrderStatus.RSN_DUST in status_str:
+        if status_str.startswith(OrderStatus.RSN_DUST):
             return OrderStatus.RSN_DUST
-        if OrderStatus.RSN_PAUSE in status_str:
+        if status_str.startswith(OrderStatus.RSN_PAUSE):
             return OrderStatus.RSN_PAUSE
