@@ -8,8 +8,8 @@ from market_maker.exchange import ExchangeInfo
 DEFAULT_MIN_SPREAD_ADJUSTMENT_FACTOR = 0.6
 DEFAULT_RELIST_INTERVAL_ADJUSTMENT_FACTOR = 1.2
 
-BITMEX_DEFAULT_POSITION_MARGIN_TO_WALLET_RATIO_PCT = 0.0386
-BITMEX_DEFAULT_ORDER_MARGIN_TO_WALLET_RATIO_PCT = 0.0386
+BITMEX_DEFAULT_POSITION_MARGIN_TO_WALLET_RATIO_PCT = 0.0224
+BITMEX_DEFAULT_ORDER_MARGIN_TO_WALLET_RATIO_PCT = 0.0224
 BITMEX_DEFAULT_LEVERAGE = 100
 BITMEX_DEFAULT_INITIAL_MARGIN_BASE_PCT = 0.01
 BITMEX_DEFAULT_TAKER_FEE_PCT = 0.00075
@@ -17,7 +17,7 @@ BITMEX_DEFAULT_MIN_POSITION_SHORTS_ADJUSTMENT_FACTOR = 1.4
 
 BITFINEX_DEFAULT_MAINTENANCE_RATIO_PCT = 0.15
 BITFINEX_DISTANCE_TO_LIQUIDATION_PRICE_PCT = 0.25
-BITFINEX_TOTAL_POSITION_MARGIN_ADJUST_RATIO = 0.9
+BITFINEX_TOTAL_POSITION_MARGIN_ADJUST_RATIO = 0.8
 BITFINEX_DEFAULT_LEVERAGE = 3.33333333
 
 PARAMS_UPDATE_INTERVAL = 300  # 5 minutes
@@ -191,51 +191,51 @@ RISK_PROFILE_CONFIGURATION = [
     {
         "id": "RP1",
         "risk_level": 75,
-        "max_drawdown_pct": 0.085,
-        "working_range_pct": 0.015,
-        "max_number_dca_orders": 34
+        "max_number_dca_orders": 34,
+        "interval_pct": 0.0025,
+        "order_pairs": 6
     },
     {
         "id": "RP2",
         "risk_level": 70,
-        "max_drawdown_pct": 0.085,
-        "working_range_pct": 0.04,
-        "max_number_dca_orders": 17
+        "max_number_dca_orders": 17,
+        "interval_pct": 0.005,
+        "order_pairs": 6
     },
     {
         "id": "RP3",
         "risk_level": 60,
-        "max_drawdown_pct": 0.1575,
-        "working_range_pct": 0.06,
-        "max_number_dca_orders": 21
+        "max_number_dca_orders": 21,
+        "interval_pct": 0.0075,
+        "order_pairs": 6
     },
     {
         "id": "RP4",
         "risk_level": 50,
-        "max_drawdown_pct": 0.27,
-        "working_range_pct": 0.08,
-        "max_number_dca_orders": 27
+        "max_number_dca_orders": 27,
+        "interval_pct": 0.01,
+        "order_pairs": 6
     },
     {
         "id": "RP5",
         "risk_level": 40,
-        "max_drawdown_pct": 0.495,
-        "working_range_pct": 0.12,
-        "max_number_dca_orders": 33
+        "max_number_dca_orders": 33,
+        "interval_pct": 0.015,
+        "order_pairs": 6
     },
     {
         "id": "RP6",
         "risk_level": 30,
-        "max_drawdown_pct": 0.82,
-        "working_range_pct": 0.16,
-        "max_number_dca_orders": 41
+        "max_number_dca_orders": 41,
+        "interval_pct": 0.02,
+        "order_pairs": 6
     },
     {
         "id": "RP7",
         "risk_level": 20,
-        "max_drawdown_pct": 1.25,
-        "working_range_pct": 0.20,
-        "max_number_dca_orders": 50
+        "max_number_dca_orders": 50,
+        "interval_pct": 0.025,
+        "order_pairs": 6
     }
 ]
 
@@ -254,8 +254,6 @@ class DynamicSettings(object):
         self.initial_margin_base_pct = 0
         self.taker_fee_pct = 0
         self.max_possible_position_margin = 0
-        self.max_drawdown_pct = 0
-        self.working_range_pct = 0
         self.max_number_dca_orders = 0
         self.interval_pct = 0
         self.min_spread_pct = 0
@@ -370,13 +368,11 @@ class DynamicSettings(object):
             self.taker_fee_pct = BITMEX_DEFAULT_TAKER_FEE_PCT
             self.curr_risk_profile_id = risk_profile["id"]
             self.curr_risk_level = risk_profile["risk_level"]
-            self.max_drawdown_pct = risk_profile["max_drawdown_pct"]
-            self.working_range_pct = risk_profile["working_range_pct"]
             self.max_number_dca_orders = risk_profile["max_number_dca_orders"]
-            self.interval_pct = round(self.max_drawdown_pct / self.max_number_dca_orders, 8)
+            self.interval_pct = risk_profile["interval_pct"]
             self.min_spread_pct = round(self.interval_pct * 2 * DEFAULT_MIN_SPREAD_ADJUSTMENT_FACTOR, 8)
             self.relist_interval_pct = round(self.interval_pct * DEFAULT_RELIST_INTERVAL_ADJUSTMENT_FACTOR, 8)
-            self.order_pairs = int(round(self.working_range_pct / self.interval_pct))
+            self.order_pairs = risk_profile["order_pairs"]
 
             self.position_margin_amount = round(last_wallet_balance * self.position_margin_pct, 8)
             self.order_margin_amount = round(last_wallet_balance * self.order_margin_pct, 8)
@@ -390,13 +386,11 @@ class DynamicSettings(object):
         elif ExchangeInfo.is_bitfinex():
             self.curr_risk_profile_id = risk_profile["id"]
             self.curr_risk_level = risk_profile["risk_level"]
-            self.max_drawdown_pct = risk_profile["max_drawdown_pct"]
-            self.working_range_pct = risk_profile["working_range_pct"]
             self.max_number_dca_orders = risk_profile["max_number_dca_orders"]
-            self.interval_pct = round(self.max_drawdown_pct / self.max_number_dca_orders, 8)
+            self.interval_pct = risk_profile["interval_pct"]
             self.min_spread_pct = round(self.interval_pct * 2 * DEFAULT_MIN_SPREAD_ADJUSTMENT_FACTOR, 8)
             self.relist_interval_pct = round(self.interval_pct * DEFAULT_RELIST_INTERVAL_ADJUSTMENT_FACTOR, 8)
-            self.order_pairs = int(round(self.working_range_pct / self.interval_pct))
+            self.order_pairs = risk_profile["order_pairs"]
             if self.order_pairs > 5:
                 self.order_pairs = 5
 
