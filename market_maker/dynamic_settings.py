@@ -27,162 +27,162 @@ PARAMS_UPDATE_INTERVAL = 300  # 5 minutes
 RISK_MANAGEMENT_MATRIX = [
     {
         "id": 1,
-        "distance_to_avg_price_band_start": 0,
-        "distance_to_avg_price_band_end": 1.99999999,
         "deposit_load_band_start": 0,
         "deposit_load_band_end": 9.99999999,
+        "distance_to_avg_price_band_start": 0,
+        "distance_to_avg_price_band_end": 0.99999999,
         "risk_profile": "RP1"
     },
     {
         "id": 2,
-        "distance_to_avg_price_band_start": 0,
-        "distance_to_avg_price_band_end": 1.99999999,
         "deposit_load_band_start": 10,
         "deposit_load_band_end": 24.99999999,
+        "distance_to_avg_price_band_start": 0,
+        "distance_to_avg_price_band_end": 0.99999999,
         "risk_profile": "RP2"
     },
     {
         "id": 3,
-        "distance_to_avg_price_band_start": 0,
-        "distance_to_avg_price_band_end": 1.99999999,
         "deposit_load_band_start": 25,
         "deposit_load_band_end": 49.99999999,
+        "distance_to_avg_price_band_start": 0,
+        "distance_to_avg_price_band_end": 0.99999999,
         "risk_profile": "RP3"
     },
     {
         "id": 4,
-        "distance_to_avg_price_band_start": 0,
-        "distance_to_avg_price_band_end": 1.99999999,
         "deposit_load_band_start": 50,
         "deposit_load_band_end": 74.99999999,
+        "distance_to_avg_price_band_start": 0,
+        "distance_to_avg_price_band_end": 0.99999999,
         "risk_profile": "RP4"
     },
     {
         "id": 5,
-        "distance_to_avg_price_band_start": 0,
-        "distance_to_avg_price_band_end": 1.99999999,
         "deposit_load_band_start": 75,
         "deposit_load_band_end": 999,
+        "distance_to_avg_price_band_start": 0,
+        "distance_to_avg_price_band_end": 0.99999999,
         "risk_profile": "RP5"
     },
     {
         "id": 6,
-        "distance_to_avg_price_band_start": 2,
-        "distance_to_avg_price_band_end": 4.99999999,
         "deposit_load_band_start": 0,
         "deposit_load_band_end": 9.99999999,
+        "distance_to_avg_price_band_start": 1,
+        "distance_to_avg_price_band_end": 4.99999999,
         "risk_profile": "RP2"
     },
     {
         "id": 7,
-        "distance_to_avg_price_band_start": 2,
-        "distance_to_avg_price_band_end": 4.99999999,
         "deposit_load_band_start": 10,
         "deposit_load_band_end": 24.99999999,
+        "distance_to_avg_price_band_start": 1,
+        "distance_to_avg_price_band_end": 4.99999999,
         "risk_profile": "RP3"
     },
     {
         "id": 8,
-        "distance_to_avg_price_band_start": 2,
-        "distance_to_avg_price_band_end": 4.99999999,
         "deposit_load_band_start": 25,
         "deposit_load_band_end": 49.99999999,
+        "distance_to_avg_price_band_start": 1,
+        "distance_to_avg_price_band_end": 4.99999999,
         "risk_profile": "RP4"
     },
     {
         "id": 9,
-        "distance_to_avg_price_band_start": 2,
-        "distance_to_avg_price_band_end": 4.99999999,
         "deposit_load_band_start": 50,
         "deposit_load_band_end": 74.99999999,
+        "distance_to_avg_price_band_start": 1,
+        "distance_to_avg_price_band_end": 4.99999999,
         "risk_profile": "RP5"
     },
     {
         "id": 10,
-        "distance_to_avg_price_band_start": 2,
-        "distance_to_avg_price_band_end": 4.99999999,
         "deposit_load_band_start": 75,
         "deposit_load_band_end": 999,
+        "distance_to_avg_price_band_start": 1,
+        "distance_to_avg_price_band_end": 4.99999999,
         "risk_profile": "RP6"
     },
     {
         "id": 11,
-        "distance_to_avg_price_band_start": 5,
-        "distance_to_avg_price_band_end": 9.99999999,
         "deposit_load_band_start": 0,
         "deposit_load_band_end": 9.99999999,
+        "distance_to_avg_price_band_start": 5,
+        "distance_to_avg_price_band_end": 9.99999999,
         "risk_profile": "RP3"
     },
     {
         "id": 12,
-        "distance_to_avg_price_band_start": 5,
-        "distance_to_avg_price_band_end": 9.99999999,
         "deposit_load_band_start": 10,
         "deposit_load_band_end": 24.99999999,
+        "distance_to_avg_price_band_start": 5,
+        "distance_to_avg_price_band_end": 9.99999999,
         "risk_profile": "RP4"
     },
     {
         "id": 13,
-        "distance_to_avg_price_band_start": 5,
-        "distance_to_avg_price_band_end": 9.99999999,
         "deposit_load_band_start": 25,
         "deposit_load_band_end": 49.99999999,
+        "distance_to_avg_price_band_start": 5,
+        "distance_to_avg_price_band_end": 9.99999999,
         "risk_profile": "RP5"
     },
     {
         "id": 14,
-        "distance_to_avg_price_band_start": 5,
-        "distance_to_avg_price_band_end": 9.99999999,
         "deposit_load_band_start": 50,
         "deposit_load_band_end": 74.99999999,
+        "distance_to_avg_price_band_start": 5,
+        "distance_to_avg_price_band_end": 9.99999999,
         "risk_profile": "RP6"
     },
     {
         "id": 15,
-        "distance_to_avg_price_band_start": 5,
-        "distance_to_avg_price_band_end": 9.99999999,
         "deposit_load_band_start": 75,
         "deposit_load_band_end": 999,
+        "distance_to_avg_price_band_start": 5,
+        "distance_to_avg_price_band_end": 9.99999999,
         "risk_profile": "RP7"
     },
     {
         "id": 16,
-        "distance_to_avg_price_band_start": 10,
-        "distance_to_avg_price_band_end": 999,
         "deposit_load_band_start": 0,
         "deposit_load_band_end": 9.99999999,
+        "distance_to_avg_price_band_start": 10,
+        "distance_to_avg_price_band_end": 999,
         "risk_profile": "RP4"
     },
     {
         "id": 17,
-        "distance_to_avg_price_band_start": 10,
-        "distance_to_avg_price_band_end": 999,
         "deposit_load_band_start": 10,
         "deposit_load_band_end": 24.99999999,
+        "distance_to_avg_price_band_start": 10,
+        "distance_to_avg_price_band_end": 999,
         "risk_profile": "RP5"
     },
     {
         "id": 18,
-        "distance_to_avg_price_band_start": 10,
-        "distance_to_avg_price_band_end": 999,
         "deposit_load_band_start": 25,
         "deposit_load_band_end": 49.99999999,
+        "distance_to_avg_price_band_start": 10,
+        "distance_to_avg_price_band_end": 999,
         "risk_profile": "RP6"
     },
     {
         "id": 19,
-        "distance_to_avg_price_band_start": 10,
-        "distance_to_avg_price_band_end": 999,
         "deposit_load_band_start": 50,
         "deposit_load_band_end": 74.99999999,
+        "distance_to_avg_price_band_start": 10,
+        "distance_to_avg_price_band_end": 999,
         "risk_profile": "RP7"
     },
     {
         "id": 20,
-        "distance_to_avg_price_band_start": 10,
-        "distance_to_avg_price_band_end": 999,
         "deposit_load_band_start": 75,
         "deposit_load_band_end": 999,
+        "distance_to_avg_price_band_start": 10,
+        "distance_to_avg_price_band_end": 999,
         "risk_profile": "RP7"
     },
 ]
@@ -190,9 +190,9 @@ RISK_MANAGEMENT_MATRIX = [
 RISK_PROFILE_CONFIGURATION = [
     {
         "id": "RP1",
-        "risk_level": 75,
+        "risk_level": 95,
         "max_number_dca_orders": 34,
-        "interval_pct": 0.005,
+        "interval_pct": 0.0025,
         "order_pairs": 6
     },
     {
