@@ -131,8 +131,12 @@ class BitMEXWebsocket():
         pos = [p for p in positions if p['symbol'] == symbol]
         if len(pos) == 0:
             # No position found; stub it
-            return {'avgCostPrice': 0, 'avgEntryPrice': 0, 'currentQty': 0, 'symbol': symbol}
-        return pos[0]
+            return {'avgCostPrice': 0, 'avgEntryPrice': 0, 'currentQty': 0, 'symbol': symbol, 'unrealisedPnl': 0}
+
+        pos_dict = pos[0]
+        pos_dict_copy = pos_dict.copy()
+        pos_dict_copy["unrealisedPnl"] = XBt_to_XBT(pos_dict["unrealisedPnl"])
+        return pos_dict_copy
 
     #
     # Lifecycle methods

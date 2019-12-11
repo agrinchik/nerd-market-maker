@@ -141,7 +141,7 @@ class Position:
             #"indicativeTaxRate": 0,
             #"indicativeTax": 0,
             #"unrealisedTax": 0,
-            #"unrealisedPnl": 0,
+            "unrealisedPnl": Position.get_list_value(raw_position, PositionModel.PL, 0),
             #"unrealisedPnlPcnt": 0,
             #"unrealisedRoePcnt": 0,
             #"simpleQty": 0,

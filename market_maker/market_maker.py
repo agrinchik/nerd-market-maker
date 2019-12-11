@@ -81,6 +81,17 @@ class ExchangeInterface:
             result = round(-(last_price - position['avgEntryPrice']) * 100 / last_price, 2)
         return result
 
+    def get_unrealized_pnl(self):
+        return self.get_position()['unrealisedPnl']
+
+    def get_unrealized_pnl_pct(self):
+        result = 0
+        unrealized_pnl = self.get_unrealized_pnl()
+        margin = self.get_margin()
+        wallet_balance = margin["walletBalance"]
+        result = 100 * unrealized_pnl / wallet_balance
+        return result
+
     def get_distance_to_liq_price_pct(self):
         result = 0
         position = self.get_position()
@@ -235,15 +246,18 @@ class MarketMakerManager:
         margin_balance = margin["marginBalance"]
         instrument = self.exchange.get_instrument(position["symbol"])
         tick_log = instrument["tickLog"]
+        last_price = self.get_ticker()["last"]
 
         combined_msg = "\nWallet Balance: {}\n".format(self.get_round_value(wallet_balance, 8))
         combined_msg += "Margin Balance: {}\n".format(self.get_round_value(margin_balance, 8))
+        combined_msg += "Last Price: {}\n".format(self.get_round_value(last_price, 8))
         combined_msg += "Position: {} ({}%)\n".format(self.get_round_value(self.running_qty, tick_log), round(self.get_deposit_load_pct(self.running_qty), 2))
         if settings.CHECK_POSITION_LIMITS:
             combined_msg += "Position limits: {}/{}\n".format(self.get_round_value(settings.MIN_POSITION, tick_log), self.get_round_value(settings.MAX_POSITION, tick_log))
         if position['currentQty'] != 0:
             combined_msg += "Avg Entry Price: {}\n".format(self.get_round_value(position['avgEntryPrice'], tick_log))
             combined_msg += "Distance To Avg Price: {:.2f}% ({})\n".format(self.exchange.get_distance_to_avg_price_pct(), self.exchange.get_position_pnl_text_status())
+            combined_msg += "Unrealized PNL: {} ({:.2f}%)\n".format(self.get_round_value(self.exchange.get_unrealized_pnl(), tick_log), self.exchange.get_unrealized_pnl_pct())
             combined_msg += "Liquidation Price: {}\n".format(self.get_round_value(float(position['liquidationPrice']), tick_log))
             combined_msg += "Distance To Liq. Price: {:.2f}%\n".format(self.exchange.get_distance_to_liq_price_pct())
         log_info(logger, combined_msg, send_to_telegram)

@@ -17,7 +17,7 @@ BITMEX_DEFAULT_MIN_POSITION_SHORTS_ADJUSTMENT_FACTOR = 1.4
 
 BITFINEX_DEFAULT_MAINTENANCE_RATIO_PCT = 0.15
 BITFINEX_DISTANCE_TO_LIQUIDATION_PRICE_PCT = 0.25
-BITFINEX_TOTAL_POSITION_MARGIN_ADJUST_RATIO = 0.55
+BITFINEX_TOTAL_POSITION_MARGIN_ADJUST_RATIO = 0.3
 BITFINEX_DEFAULT_LEVERAGE = 3.33
 
 PARAMS_UPDATE_INTERVAL = 300  # 5 minutes
@@ -294,7 +294,7 @@ class DynamicSettings(object):
         self.curr_risk_profile_id = "N/A"
         self.curr_risk_level = 1000000
 
-        self.log_params()
+        self.log_params(ticker_last_price)
 
     def update_settings_value(self, key, value):
         if settings[key] != value:
@@ -355,7 +355,7 @@ class DynamicSettings(object):
             result = True
 
         if result is True:
-            self.log_params()
+            self.log_params(ticker_last_price)
 
         return result
 
@@ -433,7 +433,7 @@ class DynamicSettings(object):
     def get_pct_value(self, val):
         return "{}%".format(round(val * 100, 2))
 
-    def log_params(self):
+    def log_params(self, ticker_last_price):
         txt = self.append_log_text("",  "Current parameters:")
         txt = self.append_log_text(txt, "max_possible_position_margin = {}".format(self.max_possible_position_margin))
         txt = self.append_log_text(txt, "interval_pct = {}".format(self.get_pct_value(self.interval_pct)))
@@ -446,5 +446,7 @@ class DynamicSettings(object):
         txt = self.append_log_text(txt, "deposit_load_pct = {}%".format(round(self.deposit_load_pct, 2)))
         txt = self.append_log_text(txt, "deposit_load_intensity (USD/1% interval) = ${}".format(self.deposit_load_intensity))
         txt = self.append_log_text(txt, "curr_risk_profile_id = {}".format(self.curr_risk_profile_id))
+        txt = self.append_log_text(txt, "---------------------")
+        txt = self.append_log_text(txt, "Last Price = {}".format(ticker_last_price))
 
         log_info(self.logger, txt, True)
