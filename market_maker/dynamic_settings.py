@@ -221,21 +221,21 @@ RISK_PROFILE_CONFIGURATION = [
         "risk_level": 40,
         "max_number_dca_orders": 33,
         "interval_pct": 0.03,
-        "order_pairs": 6
+        "order_pairs": 5
     },
     {
         "id": "RP6",
         "risk_level": 30,
         "max_number_dca_orders": 41,
         "interval_pct": 0.04,
-        "order_pairs": 6
+        "order_pairs": 4
     },
     {
         "id": "RP7",
         "risk_level": 20,
         "max_number_dca_orders": 50,
         "interval_pct": 0.05,
-        "order_pairs": 6
+        "order_pairs": 3
     }
 ]
 
