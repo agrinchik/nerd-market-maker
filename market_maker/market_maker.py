@@ -7,6 +7,7 @@ from datetime import datetime
 import requests
 import atexit
 import signal
+from market_maker.utils.log import log_debug
 from market_maker.utils.log import log_info
 from market_maker.utils.log import log_error
 
@@ -36,13 +37,14 @@ class ExchangeInterface:
 
     def create_exchange_interface(self):
         result = None
-        if ExchangeInfo.is_bitmex() is True:
+        if ExchangeInfo.is_bitmex():
+            prefix = "{}_{}".format(settings.BOTID, settings.ORDERID_PREFIX)
             result = bitmex.BitMEX(symbol=self.symbol,
-                                    orderIDPrefix=settings.ORDERID_PREFIX, postOnly=settings.POST_ONLY,
+                                    orderIDPrefix=prefix, postOnly=settings.POST_ONLY,
                                     timeout=settings.TIMEOUT,
                                     retries=settings.RETRIES,
                                     retry_delay=settings.RETRY_DELAY)
-        elif ExchangeInfo.is_bitfinex() is True:
+        elif ExchangeInfo.is_bitfinex():
             result = bitfinex.Bitfinex(symbol=self.symbol)
 
         return result
@@ -188,37 +190,41 @@ class MarketMakerManager:
         self.start_time = datetime.now()
         self.starting_qty = self.exchange.get_delta()
         self.running_qty = self.starting_qty
-        self.max_wallet_balance = self.get_cached_wallet_balance()
         self.dynamic_settings = DynamicSettings(self.exchange)
         self.is_trading_suspended = False
         self.price_change_last_check = datetime.now()
         self.price_change_last_price = -1
         self.reset()
 
-    def get_wallet_balance_filename(self):
-        if settings.ENV == "TEST":
-            return "./stats/walletbalance/test.txt"
-        else:
-            return "./stats/walletbalance/live.txt"
+    def whereAmI(self):
+        return os.path.dirname(os.path.realpath(__import__("__main__").__file__))
 
-    def get_cached_wallet_balance(self):
-        result = 0
-        filename = self.get_wallet_balance_filename()
-        with open(filename, encoding='utf8') as f:
-            text = f.read().strip()
-            result = float(text)
+    def get_wallet_balance_filename(self, botid):
+        base_dir = self.whereAmI()
+        return "{}/stats/walletbalance/{}/{}_{}.txt".format(base_dir, settings.ENV.lower(), botid.lower(), settings.ENV.lower())
+
+    def get_cached_wallet_balance(self, botid):
+        filename = self.get_wallet_balance_filename(botid)
+        try:
+            with open(filename, encoding='utf8') as f:
+                text = f.read().strip()
+                result = float(text)
+        except FileNotFoundError as fnfe:
+            result = 0
+        except ValueError as ve:
+            result = 0
         return result
+
+    def store_wallet_balance(self, balance, botid):
+        filename = self.get_wallet_balance_filename(botid)
+        with open(filename, "w") as text_file:
+            text_file.write("{:08}".format(balance))
 
     def get_deposit_load_pct(self, running_qty):
         if running_qty < 0:
             return abs(running_qty / settings.MIN_POSITION) * 100
         else:
             return abs(running_qty / settings.MAX_POSITION) * 100
-
-    def store_wallet_balance(self, balance):
-        filename = self.get_wallet_balance_filename()
-        with open(filename, "w") as text_file:
-            text_file.write("{:08}".format(balance))
 
     def reset(self):
         self.exchange.cancel_all_orders()
@@ -236,6 +242,17 @@ class MarketMakerManager:
         elif abs(value) >= 1:
             return round(value, tick_log)
 
+    def get_botid_by_number(self, number):
+        return "Bot{:0>3}".format(number)
+
+    def get_portfolio_balance(self):
+        result = 0
+        number_of_bots = settings.NUMBER_OF_BOTS
+        for i in range(1, number_of_bots + 1):
+            botid = self.get_botid_by_number(i)
+            result += self.get_cached_wallet_balance(botid)
+        return result
+
     def print_status(self, send_to_telegram):
         """Print the current MM status."""
 
@@ -243,24 +260,22 @@ class MarketMakerManager:
         position = self.exchange.get_position()
         self.running_qty = self.exchange.get_delta()
         wallet_balance = margin["walletBalance"]
-        margin_balance = margin["marginBalance"]
         instrument = self.exchange.get_instrument(position["symbol"])
         tick_log = instrument["tickLog"]
         last_price = self.get_ticker()["last"]
+        num_bots = settings.NUMBER_OF_BOTS
+        portfolio_balance = self.get_portfolio_balance()
 
         combined_msg = "\nWallet Balance: {}\n".format(self.get_round_value(wallet_balance, 8))
-        combined_msg += "Margin Balance: {}\n".format(self.get_round_value(margin_balance, 8))
         combined_msg += "Last Price: {}\n".format(self.get_round_value(last_price, 8))
         combined_msg += "Position: {} ({}%)\n".format(self.get_round_value(self.running_qty, tick_log), round(self.get_deposit_load_pct(self.running_qty), 2))
-        if settings.CHECK_POSITION_LIMITS:
-            combined_msg += "Position limits: {}/{}\n".format(self.get_round_value(settings.MIN_POSITION, tick_log), self.get_round_value(settings.MAX_POSITION, tick_log))
         if position['currentQty'] != 0:
             combined_msg += "Avg Entry Price: {}\n".format(self.get_round_value(position['avgEntryPrice'], tick_log))
             combined_msg += "Distance To Avg Price: {:.2f}% ({})\n".format(self.exchange.get_distance_to_avg_price_pct(), self.exchange.get_position_pnl_text_status())
             combined_msg += "Unrealized PNL: {} ({:.2f}%)\n".format(self.get_round_value(self.exchange.get_unrealized_pnl(), tick_log), self.exchange.get_unrealized_pnl_pct())
-            combined_msg += "Liquidation Price: {}\n".format(self.get_round_value(float(position['liquidationPrice']), tick_log))
-            combined_msg += "Distance To Liq. Price: {:.2f}%\n".format(self.exchange.get_distance_to_liq_price_pct())
-        log_info(logger, combined_msg, send_to_telegram)
+            combined_msg += "Liquidation Price (Dist %): {} ({:.2f}%)\n".format(self.get_round_value(float(position['liquidationPrice']), tick_log), self.exchange.get_distance_to_liq_price_pct())
+        combined_msg += "Portfolio Balance [{} {}]: {}\n".format(num_bots, "bots" if num_bots > 1 else "bot", self.get_round_value(portfolio_balance, tick_log))
+        log_debug(logger, combined_msg, send_to_telegram)
 
     def check_suspend_trading(self):
         curr_time = datetime.now()
@@ -294,16 +309,19 @@ class MarketMakerManager:
                     self.price_change_last_check = curr_time
                     self.price_change_last_price = ticker_last_price
 
-    def check_stop_trading(self):
+    def check_capital_stoploss(self):
         margin = self.exchange.get_margin()
         curr_wallet_balance = margin["walletBalance"]
-        cached_wallet_balance = self.get_cached_wallet_balance()
-        capital_drawdown_pct = abs(100 * (curr_wallet_balance - cached_wallet_balance) / cached_wallet_balance)
-        if curr_wallet_balance > cached_wallet_balance:
-            self.store_wallet_balance(curr_wallet_balance)
-        elif capital_drawdown_pct > settings.STOP_TRADING_CAPITAL_STOPLOSS_PCT:
+        cached_wallet_balance = self.get_cached_wallet_balance(settings.BOTID)
+        self.store_wallet_balance(curr_wallet_balance, settings.BOTID)
+
+        capital_drawdown_pct = abs(100 * (curr_wallet_balance - cached_wallet_balance) / cached_wallet_balance) if cached_wallet_balance != 0 else 0
+        if settings.STOP_TRADING_CHECK_CAPITAL_STOPLOSS_FLAG and capital_drawdown_pct > settings.STOP_TRADING_CAPITAL_STOPLOSS_PCT:
             log_info(logger, "CRITICAL: current wallet balance drawdown has exceeded capital stop-loss value ({}%)! Shutting down the NerdMarketMaker!".format(settings.STOP_TRADING_CAPITAL_STOPLOSS_PCT), True)
             self.exit(settings.FORCE_STOP_EXIT_STATUS_CODE)
+
+    def check_stop_trading(self):
+        self.check_capital_stoploss()
 
     def get_ticker(self):
         instrument = self.exchange.get_instrument()
@@ -333,8 +351,8 @@ class MarketMakerManager:
 
         # Midpoint, used for simpler order placement.
         self.start_position_mid = ticker["mid"]
-        logger.info("{} Ticker: Buy: {}, Sell: {}".format(instrument['symbol'], round(ticker["buy"], tickLog), round(ticker["sell"], tickLog)))
-        logger.info('Start Positions: Buy: {}, Sell: {}, Mid: {}'.format(self.start_position_buy, self.start_position_sell, self.start_position_mid))
+        logger.debug("{} Ticker: Buy: {}, Sell: {}".format(instrument['symbol'], round(ticker["buy"], tickLog), round(ticker["sell"], tickLog)))
+        logger.debug('Start Positions: Buy: {}, Sell: {}, Mid: {}'.format(self.start_position_buy, self.start_position_sell, self.start_position_mid))
         return ticker
 
     def get_price_offset(self, index):
@@ -609,7 +627,8 @@ class MarketMakerManager:
         """Ensure the WS connections are still open."""
         return self.exchange.is_open()
 
-    def exit(self, status=settings.FORCE_STOP_EXIT_STATUS_CODE):
+    def exit(self, status=settings.FORCE_STOP_EXIT_STATUS_CODE, stackframe=None):
+        logger.info("exit(): status={}, stackframe={}".format(status, stackframe))
         logger.info("Shutting down. All open orders will be cancelled.")
         try:
             self.exchange.cancel_all_orders()
@@ -623,7 +642,7 @@ class MarketMakerManager:
 
     def run_loop(self):
         while True:
-            logger.info("*" * 100)
+            logger.debug("*" * 100)
 
             # This will restart on very short downtime, but if it's longer,
             # the MM will crash entirely as it is unable to connect to the WS on boot.
@@ -651,7 +670,6 @@ def run():
     log_info(logger, 'Nerd Market Maker %s\n' % constants.VERSION, True)
 
     om = MarketMakerManager()
-    # Try/except just keeps ctrl-c from printing an ugly stacktrace
     try:
         om.run_loop()
     except ForceRestartException as fe:
@@ -663,4 +681,3 @@ def run():
     except Exception as e:
         log_error(logger, "UNEXPECTED EXCEPTION! {}\nNerdMarketMaker bot will be terminated.".format(e), True)
         om.exit(settings.FORCE_STOP_EXIT_STATUS_CODE)
-

@@ -1,5 +1,4 @@
-stats/walletbalance/test.txt
-stats/walletbalance/live.txt
+stats/walletbalance/
 settings_live.py
 settings_test.py
 settings.py

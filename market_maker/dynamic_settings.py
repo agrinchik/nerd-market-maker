@@ -8,8 +8,6 @@ from market_maker.exchange import ExchangeInfo
 DEFAULT_MIN_SPREAD_ADJUSTMENT_FACTOR = 0.6
 DEFAULT_RELIST_INTERVAL_ADJUSTMENT_FACTOR = 1.2
 
-BITMEX_DEFAULT_POSITION_MARGIN_TO_WALLET_RATIO_PCT = 0.0174
-BITMEX_DEFAULT_ORDER_MARGIN_TO_WALLET_RATIO_PCT = 0.0174
 BITMEX_DEFAULT_LEVERAGE = 100
 BITMEX_DEFAULT_INITIAL_MARGIN_BASE_PCT = 0.01
 BITMEX_DEFAULT_TAKER_FEE_PCT = 0.00075
@@ -24,7 +22,7 @@ PARAMS_UPDATE_INTERVAL = 300  # 5 minutes
 
 
 # Risk management configuration matrix - pre-configured parameters based on distance to average price (bands) and deposit load values (bands)
-RISK_MANAGEMENT_MATRIX = [
+RISK_MANAGEMENT_BANDS_MATRIX = [
     {
         "id": 1,
         "deposit_load_band_start": 0,
@@ -351,7 +349,6 @@ class DynamicSettings(object):
         if is_params_exceeded_update_interval_flag is True and is_risk_profile_changed_flag is True:
             self.update_dynamic_params(wallet_balance, ticker_last_price, risk_profile)
             self.params_last_update = curr_time
-            log_info(self.logger, "Dynamic parameters have been updated!", True)
             result = True
 
         if result is True:
@@ -361,8 +358,8 @@ class DynamicSettings(object):
 
     def update_dynamic_params(self, last_wallet_balance, ticker_last_price, risk_profile):
         if ExchangeInfo.is_bitmex():
-            self.position_margin_pct = BITMEX_DEFAULT_POSITION_MARGIN_TO_WALLET_RATIO_PCT
-            self.order_margin_pct = BITMEX_DEFAULT_ORDER_MARGIN_TO_WALLET_RATIO_PCT
+            self.position_margin_pct = settings.BITMEX_DEFAULT_POSITION_MARGIN_TO_WALLET_RATIO_PCT
+            self.order_margin_pct = settings.BITMEX_DEFAULT_ORDER_MARGIN_TO_WALLET_RATIO_PCT
             self.default_leverage = BITMEX_DEFAULT_LEVERAGE
             self.initial_margin_base_pct = BITMEX_DEFAULT_INITIAL_MARGIN_BASE_PCT
             self.taker_fee_pct = BITMEX_DEFAULT_TAKER_FEE_PCT
@@ -408,7 +405,7 @@ class DynamicSettings(object):
             self.deposit_load_intensity = round(self.order_start_size * ticker_last_price / (100 * self.interval_pct), 2)
 
     def get_risk_profile(self, distance_to_avg_price_pct, deposit_load_pct):
-        for rmm_entry in RISK_MANAGEMENT_MATRIX:
+        for rmm_entry in RISK_MANAGEMENT_BANDS_MATRIX:
             distance_to_avg_price_band_start = rmm_entry["distance_to_avg_price_band_start"]
             distance_to_avg_price_band_end = rmm_entry["distance_to_avg_price_band_end"]
             deposit_load_band_start = rmm_entry["deposit_load_band_start"]
@@ -434,18 +431,11 @@ class DynamicSettings(object):
         return "{}%".format(round(val * 100, 2))
 
     def log_params(self, ticker_last_price):
-        txt = self.append_log_text("",  "Current parameters:")
-        txt = self.append_log_text(txt, "max_possible_position_margin = {}".format(self.max_possible_position_margin))
-        txt = self.append_log_text(txt, "interval_pct = {}".format(self.get_pct_value(self.interval_pct)))
-        txt = self.append_log_text(txt, "min_spread_pct = {}".format(self.get_pct_value(self.min_spread_pct)))
-        txt = self.append_log_text(txt, "min_position = {}".format(self.min_position))
-        txt = self.append_log_text(txt, "max_position = {}".format(self.max_position))
+        txt = self.append_log_text("",  "Dynamic parameters have been updated:")
+        txt = self.append_log_text(txt, "interval_pct (RP) = {} ({})".format(self.get_pct_value(self.interval_pct), self.curr_risk_profile_id))
+        txt = self.append_log_text(txt, "min/max position = {}/{}".format(self.min_position, self.max_position))
         txt = self.append_log_text(txt, "order_start_size = {}".format(self.order_start_size))
-        txt = self.append_log_text(txt, "order_pairs = {}".format(self.order_pairs))
         txt = self.append_log_text(txt, "distance_to_avg_price_pct = {}%".format(round(self.distance_to_avg_price_pct, 2)))
-        txt = self.append_log_text(txt, "deposit_load_pct = {}%".format(round(self.deposit_load_pct, 2)))
-        txt = self.append_log_text(txt, "deposit_load_intensity (USD/1% interval) = ${}".format(self.deposit_load_intensity))
-        txt = self.append_log_text(txt, "curr_risk_profile_id = {}".format(self.curr_risk_profile_id))
         txt = self.append_log_text(txt, "---------------------")
         txt = self.append_log_text(txt, "Last Price = {}".format(ticker_last_price))
 

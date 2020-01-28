@@ -20,9 +20,10 @@ with hooks():  # Python 2/3 compat
 from market_maker.exchange import ExchangeInfo
 from market_maker.utils import math
 
-ORDER_CLOSE_POSITION_STATUS_INCREASE = 0
-ORDER_CLOSE_POSITION_STATUS_PARTIAL_CLOSE = 1
-ORDER_CLOSE_POSITION_STATUS_FULL_CLOSE = 2
+ORDER_POSITION_STATUS_INCREASE = 0
+ORDER_POSITION_STATUS_PARTIAL_CLOSE = 1
+ORDER_POSITION_STATUS_FULL_CLOSE = 2
+
 
 # Connects to BitMEX websocket for streaming realtime data.
 # The Marketmaker still interacts with this as if it were a REST Endpoint, but now it can get
@@ -212,16 +213,15 @@ class BitMEXWebsocket():
         while not {'instrument', 'trade', 'quote'} <= set(self.data):
             sleep(0.1)
 
-    def get_order_close_position_status(self, position_qty, order_side, order_price):
-        self.logger.debug("get_order_close_position_status(): curr_position={}, order_side={}, order_price={}".format(position_qty, order_side, order_price))
+    def get_order_position_status(self, position_qty, order_side, order_price, order_size):
+        self.logger.info("get_order_position_status(): curr_position={}, order_side={}, order_price={}, order_size={}".format(position_qty, order_side, order_price, order_size))
         is_order_long = True if order_side == "Buy" else False
-        order_price_with_sign = order_price if is_order_long is True else -order_price
-        if position_qty == 0 or position_qty == -order_price_with_sign:
-            return ORDER_CLOSE_POSITION_STATUS_FULL_CLOSE
-        if position_qty > 0 and order_price_with_sign > 0 or position_qty < 0 and order_price_with_sign < 0:
-            return ORDER_CLOSE_POSITION_STATUS_INCREASE
-        if position_qty > 0 and order_price_with_sign < 0 or position_qty < 0 and order_price_with_sign > 0:
-            return ORDER_CLOSE_POSITION_STATUS_PARTIAL_CLOSE
+        if position_qty < 0 and is_order_long and position_qty == order_size or position_qty > 0 and not is_order_long and position_qty == order_size:
+            return ORDER_POSITION_STATUS_FULL_CLOSE
+        if position_qty >= 0 and is_order_long or position_qty <= 0 and not is_order_long:
+            return ORDER_POSITION_STATUS_INCREASE
+        if position_qty > 0 and not is_order_long or position_qty < 0 and is_order_long:
+            return ORDER_POSITION_STATUS_PARTIAL_CLOSE
 
     def __on_message(self, message):
         '''Handler for parsing WS messages.'''
@@ -283,17 +283,17 @@ class BitMEXWebsocket():
                             is_canceled = 'ordStatus' in updateData and updateData['ordStatus'] == 'Canceled'
                             if 'cumQty' in updateData and not is_canceled:
                                 curr_position = self.current_qty()
-                                contExecuted = updateData['cumQty'] - item['cumQty']
+                                order_size = updateData['cumQty'] - item['cumQty']
                                 order_side = item['side']
                                 symbol = item['symbol']
                                 order_price = item['price']
-                                order_close_position_status = self.get_order_close_position_status(curr_position, order_side, order_price)
-                                if order_close_position_status == ORDER_CLOSE_POSITION_STATUS_INCREASE:
-                                    log_info(self.logger, "Execution (position increase): {} {} contracts of {} at {}".format(order_side, contExecuted, symbol, order_price), True)
-                                elif order_close_position_status == ORDER_CLOSE_POSITION_STATUS_PARTIAL_CLOSE:
-                                    log_info(self.logger, "Execution (position partial close): {} {} contracts of {} at {}".format(order_side, contExecuted, symbol, order_price), True)
-                                elif order_close_position_status == ORDER_CLOSE_POSITION_STATUS_FULL_CLOSE:
-                                    log_info(self.logger, "Execution (position fully closed): {} {} contracts of {} at {}".format(order_side, contExecuted, symbol, order_price), True)
+                                order_position_status = self.get_order_position_status(curr_position, order_side, order_price, order_size)
+                                if order_position_status == ORDER_POSITION_STATUS_INCREASE:
+                                    log_info(self.logger, "Execution (position increase): {} {} contracts of {} at {}".format(order_side, order_size, symbol, order_price), True)
+                                elif order_position_status == ORDER_POSITION_STATUS_PARTIAL_CLOSE:
+                                    log_info(self.logger, "Execution (position partial close): {} {} contracts of {} at {}".format(order_side, order_size, symbol, order_price), True)
+                                elif order_position_status == ORDER_POSITION_STATUS_FULL_CLOSE:
+                                    log_info(self.logger, "Execution (position fully closed): {} {} contracts of {} at {}".format(order_side, order_size, symbol, order_price), True)
 
                         # Update this item.
                         item.update(updateData)

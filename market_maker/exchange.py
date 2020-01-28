@@ -104,14 +104,10 @@ class ExchangeInfo(object):
 
     @staticmethod
     def get_apikey():
-        if ExchangeInfo.is_bitmex():
-            return settings.BITMEX_API_KEY
-        if ExchangeInfo.is_bitfinex():
-            return settings.BITFINEX_API_KEY
+        config_entry = settings.PORTFOLIO_BOT_CONFIG[settings.BOTID]
+        return config_entry["apikey"]
 
     @staticmethod
     def get_apisecret():
-        if ExchangeInfo.is_bitmex():
-            return settings.BITMEX_API_SECRET
-        if ExchangeInfo.is_bitfinex():
-            return settings.BITFINEX_API_SECRET
+        config_entry = settings.PORTFOLIO_BOT_CONFIG[settings.BOTID]
+        return config_entry["secret"]

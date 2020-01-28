@@ -7,9 +7,10 @@ import logging
 from market_maker.models.bitfinex import Order, OrderStatus
 from market_maker.utils.log import log_info
 
-ORDER_CLOSE_POSITION_STATUS_INCREASE = 0
-ORDER_CLOSE_POSITION_STATUS_PARTIAL_CLOSE = 1
-ORDER_CLOSE_POSITION_STATUS_FULL_CLOSE = 2
+ORDER_POSITION_STATUS_INCREASE = 0
+ORDER_POSITION_STATUS_PARTIAL_CLOSE = 1
+ORDER_POSITION_STATUS_FULL_CLOSE = 2
+
 
 class OrderManager:
     """
@@ -79,16 +80,15 @@ class OrderManager:
     def get_current_position(self):
         return self.bfxapi.positionManager.get_open_positions().get(self.bfxapi.symbol)
 
-    def get_order_close_position_status(self, position_qty, order_side, order_price):
-        self.logger.debug("get_order_close_position_status(): curr_position={}, order_side={}, order_price={}".format(position_qty, order_side, order_price))
+    def get_order_position_status(self, position_qty, order_side, order_price, order_size):
+        self.logger.info("get_order_position_status(): curr_position={}, order_side={}, order_price={}, order_size={}".format(position_qty, order_side, order_price, order_size))
         is_order_long = True if order_side == "Buy" else False
-        order_price_with_sign = order_price if is_order_long is True else -order_price
-        if position_qty == 0 or position_qty == -order_price_with_sign:
-            return ORDER_CLOSE_POSITION_STATUS_FULL_CLOSE
-        if position_qty > 0 and order_price_with_sign > 0 or position_qty < 0 and order_price_with_sign < 0:
-            return ORDER_CLOSE_POSITION_STATUS_INCREASE
-        if position_qty > 0 and order_price_with_sign < 0 or position_qty < 0 and order_price_with_sign > 0:
-            return ORDER_CLOSE_POSITION_STATUS_PARTIAL_CLOSE
+        if position_qty < 0 and is_order_long and position_qty == order_size or position_qty > 0 and not is_order_long and position_qty == order_size:
+            return ORDER_POSITION_STATUS_FULL_CLOSE
+        if position_qty >= 0 and is_order_long or position_qty <= 0 and not is_order_long:
+            return ORDER_POSITION_STATUS_INCREASE
+        if position_qty > 0 and not is_order_long or position_qty < 0 and is_order_long:
+            return ORDER_POSITION_STATUS_PARTIAL_CLOSE
 
     def log_order_execution(self, order, update_order):
         # Log order execution
@@ -97,16 +97,16 @@ class OrderManager:
         if is_canceled is False:
             curr_position = self.get_current_position()
             position_qty = curr_position['currentQty'] if curr_position is not None else 0
-            contExecuted = update_order['cumQty'] - order['cumQty']
+            order_size = update_order['cumQty'] - order['cumQty']
             order_side = update_order['side']
             order_price = update_order['price']
             symbol = update_order['symbol']
-            order_close_position_status = self.get_order_close_position_status(position_qty, order_side, order_price)
-            if order_close_position_status == ORDER_CLOSE_POSITION_STATUS_INCREASE:
-                log_info(self.logger, "Execution (position increase): {} {} quantity of {} at {}".format(order_side, contExecuted, symbol, order_price), True)
-            elif order_close_position_status == ORDER_CLOSE_POSITION_STATUS_PARTIAL_CLOSE:
-                log_info(self.logger, "Execution (position partial close): {} {} quantity of {} at {}".format(order_side, contExecuted, symbol, order_price), True)
-            elif order_close_position_status == ORDER_CLOSE_POSITION_STATUS_FULL_CLOSE:
-                log_info(self.logger, "Execution (position fully closed): {} {} quantity of {} at {}".format(order_side, contExecuted, symbol, order_price), True)
+            order_position_status = self.get_order_position_status(position_qty, order_side, order_price, order_size)
+            if order_position_status == ORDER_POSITION_STATUS_INCREASE:
+                log_info(self.logger, "Execution (position increase): {} {} quantity of {} at {}".format(order_side, order_size, symbol, order_price), True)
+            elif order_position_status == ORDER_POSITION_STATUS_PARTIAL_CLOSE:
+                log_info(self.logger, "Execution (position partial close): {} {} quantity of {} at {}".format(order_side, order_size, symbol, order_price), True)
+            elif order_position_status == ORDER_POSITION_STATUS_FULL_CLOSE:
+                log_info(self.logger, "Execution (position fully closed): {} {} quantity of {} at {}".format(order_side, order_size, symbol, order_price), True)
 
 

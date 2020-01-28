@@ -25,6 +25,16 @@ def import_path(fullpath):
 def parse_args():
     parser = argparse.ArgumentParser(description='NerdMarketMaker')
 
+    parser.add_argument('-b', '--botid',
+                        type=str,
+                        required=True,
+                        help='Bot ID')
+
+    parser.add_argument('-n', '--number_of_bots',
+                        type=int,
+                        required=True,
+                        help='Number of bots')
+
     parser.add_argument('--live',
                         action='store_true',
                         help=('Execution Live flag'))
@@ -51,6 +61,12 @@ userSettings = import_path(os.path.join('.', settings_filename))
 # Assemble settings.
 settings = {}
 settings.update(vars(userSettings))
+
+settings["BOTID"] = args.botid
+settings["NUMBER_OF_BOTS"] = args.number_of_bots
+config_entry = settings["PORTFOLIO_BOT_CONFIG"][settings["BOTID"]]
+settings["EXCHANGE"] = config_entry["exchange"]
+settings["SYMBOL"] = config_entry["symbol"]
 
 # Main export
 settings = dotdict(settings)

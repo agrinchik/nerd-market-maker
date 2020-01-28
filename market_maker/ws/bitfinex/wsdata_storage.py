@@ -2,6 +2,7 @@
 import logging
 from market_maker.utils.bitfinex.utils import strip_trade_symbol
 
+
 class WsData_Storage:
 
     def __init__(self):
