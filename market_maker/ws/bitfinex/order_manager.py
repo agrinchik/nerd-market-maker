@@ -83,7 +83,7 @@ class OrderManager:
     def get_order_position_status(self, position_qty, order_side, order_price, order_size):
         self.logger.info("get_order_position_status(): curr_position={}, order_side={}, order_price={}, order_size={}".format(position_qty, order_side, order_price, order_size))
         is_order_long = True if order_side == "Buy" else False
-        if position_qty < 0 and is_order_long and position_qty == order_size or position_qty > 0 and not is_order_long and position_qty == order_size:
+        if position_qty < 0 and is_order_long and abs(position_qty) == order_size or position_qty > 0 and not is_order_long and abs(position_qty) == order_size:
             return ORDER_POSITION_STATUS_FULL_CLOSE
         if position_qty >= 0 and is_order_long or position_qty <= 0 and not is_order_long:
             return ORDER_POSITION_STATUS_INCREASE

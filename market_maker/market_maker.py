@@ -667,7 +667,7 @@ class MarketMakerManager:
 
 
 def run():
-    log_info(logger, 'Nerd Market Maker %s\n' % constants.VERSION, True)
+    log_info(logger, 'Started Nerd Market Maker %s\n' % constants.VERSION, True)
 
     om = MarketMakerManager()
     try:
