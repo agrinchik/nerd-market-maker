@@ -667,7 +667,7 @@ class MarketMakerManager:
 
 
 def run():
-    log_info(logger, 'Started NerdMarketMaker {}\nExchange: {}\nSymbol: {}\nNumber Of Bots: {}'.format(constants.VERSION, settings.EXCHANGE, settings.SYMBOL, settings.NUMBER_OF_BOTS), True)
+    log_info(logger, 'Started NerdMarketMaker {}\nExchange: {}\nSymbol: {}\nNumber of bots: {}'.format(constants.VERSION, settings.EXCHANGE, settings.SYMBOL, settings.NUMBER_OF_BOTS), True)
 
     om = MarketMakerManager()
     try:
