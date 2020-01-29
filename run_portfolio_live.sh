@@ -35,9 +35,12 @@ echo Executing portfolio of NerdMarketMaker bot instances in LIVE environment ..
 
 for (( i=1; i<=${NUMBER_OF_BOTS}; i++ ))
 do
-     botid=$(printf "Bot%03d" $i)
+    botid=$(printf "Bot%03d" $i)
 
-     run_bot_process ${botid} ${NUMBER_OF_BOTS}
-     sleep ${PROCESS_DELAY_SECONDS}
+    run_bot_process ${botid} ${NUMBER_OF_BOTS}
+
+    if [ "${i}" -lt ${NUMBER_OF_BOTS} ]; then
+        sleep ${PROCESS_DELAY_SECONDS}
+    fi
 
 done
