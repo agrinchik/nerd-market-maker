@@ -33,10 +33,10 @@ while true
 
     st=$?
     if [ "$st" == "99" ] || [ "$st" == "15" ]; then
-        echo "NerdMarketMaker bot has finished with status code=${st} and the bash script will be terminated!"
+        echo "NerdMarketMaker bot instance (${BOTID}) has finished with status code=${st} and the bash script will be terminated!"
         exit 0
     else
-        echo "NerdMarketMaker bot has finished and will be restarted: status code=${st}"
+        echo "NerdMarketMaker bot instance (${BOTID}) has finished and will be restarted: status code=${st}"
         sleep 5
     fi
 done
