@@ -1,7 +1,7 @@
 #! /bin/bash
 
 NUMBER_OF_BOTS=$1
-PROCESS_DELAY_SECONDS=7200
+PROCESS_DELAY_SECONDS=10
 
 run_bot_process() {
     _botid=${1}
