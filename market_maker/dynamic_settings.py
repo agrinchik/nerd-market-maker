@@ -441,7 +441,7 @@ class DynamicSettings(object):
         txt = self.append_log_text(txt, "distance_to_avg_price_pct = {}%".format(round(self.distance_to_avg_price_pct, 2)))
         txt = self.append_log_text(txt, "deposit_load_pct = {}%".format(round(self.deposit_load_pct, 2)))
         txt = self.append_log_text(txt, "deposit_load_intensity (USD/1% interval) = ${}".format(self.deposit_load_intensity))
-        txt = self.append_log_text(txt, "deposit_load_intensity (USD/1% interval), % = {}%".format(round(self.deposit_load_intensity_pct), 2))
+        txt = self.append_log_text(txt, "deposit_load_intensity (USD/1% interval), % = {}%".format(round(self.deposit_load_intensity_pct, 2)))
         txt = self.append_log_text(txt, "---------------------")
         txt = self.append_log_text(txt, "Last Price = {}".format(ticker_last_price))
 
