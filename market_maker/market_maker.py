@@ -266,7 +266,7 @@ class MarketMakerManager:
         num_bots = settings.NUMBER_OF_BOTS
         portfolio_balance = self.get_portfolio_balance()
 
-        combined_msg = "\nWallet Balance: {}\n".format(self.get_round_value(wallet_balance, 8))
+        combined_msg = "Wallet Balance: {}\n".format(self.get_round_value(wallet_balance, 8))
         combined_msg += "Last Price: {}\n".format(self.get_round_value(last_price, 8))
         combined_msg += "Position: {} ({}%)\n".format(self.get_round_value(self.running_qty, tick_log), round(self.get_deposit_load_pct(self.running_qty), 2))
         if position['currentQty'] != 0:

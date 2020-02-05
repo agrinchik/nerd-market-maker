@@ -22,7 +22,7 @@ def setup_custom_logger(name, log_level=settings.LOG_LEVEL):
 def get_telegram_message_text(txt):
     bot_id = settings.BOTID.upper()
     bot_id = "{}_{}".format(bot_id[0:3], bot_id[3:6])
-    return "<b>{}</b>: {}".format(bot_id, txt)
+    return "<b>{} - {}</b>:\n{}".format(bot_id, settings.ENV, txt)
 
 
 def send_telegram_message(message=""):
