@@ -189,49 +189,49 @@ RISK_PROFILE_CONFIGURATION = [
     {
         "id": "RP1",
         "risk_level": 95,
-        "max_number_dca_orders": 34,
+        "max_number_dca_orders": 15,
         "interval_pct": 0.0025,
         "order_pairs": 6
     },
     {
         "id": "RP2",
         "risk_level": 70,
-        "max_number_dca_orders": 17,
+        "max_number_dca_orders": 15,
         "interval_pct": 0.005,
         "order_pairs": 6
     },
     {
         "id": "RP3",
         "risk_level": 60,
-        "max_number_dca_orders": 21,
+        "max_number_dca_orders": 15,
         "interval_pct": 0.0075,
         "order_pairs": 6
     },
     {
         "id": "RP4",
         "risk_level": 50,
-        "max_number_dca_orders": 27,
+        "max_number_dca_orders": 15,
         "interval_pct": 0.01,
         "order_pairs": 6
     },
     {
         "id": "RP5",
         "risk_level": 40,
-        "max_number_dca_orders": 33,
+        "max_number_dca_orders": 15,
         "interval_pct": 0.015,
         "order_pairs": 5
     },
     {
         "id": "RP6",
         "risk_level": 30,
-        "max_number_dca_orders": 41,
+        "max_number_dca_orders": 15,
         "interval_pct": 0.02,
         "order_pairs": 4
     },
     {
         "id": "RP7",
         "risk_level": 20,
-        "max_number_dca_orders": 50,
+        "max_number_dca_orders": 15,
         "interval_pct": 0.025,
         "order_pairs": 3
     }
@@ -436,6 +436,8 @@ class DynamicSettings(object):
         txt = self.append_log_text(txt, "min/max position = {}/{}".format(self.min_position, self.max_position))
         txt = self.append_log_text(txt, "order_start_size = {}".format(self.order_start_size))
         txt = self.append_log_text(txt, "distance_to_avg_price_pct = {}%".format(round(self.distance_to_avg_price_pct, 2)))
+        txt = self.append_log_text(txt, "deposit_load_pct = {}%".format(round(self.deposit_load_pct, 2)))
+        txt = self.append_log_text(txt, "deposit_load_intensity (USD/1% interval) = ${}".format(self.deposit_load_intensity))
         txt = self.append_log_text(txt, "---------------------")
         txt = self.append_log_text(txt, "Last Price = {}".format(ticker_last_price))
 
