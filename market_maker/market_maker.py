@@ -199,27 +199,6 @@ class MarketMakerManager:
     def whereAmI(self):
         return os.path.dirname(os.path.realpath(__import__("__main__").__file__))
 
-    def get_wallet_balance_filename(self, botid):
-        base_dir = self.whereAmI()
-        return "{}/stats/walletbalance/{}/{}_{}.txt".format(base_dir, settings.ENV.lower(), botid.lower(), settings.ENV.lower())
-
-    def get_cached_wallet_balance(self, botid):
-        filename = self.get_wallet_balance_filename(botid)
-        try:
-            with open(filename, encoding='utf8') as f:
-                text = f.read().strip()
-                result = float(text)
-        except FileNotFoundError as fnfe:
-            result = 0
-        except ValueError as ve:
-            result = 0
-        return result
-
-    def store_wallet_balance(self, balance, botid):
-        filename = self.get_wallet_balance_filename(botid)
-        with open(filename, "w") as text_file:
-            text_file.write("{:08}".format(balance))
-
     def get_deposit_load_pct(self, running_qty):
         if running_qty < 0:
             return abs(running_qty / settings.MIN_POSITION) * 100
@@ -246,12 +225,8 @@ class MarketMakerManager:
         return "Bot{:0>3}".format(number)
 
     def get_portfolio_balance(self):
-        result = 0
-        number_of_bots = settings.NUMBER_OF_BOTS
-        for i in range(1, number_of_bots + 1):
-            botid = self.get_botid_by_number(i)
-            result += self.get_cached_wallet_balance(botid)
-        return result
+        # TODO:
+        return 0
 
     def print_status(self, send_to_telegram):
         """Print the current MM status."""
@@ -312,16 +287,12 @@ class MarketMakerManager:
     def check_capital_stoploss(self):
         margin = self.exchange.get_margin()
         curr_wallet_balance = margin["walletBalance"]
-        cached_wallet_balance = self.get_cached_wallet_balance(settings.BOTID)
-        self.store_wallet_balance(curr_wallet_balance, settings.BOTID)
-
-        capital_drawdown_pct = abs(100 * (curr_wallet_balance - cached_wallet_balance) / cached_wallet_balance) if cached_wallet_balance != 0 else 0
-        if settings.STOP_TRADING_CHECK_CAPITAL_STOPLOSS_FLAG and capital_drawdown_pct > settings.STOP_TRADING_CAPITAL_STOPLOSS_PCT:
-            log_info(logger, "CRITICAL: current wallet balance drawdown has exceeded capital stop-loss value ({}%)! Shutting down the NerdMarketMaker!".format(settings.STOP_TRADING_CAPITAL_STOPLOSS_PCT), True)
-            self.exit(settings.FORCE_STOP_EXIT_STATUS_CODE)
+        # TODO:
+        pass
 
     def check_stop_trading(self):
-        self.check_capital_stoploss()
+        # TODO:
+        pass
 
     def get_ticker(self):
         instrument = self.exchange.get_instrument()
