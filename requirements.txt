@@ -5,7 +5,9 @@ packaging==16.8
 pyparsing==2.2.0
 requests==2.13.0
 websocket-client==0.53.0
-peewee=3.13.1
+peewee==3.13.1
+mysqlclient==1.4.6
+pymysql==0.9.3
 
 # Bitfinex code requirements:
 eventemitter==0.2.0

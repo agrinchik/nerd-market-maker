@@ -3,9 +3,9 @@ from __future__ import absolute_import
 import importlib
 import os
 import sys
-import argparse
 
 from market_maker.utils.bitmex.dotdict import dotdict
+from .arg_parser import ArgParser
 
 
 def import_path(fullpath):
@@ -22,30 +22,6 @@ def import_path(fullpath):
     return module
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(description='NerdMarketMaker')
-
-    parser.add_argument('-b', '--botid',
-                        type=str,
-                        required=True,
-                        help='Bot ID')
-
-    parser.add_argument('-n', '--number_of_bots',
-                        type=int,
-                        required=True,
-                        help='Number of bots')
-
-    parser.add_argument('--live',
-                        action='store_true',
-                        help=('Execution Live flag'))
-
-    parser.add_argument('--debug',
-                        action='store_true',
-                        help=('Print Debugs'))
-
-    return parser.parse_args()
-
-
 def resolve_settings_filename(is_live_flag):
     if is_live_flag:
         return "settings_live"
@@ -53,7 +29,7 @@ def resolve_settings_filename(is_live_flag):
         return "settings_test"
 
 
-args = parse_args()
+args = ArgParser.parse_args_bot()
 
 settings_filename = resolve_settings_filename(args.live)
 userSettings = import_path(os.path.join('.', settings_filename))

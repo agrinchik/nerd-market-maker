@@ -1,9 +1,10 @@
 import logging
 import requests
 from market_maker.settings import settings
+from common.bot_info import BotInfo
 
 
-def setup_custom_logger(name, log_level=settings.LOG_LEVEL):
+def setup_bot_custom_logger(name, log_level=settings.LOG_LEVEL):
     botId = settings.BOTID
     log_text_format = "%(asctime)s - {} - %(levelname)s - %(module)s - %(message)s".format(botId)
     formatter = logging.Formatter(fmt=log_text_format)
@@ -19,9 +20,22 @@ def setup_custom_logger(name, log_level=settings.LOG_LEVEL):
     return logger
 
 
+def setup_supervisor_custom_logger(name, log_level=settings.LOG_LEVEL):
+    log_text_format = "%(asctime)s  - %(levelname)s - %(module)s - %(message)s"
+    formatter = logging.Formatter(fmt=log_text_format)
+
+    handler = logging.StreamHandler()
+    handler.setFormatter(formatter)
+
+    logger = logging.getLogger(name)
+    logger.setLevel(log_level)
+    log_filename = "./logs/{}/nerd_supervisor_log_out.txt".format(settings.ENV.lower())
+    logging.basicConfig(filename=log_filename, filemode='a', format=log_text_format)
+    #logger.addHandler(handler)
+    return logger
+
 def get_telegram_message_text(txt):
-    bot_id = settings.BOTID.upper()
-    bot_id = "{}_{}".format(bot_id[0:3], bot_id[3:6])
+    bot_id = BotInfo.parse_for_tg_logs(settings.BOTID)
     return "<b>{} - {}</b>:\n{}".format(bot_id, settings.ENV, txt)
 
 

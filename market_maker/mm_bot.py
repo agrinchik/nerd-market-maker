@@ -2,7 +2,6 @@ from __future__ import absolute_import
 from time import sleep
 import sys
 import os
-import datetime
 from datetime import datetime
 import requests
 import atexit
@@ -17,13 +16,13 @@ from market_maker.settings import settings
 from market_maker.utils.bitmex import constants, errors
 from market_maker.utils import log, math
 from market_maker.exchange import ExchangeInfo
-
+from market_maker.db.model import *
 from market_maker.dynamic_settings import DynamicSettings
 
 #
 # Helpers
 #
-logger = log.setup_custom_logger('root')
+logger = log.setup_bot_custom_logger('root')
 
 
 class ForceRestartException(Exception):
@@ -175,7 +174,7 @@ class ExchangeInterface:
         return self.xchange.cancel_orders(orders)
 
 
-class MarketMakerManager:
+class NerdMarketMakerBot:
     def __init__(self):
         self.exchange = ExchangeInterface()
         # Once exchange is created, register exit handler that will always cancel orders
@@ -185,7 +184,7 @@ class MarketMakerManager:
 
         logger.info("Using symbol %s." % self.exchange.symbol)
 
-        logger.info("Order Manager initializing, connecting to exchange. Live run: executing real trades.")
+        logger.info("NerdMarketMakerBot initializing, connecting to exchange. Live run: executing real trades.")
 
         self.start_time = datetime.now()
         self.starting_qty = self.exchange.get_delta()
@@ -195,6 +194,8 @@ class MarketMakerManager:
         self.price_change_last_check = datetime.now()
         self.price_change_last_price = -1
         self.reset()
+        # Connect to database.
+        db.connect()
 
     def whereAmI(self):
         return os.path.dirname(os.path.realpath(__import__("__main__").__file__))
@@ -220,9 +221,6 @@ class MarketMakerManager:
             return round(value, 8)
         elif abs(value) >= 1:
             return round(value, tick_log)
-
-    def get_botid_by_number(self, number):
-        return "Bot{:0>3}".format(number)
 
     def get_portfolio_balance(self):
         # TODO:
@@ -598,6 +596,45 @@ class MarketMakerManager:
         """Ensure the WS connections are still open."""
         return self.exchange.is_open()
 
+    def update_wallet_db(self):
+        try:
+            margin = self.exchange.get_margin()
+            w_balance = margin["walletBalance"]
+            m_balance = margin["marginBalance"]
+            query = Wallet.update(wallet_balance=w_balance,
+                                  margin_balance=m_balance,
+                                  update_=datetime.datetime.now()).where(Wallet.bot_id == settings.BOTID)
+            query.execute()
+
+        except Exception as e:
+            log_error(logger, "Database exception has occurred: {}. Restarting the NerdMarkerMaker bot instance.".format(e), True)
+            self.restart()
+
+    def update_position_db(self):
+        try:
+            position = self.exchange.get_position()
+            p_symbol = self.exchange.get_instrument(position["symbol"])
+            p_is_long = True if position['currentQty'] > 0 else False
+            p_avg_entry_price = position['avgEntryPrice']
+            p_current_qty = position['currentQty']
+            p_unrealised_pnl = position['unrealisedPnl']
+
+            query = Position.update(symbol=p_symbol,
+                                    is_long=p_is_long,
+                                    avg_entry_price=p_avg_entry_price,
+                                    current_qty=p_current_qty,
+                                    unrealised_pnl=p_unrealised_pnl,
+                                    update_=datetime.datetime.now()).where(Position.bot_id == settings.BOTID)
+            query.execute()
+
+        except Exception as e:
+            log_error(logger, "Database exception has occurred: {}. Restarting the NerdMarkerMaker bot instance.".format(e), True)
+            self.restart()
+
+    def update_db(self):
+        self.update_wallet_db()
+        self.update_position_db()
+
     def exit(self, status=settings.FORCE_STOP_EXIT_STATUS_CODE, stackframe=None):
         logger.info("exit(): status={}, stackframe={}".format(status, stackframe))
         logger.info("Shutting down. All open orders will be cancelled.")
@@ -608,6 +645,9 @@ class MarketMakerManager:
             logger.info("Was not authenticated; could not cancel orders.")
         except Exception as e:
             logger.info("Unable to cancel orders: %s" % e)
+
+        if not db.is_closed():
+            db.close()
 
         os._exit(status)
 
@@ -629,6 +669,7 @@ class MarketMakerManager:
             self.check_suspend_trading()
             self.check_stop_trading()
             self.place_orders()  # Creates desired orders and converges to existing orders
+            self.update_db()
 
             sleep(settings.LOOP_INTERVAL)
 
@@ -640,7 +681,7 @@ class MarketMakerManager:
 def run():
     log_info(logger, 'Started NerdMarketMaker Bot\nBotID: {}\nExchange: {}\nSymbol: {}'.format(settings.BOTID, settings.EXCHANGE, settings.SYMBOL), True)
 
-    om = MarketMakerManager()
+    om = NerdMarketMakerBot()
     try:
         om.run_loop()
     except ForceRestartException as fe:
@@ -652,3 +693,7 @@ def run():
     except Exception as e:
         log_error(logger, "UNEXPECTED EXCEPTION! {}\nNerdMarketMaker bot will be terminated.".format(e), True)
         om.exit(settings.FORCE_STOP_EXIT_STATUS_CODE)
+
+
+if __name__ == "__main__":
+    run()
