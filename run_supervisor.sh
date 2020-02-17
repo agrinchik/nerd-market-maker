@@ -1,13 +1,13 @@
 #! /usr/bin/env zsh
 
 ENV=$1
-BOTID=$2
-NUMBER_OF_BOTS=$3
+NUMBER_OF_BOTS=$2
+ENV_LOWERCASE=$(echo "${ENV}" | tr '[:upper:]' '[:lower:]')
 ENV_UPPERCASE=$(echo "${ENV}" | tr '[:lower:]' '[:upper:]')
 
 
-if [[ "$#" -ne 3 ]]; then
-    echo "Usage: run_bot.sh <ENV> <BOTID> <NUMBER_OF_BOTS>"
+if [[ "$#" -ne 2 ]]; then
+    echo "Usage: run_supervisor.sh <ENV> <NUMBER_OF_BOTS>"
     exit 0
 fi
 
@@ -21,15 +21,15 @@ fi
 conda activate nerd-market-maker
 
 while true
-    echo Launching a NerdMarketMakerBot instance in ${ENV_UPPERCASE}: BotID=${BOTID}
+    echo Launching a NerdSupervisor in ${ENV_UPPERCASE} environment
 
-    do python -m market_maker.mm_bot -e ${ENV} --botid ${BOTID} --number_of_bots ${NUMBER_OF_BOTS}
+    do python -m market_maker.nerd_supervisor -e ${ENV_LOWERCASE} --number_of_bots ${NUMBER_OF_BOTS} -i "NERD SUPERVISOR"
     st=$?
     if [[ "$st" == "99"  ||  "$st" == "15" ]]; then
-        echo "NerdMarketMakerBot instance (${BOTID}) has finished with status code=${st} and the bash script will be terminated!"
+        echo "NerdSupervisor has finished with status code=${st} and the bash script will be terminated!"
         exit 0
     else
-        echo "NerdMarketMakerBot instance (${BOTID}) has finished and will be restarted: status code=${st}"
+        echo "NerdSupervisor has finished and will be restarted: status code=${st}"
         sleep 5
     fi
 done

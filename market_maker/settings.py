@@ -22,27 +22,31 @@ def import_path(fullpath):
     return module
 
 
-def resolve_settings_filename(is_live_flag):
-    if is_live_flag:
+def resolve_settings_filename(env):
+    if env == "live":
         return "settings_live"
-    else:
+    elif env == "test":
         return "settings_test"
 
 
-args = ArgParser.parse_args_bot()
+args = ArgParser.parse_args_common()
 
-settings_filename = resolve_settings_filename(args.live)
+settings_filename = resolve_settings_filename(args.env)
 userSettings = import_path(os.path.join('.', settings_filename))
 
 # Assemble settings.
 settings = {}
 settings.update(vars(userSettings))
 
-settings["BOTID"] = args.botid
+if args.botid:
+    settings["BOTID"] = args.botid
+    settings["INSTANCEID"] = args.botid
+    config_entry = settings["PORTFOLIO_BOT_CONFIG"][args.botid]
+    settings["EXCHANGE"] = config_entry["exchange"]
+    settings["SYMBOL"] = config_entry["symbol"]
+else:
+    settings["INSTANCEID"] = args.instanceid
 settings["NUMBER_OF_BOTS"] = args.number_of_bots
-config_entry = settings["PORTFOLIO_BOT_CONFIG"][settings["BOTID"]]
-settings["EXCHANGE"] = config_entry["exchange"]
-settings["SYMBOL"] = config_entry["symbol"]
 
 # Main export
 settings = dotdict(settings)

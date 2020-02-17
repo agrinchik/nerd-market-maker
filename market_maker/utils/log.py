@@ -34,9 +34,10 @@ def setup_supervisor_custom_logger(name, log_level=settings.LOG_LEVEL):
     #logger.addHandler(handler)
     return logger
 
+
 def get_telegram_message_text(txt):
-    bot_id = BotInfo.parse_for_tg_logs(settings.BOTID)
-    return "<b>{} - {}</b>:\n{}".format(bot_id, settings.ENV, txt)
+    instance_id = BotInfo.parse_for_tg_logs(settings.BOTID) if settings.BOTID else settings.INSTANCEID
+    return "<b>{} - {}</b>:\n{}".format(instance_id, settings.ENV, txt)
 
 
 def send_telegram_message(message=""):

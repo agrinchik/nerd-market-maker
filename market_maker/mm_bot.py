@@ -2,31 +2,27 @@ from __future__ import absolute_import
 from time import sleep
 import sys
 import os
-from datetime import datetime
 import requests
 import atexit
 import signal
 from market_maker.utils.log import log_debug
 from market_maker.utils.log import log_info
 from market_maker.utils.log import log_error
-
+from common.exception import *
 from market_maker import bitmex
 from market_maker import bitfinex
 from market_maker.settings import settings
-from market_maker.utils.bitmex import constants, errors
+from market_maker.utils.bitmex import errors
 from market_maker.utils import log, math
 from market_maker.exchange import ExchangeInfo
 from market_maker.db.model import *
 from market_maker.dynamic_settings import DynamicSettings
+from datetime import datetime
 
 #
 # Helpers
 #
 logger = log.setup_bot_custom_logger('root')
-
-
-class ForceRestartException(Exception):
-    pass
 
 
 class ExchangeInterface:
@@ -214,20 +210,8 @@ class NerdMarketMakerBot:
         self.check_stop_trading()
         self.dynamic_settings.initialize_params()
 
-    def get_round_value(self, value, tick_log):
-        if abs(value) < 1 and tick_log == 0:
-            return round(value, 8)
-        elif abs(value) < 1 and tick_log > 0:
-            return round(value, 8)
-        elif abs(value) >= 1:
-            return round(value, tick_log)
-
-    def get_portfolio_balance(self):
-        # TODO:
-        return 0
-
     def print_status(self, send_to_telegram):
-        """Print the current MM status."""
+        """Print the current status of NerdMarkerMakerBot"""
 
         margin = self.exchange.get_margin()
         position = self.exchange.get_position()
@@ -236,18 +220,15 @@ class NerdMarketMakerBot:
         instrument = self.exchange.get_instrument(position["symbol"])
         tick_log = instrument["tickLog"]
         last_price = self.get_ticker()["last"]
-        num_bots = settings.NUMBER_OF_BOTS
-        portfolio_balance = self.get_portfolio_balance()
 
-        combined_msg = "Wallet Balance: {}\n".format(self.get_round_value(wallet_balance, 8))
-        combined_msg += "Last Price: {}\n".format(self.get_round_value(last_price, 8))
-        combined_msg += "Position: {} ({}%)\n".format(self.get_round_value(self.running_qty, tick_log), round(self.get_deposit_load_pct(self.running_qty), 2))
+        combined_msg = "Wallet Balance: {}\n".format(math.get_round_value(wallet_balance, 8))
+        combined_msg += "Last Price: {}\n".format(math.get_round_value(last_price, 8))
+        combined_msg += "Position: {} ({}%)\n".format(math.get_round_value(self.running_qty, tick_log), round(self.get_deposit_load_pct(self.running_qty), 2))
         if position['currentQty'] != 0:
-            combined_msg += "Avg Entry Price: {}\n".format(self.get_round_value(position['avgEntryPrice'], tick_log))
+            combined_msg += "Avg Entry Price: {}\n".format(math.get_round_value(position['avgEntryPrice'], tick_log))
             combined_msg += "Distance To Avg Price: {:.2f}% ({})\n".format(self.exchange.get_distance_to_avg_price_pct(), self.exchange.get_position_pnl_text_status())
-            combined_msg += "Unrealized PNL: {} ({:.2f}%)\n".format(self.get_round_value(self.exchange.get_unrealized_pnl(), tick_log), self.exchange.get_unrealized_pnl_pct())
-            combined_msg += "Liquidation Price (Dist %): {} ({:.2f}%)\n".format(self.get_round_value(float(position['liquidationPrice']), tick_log), self.exchange.get_distance_to_liq_price_pct())
-        combined_msg += "Portfolio Balance [{} {}]: {}\n".format(num_bots, "bots" if num_bots > 1 else "bot", self.get_round_value(portfolio_balance, tick_log))
+            combined_msg += "Unrealized PNL: {} ({:.2f}%)\n".format(math.get_round_value(self.exchange.get_unrealized_pnl(), tick_log), self.exchange.get_unrealized_pnl_pct())
+            combined_msg += "Liquidation Price (Dist %): {} ({:.2f}%)\n".format(math.get_round_value(float(position['liquidationPrice']), tick_log), self.exchange.get_distance_to_liq_price_pct())
         log_debug(logger, combined_msg, send_to_telegram)
 
     def check_suspend_trading(self):
@@ -598,37 +579,45 @@ class NerdMarketMakerBot:
 
     def update_wallet_db(self):
         try:
+            position = self.exchange.get_position()
+            p_symbol = position["symbol"]
             margin = self.exchange.get_margin()
             w_balance = margin["walletBalance"]
             m_balance = margin["marginBalance"]
-            query = Wallet.update(wallet_balance=w_balance,
+            query = Wallet.update(exchange=settings.EXCHANGE,
+                                  symbol=p_symbol,
+                                  wallet_balance=w_balance,
                                   margin_balance=m_balance,
-                                  update_=datetime.datetime.now()).where(Wallet.bot_id == settings.BOTID)
+                                  update_=datetime.now()).where(Wallet.bot_id == settings.BOTID)
             query.execute()
 
         except Exception as e:
-            log_error(logger, "Database exception has occurred: {}. Restarting the NerdMarkerMaker bot instance.".format(e), True)
+            log_error(logger, "Database exception has occurred: {}. Restarting the NerdMarketMakerBot instance.".format(e), True)
             self.restart()
 
     def update_position_db(self):
         try:
             position = self.exchange.get_position()
-            p_symbol = self.exchange.get_instrument(position["symbol"])
+            p_symbol = position["symbol"]
             p_is_long = True if position['currentQty'] > 0 else False
             p_avg_entry_price = position['avgEntryPrice']
             p_current_qty = position['currentQty']
             p_unrealised_pnl = position['unrealisedPnl']
+            instrument = self.exchange.get_instrument(position["symbol"])
+            tick_log = instrument["tickLog"]
 
-            query = Position.update(symbol=p_symbol,
+            query = Position.update(exchange=settings.EXCHANGE,
+                                    symbol=p_symbol,
                                     is_long=p_is_long,
                                     avg_entry_price=p_avg_entry_price,
                                     current_qty=p_current_qty,
                                     unrealised_pnl=p_unrealised_pnl,
-                                    update_=datetime.datetime.now()).where(Position.bot_id == settings.BOTID)
+                                    tick_log=tick_log,
+                                    update_=datetime.now()).where(Position.bot_id == settings.BOTID)
             query.execute()
 
         except Exception as e:
-            log_error(logger, "Database exception has occurred: {}. Restarting the NerdMarkerMaker bot instance.".format(e), True)
+            log_error(logger, "Database exception has occurred: {}. Restarting the NerdMarketMakerBot instance.".format(e), True)
             self.restart()
 
     def update_db(self):
@@ -675,24 +664,24 @@ class NerdMarketMakerBot:
 
     def restart(self):
         logger.info("Restarting the market maker...")
-        raise ForceRestartException("NerdMarketMaker bot will be restarted")
+        raise ForceRestartException("NerdMarketMakerBot will be restarted")
 
 
 def run():
-    log_info(logger, 'Started NerdMarketMaker Bot\nBotID: {}\nExchange: {}\nSymbol: {}'.format(settings.BOTID, settings.EXCHANGE, settings.SYMBOL), True)
+    log_info(logger, 'Started NerdMarketMakerBot\nBotID: {}\nExchange: {}\nSymbol: {}'.format(settings.BOTID, settings.EXCHANGE, settings.SYMBOL), True)
 
-    om = NerdMarketMakerBot()
+    nmmb = NerdMarketMakerBot()
     try:
-        om.run_loop()
+        nmmb.run_loop()
     except ForceRestartException as fe:
-        om.exit(settings.FORCE_RESTART_EXIT_STATUS_CODE)
+        nmmb.exit(settings.FORCE_RESTART_EXIT_STATUS_CODE)
     except KeyboardInterrupt as ki:
-        om.exit(settings.FORCE_STOP_EXIT_STATUS_CODE)
+        nmmb.exit(settings.FORCE_STOP_EXIT_STATUS_CODE)
     except SystemExit as se:
-        om.exit(se.code)
+        nmmb.exit(se.code)
     except Exception as e:
-        log_error(logger, "UNEXPECTED EXCEPTION! {}\nNerdMarketMaker bot will be terminated.".format(e), True)
-        om.exit(settings.FORCE_STOP_EXIT_STATUS_CODE)
+        log_error(logger, "UNEXPECTED EXCEPTION! {}\nNerdMarketMakerBot will be terminated.".format(e), True)
+        nmmb.exit(settings.FORCE_STOP_EXIT_STATUS_CODE)
 
 
 if __name__ == "__main__":

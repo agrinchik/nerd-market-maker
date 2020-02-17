@@ -25,3 +25,12 @@ def roundQuantity(qty, minOrderLog = None):
 
 def get_decimal_digits_number(decimal_val):
     return Decimal(str(decimal_val)).as_tuple().exponent * -1
+
+
+def get_round_value(value, tick_log):
+    if abs(value) < 1 and tick_log == 0:
+        return round(value, 8)
+    elif abs(value) < 1 and tick_log > 0:
+        return round(value, 8)
+    elif abs(value) >= 1:
+        return round(value, tick_log)

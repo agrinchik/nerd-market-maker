@@ -233,7 +233,7 @@ RISK_PROFILE_CONFIGURATION = [
         "risk_level": 20,
         "max_number_dca_orders": 15,
         "interval_pct": 0.025,
-        "order_pairs": 3
+        "order_pairs": 2
     }
 ]
 
