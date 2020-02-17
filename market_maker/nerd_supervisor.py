@@ -61,10 +61,10 @@ class NerdSupervisor:
         portfolio_balance = self.get_portfolio_balance()
 
         if self.is_need_to_send_tg_state(portfolio_balance):
-            combined_msg = "<b>PORTFOLIO STATUS:</b>\n"
+            combined_msg = "<b>Portfolio Status:</b>\n"
             for position in portfolio_positions:
                 combined_msg += "<b>{}:</b> {}|{}|{}|{}|{}\n".format(
-                    position.bot_id,
+                    BotInfo.parse_for_tg_logs(position.bot_id),
                     "LONG" if position.is_long else "SHORT",
                     position.symbol,
                     math.get_round_value(position.avg_entry_price, position.tick_log),
@@ -75,7 +75,7 @@ class NerdSupervisor:
             for position in portfolio_positions:
                 combined_msg += "  <b>{}</b>".format("⇧" if position.is_long else "⇩")
 
-            combined_msg += "\n\nBalance [{} {}]: {}\n".format(num_bots, "bots" if num_bots > 1 else "bot", math.get_round_value(portfolio_balance, 8))
+            combined_msg += "\n\nTotal Balance [{} {}]: {}\n".format(num_bots, "bots" if num_bots > 1 else "bot", math.get_round_value(portfolio_balance, 8))
             log_info(logger, combined_msg, send_to_telegram)
             self.last_tg_sent_state = portfolio_balance
 

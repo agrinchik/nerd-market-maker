@@ -12,6 +12,8 @@ run_bot_process() {
 cleanup() {
     pgrep -f "market_maker.mm_bot -e test --botid" | xargs kill
     pgrep -f "run_bot.sh test" | xargs kill
+    pgrep -f "market_maker.nerd_supervisor -e test" | xargs kill
+    pgrep -f "run_supervisor.sh test" | xargs kill
 }
 
 if [[ "$#" -ne 1 ]]; then
@@ -56,4 +58,4 @@ done
 
 echo Executing NerdSupervisor in TEST environment ...
 
-# ./run_supervisor.sh test ${_number_of_bots} &
+./run_supervisor.sh test ${NUMBER_OF_BOTS} &
