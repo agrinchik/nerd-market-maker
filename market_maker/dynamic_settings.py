@@ -380,7 +380,7 @@ class DynamicSettings(object):
             self.order_step_size = self.get_order_step_size(last_wallet_balance)
             self.order_start_size = round(self.max_possible_position_margin / self.max_number_dca_orders - self.order_step_size * (self.max_number_dca_orders - 1) / 2)
             self.deposit_load_intensity = round(self.order_start_size / (100 * self.interval_pct), 8)
-            self.deposit_load_intensity_pct = self.deposit_load_intensity * 100 / self.max_possible_position_margin
+            self.deposit_load_intensity_pct = self.deposit_load_intensity * 100 / self.max_possible_position_margin if self.max_possible_position_margin != 0 else 0
 
         elif ExchangeInfo.is_bitfinex():
             self.curr_risk_profile_id = risk_profile["id"]
@@ -405,7 +405,7 @@ class DynamicSettings(object):
             self.order_step_size = self.get_order_step_size(last_wallet_balance)
             self.order_start_size = round(self.max_possible_position_margin / (ticker_last_price * self.max_number_dca_orders) - self.order_step_size * (self.max_number_dca_orders - 1) / 2, 8)
             self.deposit_load_intensity = round(self.order_start_size * ticker_last_price / (100 * self.interval_pct), 2)
-            self.deposit_load_intensity_pct = self.deposit_load_intensity * 100 / self.max_possible_position_margin
+            self.deposit_load_intensity_pct = self.deposit_load_intensity * 100 / self.max_possible_position_margin if self.max_possible_position_margin != 0 else 0
 
     def get_risk_profile(self, distance_to_avg_price_pct, deposit_load_pct):
         for rmm_entry in RISK_MANAGEMENT_BANDS_MATRIX:

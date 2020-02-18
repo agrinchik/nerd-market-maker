@@ -1,7 +1,7 @@
 #! /usr/bin/env zsh
 
-EXCHANGE=bitfinex
-NUMBER_OF_BOTS=2
+EXCHANGE=bitmex
+NUMBER_OF_BOTS=1
 PROCESS_DELAY_SECONDS=10 #7200
 
 run_bot_process() {

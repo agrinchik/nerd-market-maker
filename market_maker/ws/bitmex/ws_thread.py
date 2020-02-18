@@ -19,6 +19,7 @@ with hooks():  # Python 2/3 compat
     from urllib.parse import urlparse, urlunparse
 from market_maker.exchange import ExchangeInfo
 from market_maker.utils import math
+from market_maker.db.db_manager import DatabaseManager
 
 ORDER_POSITION_STATUS_INCREASE = 0
 ORDER_POSITION_STATUS_PARTIAL_CLOSE = 1
@@ -294,6 +295,7 @@ class BitMEXWebsocket():
                                     log_info(self.logger, "Execution (position partial close): {} {} contracts of {} at {}".format(order_side, order_size, symbol, order_price), True)
                                 elif order_position_status == ORDER_POSITION_STATUS_FULL_CLOSE:
                                     log_info(self.logger, "Execution (position fully closed): {} {} contracts of {} at {}".format(order_side, order_size, symbol, order_price), True)
+                                    DatabaseManager.invert_quoting_side_bot_settings(self.logger, settings.EXCHANGE, settings.BOTID)
 
                         # Update this item.
                         item.update(updateData)

@@ -16,8 +16,10 @@ from market_maker.utils.bitmex import errors
 from market_maker.utils import log, math
 from market_maker.exchange import ExchangeInfo
 from market_maker.db.model import *
+from market_maker.db.quoting_side import *
 from market_maker.dynamic_settings import DynamicSettings
 from datetime import datetime
+from market_maker.db.db_manager import DatabaseManager
 
 #
 # Helpers
@@ -419,6 +421,16 @@ class NerdMarketMakerBot:
         log_info(logger, "is_order_placement_allowed(): order={}, result={}".format(order, result), False)
         return result
 
+    def is_quoting_side_ok(self, is_long):
+        result = None
+        effective_quoting_side = settings["QUOTING_SIDE_OVERRIDE"] if settings["QUOTING_SIDE_OVERRIDE"] else settings["DEFAULT_QUOTING_SIDE"]
+        if is_long:
+            result = effective_quoting_side in [QUOTING_SIDE_BOTH, QUOTING_SIDE_LONG]
+        else:
+            result = effective_quoting_side in [QUOTING_SIDE_BOTH, QUOTING_SIDE_SHORT]
+        log_info(logger, "is_quoting_side_ok(): is_long={}, result={}".format(is_long, result), False)
+        return result
+
     def converge_orders(self, buy_orders, sell_orders):
         """Converge the orders we currently have in the book with what we want to be in the book.
            This involves amending any open orders and creating new ones if any have filled completely.
@@ -457,13 +469,13 @@ class NerdMarketMakerBot:
 
         while buys_matched < len(buy_orders):
             buy_order = buy_orders[buys_matched]
-            if self.is_order_placement_allowed(buy_order) is True:
+            if self.is_order_placement_allowed(buy_order) and self.is_quoting_side_ok(True):
                 to_create.append(buy_order)
             buys_matched += 1
 
         while sells_matched < len(sell_orders):
             sell_order = sell_orders[sells_matched]
-            if self.is_order_placement_allowed(sell_order) is True:
+            if self.is_order_placement_allowed(sell_order) and self.is_quoting_side_ok(False):
                 to_create.append(sell_order)
             sells_matched += 1
 
@@ -575,52 +587,12 @@ class NerdMarketMakerBot:
         """Ensure the WS connections are still open."""
         return self.exchange.is_open()
 
-    def update_wallet_db(self):
-        try:
-            position = self.exchange.get_position()
-            p_symbol = position["symbol"]
-            margin = self.exchange.get_margin()
-            w_balance = margin["walletBalance"]
-            m_balance = margin["marginBalance"]
-            query = Wallet.update(exchange=settings.EXCHANGE,
-                                  symbol=p_symbol,
-                                  wallet_balance=w_balance,
-                                  margin_balance=m_balance,
-                                  update_=datetime.now()).where(Wallet.bot_id == settings.BOTID)
-            query.execute()
-
-        except Exception as e:
-            log_error(logger, "Database exception has occurred: {}. Restarting the NerdMarketMakerBot instance.".format(e), True)
-            self.restart()
-
-    def update_position_db(self):
-        try:
-            position = self.exchange.get_position()
-            p_symbol = position["symbol"]
-            p_is_long = True if position['currentQty'] > 0 else False
-            p_avg_entry_price = position['avgEntryPrice']
-            p_current_qty = position['currentQty']
-            p_unrealised_pnl = position['unrealisedPnl']
-            instrument = self.exchange.get_instrument(position["symbol"])
-            tick_log = instrument["tickLog"]
-
-            query = Position.update(exchange=settings.EXCHANGE,
-                                    symbol=p_symbol,
-                                    is_long=p_is_long,
-                                    avg_entry_price=p_avg_entry_price,
-                                    current_qty=p_current_qty,
-                                    unrealised_pnl=p_unrealised_pnl,
-                                    tick_log=tick_log,
-                                    update_=datetime.now()).where(Position.bot_id == settings.BOTID)
-            query.execute()
-
-        except Exception as e:
-            log_error(logger, "Database exception has occurred: {}. Restarting the NerdMarketMakerBot instance.".format(e), True)
-            self.restart()
-
     def update_db(self):
-        self.update_wallet_db()
-        self.update_position_db()
+        position = self.exchange.get_position()
+        margin = self.exchange.get_margin()
+        instrument = self.exchange.get_instrument(position["symbol"])
+        DatabaseManager.update_wallet_db(logger, position, margin)
+        DatabaseManager.update_position_db(logger, position, instrument)
 
     def exit(self, status=settings.FORCE_STOP_EXIT_STATUS_CODE, stackframe=None):
         logger.info("exit(): status={}, stackframe={}".format(status, stackframe))
@@ -661,7 +633,7 @@ class NerdMarketMakerBot:
             sleep(settings.LOOP_INTERVAL)
 
     def restart(self):
-        logger.info("Restarting the market maker...")
+        logger.info("Restarting the NerdMarketMakerBot ...")
         raise ForceRestartException("NerdMarketMakerBot will be restarted")
 
 
