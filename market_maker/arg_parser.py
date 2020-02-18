@@ -16,6 +16,11 @@ class ArgParser(object):
                             required=True,
                             help='Number of bots')
 
+        parser.add_argument('-x', '--exchange',
+                            type=str,
+                            required=False,
+                            help='Exchange')
+
         parser.add_argument('-b', '--botid',
                             type=str,
                             required=False,

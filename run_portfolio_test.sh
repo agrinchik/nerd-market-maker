@@ -1,25 +1,21 @@
 #! /usr/bin/env zsh
 
-NUMBER_OF_BOTS=$1
+EXCHANGE=bitfinex
+NUMBER_OF_BOTS=2
 PROCESS_DELAY_SECONDS=10 #7200
 
 run_bot_process() {
     _botid=${1}
     _number_of_bots=${2}
-    ./run_bot.sh test ${_botid} ${_number_of_bots} &
+    ./run_bot.sh test ${EXCHANGE} ${_botid} ${_number_of_bots} &
 }
 
 cleanup() {
-    pgrep -f "market_maker.mm_bot -e test --botid" | xargs kill
+    pgrep -f "market_maker.mm_bot -e test" | xargs kill
     pgrep -f "run_bot.sh test" | xargs kill
     pgrep -f "market_maker.nerd_supervisor -e test" | xargs kill
     pgrep -f "run_supervisor.sh test" | xargs kill
 }
-
-if [[ "$#" -ne 1 ]]; then
-    echo "Usage: run_portfolio_test.sh <NUMBER OF BOTS>"
-    exit 0
-fi
 
 if [[ "$1" == "stop" ]]; then
     echo "Stopping all NerdMarketMakerBot TEST instances.."
@@ -50,9 +46,7 @@ do
 
     run_bot_process ${botid} ${NUMBER_OF_BOTS}
 
-    if [[ "${i}" -lt ${NUMBER_OF_BOTS} ]]; then
-        sleep ${PROCESS_DELAY_SECONDS}
-    fi
+    sleep ${PROCESS_DELAY_SECONDS}
 
 done
 

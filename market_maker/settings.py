@@ -6,6 +6,7 @@ import sys
 
 from market_maker.utils.bitmex.dotdict import dotdict
 from .arg_parser import ArgParser
+from market_maker.db.model import *
 
 
 def import_path(fullpath):
@@ -34,16 +35,20 @@ args = ArgParser.parse_args_common()
 settings_filename = resolve_settings_filename(args.env)
 userSettings = import_path(os.path.join('.', settings_filename))
 
-# Assemble settings.
+# Read settings from database.
 settings = {}
-settings.update(vars(userSettings))
+db_common_settings = CommonSettings.get(CommonSettings.env == args.env)
+app_common_settings = CommonSettings.convert_to_settings(db_common_settings)
+settings.update(app_common_settings)
 
 if args.botid:
-    settings["BOTID"] = args.botid
-    settings["INSTANCEID"] = args.botid
-    config_entry = settings["PORTFOLIO_BOT_CONFIG"][args.botid]
-    settings["EXCHANGE"] = config_entry["exchange"]
-    settings["SYMBOL"] = config_entry["symbol"]
+    db_bot_settings = BotSettings.get(BotSettings.exchange == args.exchange, BotSettings.bot_id == args.botid)
+    settings["EXCHANGE"] = db_bot_settings.exchange
+    settings["BOTID"] = db_bot_settings.bot_id
+    settings["INSTANCEID"] = db_bot_settings.bot_id
+    settings["SYMBOL"] = db_bot_settings.symbol
+    settings["APIKEY"] = db_bot_settings.apikey
+    settings["SECRET"] = db_bot_settings.secret
 else:
     settings["INSTANCEID"] = args.instanceid
 settings["NUMBER_OF_BOTS"] = args.number_of_bots

@@ -25,17 +25,13 @@ class NerdSupervisor:
 
         logger.info("NerdSupervisor initializing...")
 
-        # Connect to database.
-        db.connect()
-
     def get_bot_id_list(self):
         return [BotInfo.parse_from_number(i) for i in range(1, settings.NUMBER_OF_BOTS + 1)]
 
     def get_portfolio_positions(self):
         try:
             bot_id_list = self.get_bot_id_list()
-            query = Position.select()\
-                            .where(Position.bot_id.in_(bot_id_list))
+            query = Position.select().where(Position.bot_id.in_(bot_id_list))
             return query
         except Exception as e:
             log_error(logger, "Database exception has occurred: {}. Restarting the NerdSupervisor ...".format(e), True)
@@ -54,6 +50,13 @@ class NerdSupervisor:
     def is_need_to_send_tg_state(self, data):
         return self.last_tg_sent_state != data
 
+    def get_position_arrow_status(self, position):
+        if position.current_qty > 0:
+            return "⇧"
+        if position.current_qty < 0:
+            return "⇩"
+        return "-"
+
     def print_status(self, send_to_telegram):
         """Print the current status of NerdSupervisor"""
         num_bots = settings.NUMBER_OF_BOTS
@@ -63,17 +66,24 @@ class NerdSupervisor:
         if self.is_need_to_send_tg_state(portfolio_balance):
             combined_msg = "<b>Portfolio Status:</b>\n"
             for position in portfolio_positions:
-                combined_msg += "<b>{}:</b> {}|{}|{}|{}|{}\n".format(
-                    BotInfo.parse_for_tg_logs(position.bot_id),
-                    "LONG" if position.is_long else "SHORT",
-                    position.symbol,
-                    math.get_round_value(position.avg_entry_price, position.tick_log),
-                    math.get_round_value(position.current_qty, position.tick_log),
-                    math.get_round_value(position.unrealised_pnl, position.tick_log)
-                )
+                if position.current_qty != 0:
+                    combined_msg += "<b>{}:</b> {}|{}|{}|{}|{}\n".format(
+                        BotInfo.parse_for_tg_logs(position.bot_id),
+                        "LONG" if position.is_long else "SHORT",
+                        position.symbol,
+                        math.get_round_value(position.avg_entry_price, position.tick_log),
+                        math.get_round_value(position.current_qty, position.tick_log),
+                        math.get_round_value(position.unrealised_pnl, position.tick_log)
+                    )
+                else:
+                    combined_msg += "<b>{}:</b> {}|{}\n".format(
+                        BotInfo.parse_for_tg_logs(position.bot_id),
+                        "CLOSED",
+                        position.symbol,
+                    )
             combined_msg += "\nLongs/Shorts:"
             for position in portfolio_positions:
-                combined_msg += "  <b>{}</b>".format("⇧" if position.is_long else "⇩")
+                combined_msg += "  <b>{}</b>".format(self.get_position_arrow_status(position))
 
             combined_msg += "\n\nTotal Balance [{} {}]: {}\n".format(num_bots, "bots" if num_bots > 1 else "bot", math.get_round_value(portfolio_balance, 8))
             log_info(logger, combined_msg, send_to_telegram)

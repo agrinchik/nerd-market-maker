@@ -190,8 +190,6 @@ class NerdMarketMakerBot:
         self.price_change_last_check = datetime.now()
         self.price_change_last_price = -1
         self.reset()
-        # Connect to database.
-        db.connect()
 
     def whereAmI(self):
         return os.path.dirname(os.path.realpath(__import__("__main__").__file__))
