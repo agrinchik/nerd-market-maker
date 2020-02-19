@@ -11,6 +11,7 @@ from market_maker.utils.log import log_error
 from market_maker.settings import settings
 from market_maker.utils import log, math
 from market_maker.db.model import *
+from market_maker.db.db_manager import DatabaseManager
 
 DEFAULT_LOOP_INTERVAL = 1
 
@@ -66,20 +67,22 @@ class NerdSupervisor:
         if self.is_need_to_send_tg_state(portfolio_balance):
             combined_msg = "<b>Portfolio Status:</b>\n"
             for position in portfolio_positions:
+                effective_quoting_side = DatabaseManager.get_effective_quoting_side(position.exchange, position.bot_id)
                 if position.current_qty != 0:
                     combined_msg += "<b>{}:</b> {}|{}|{}|{}|{}\n".format(
                         BotInfo.parse_for_tg_logs(position.bot_id),
-                        "LONG" if position.is_long else "SHORT",
                         position.symbol,
                         math.get_round_value(position.avg_entry_price, position.tick_log),
                         math.get_round_value(position.current_qty, position.tick_log),
-                        math.get_round_value(position.unrealised_pnl, position.tick_log)
+                        math.get_round_value(position.unrealised_pnl, position.tick_log),
+                        effective_quoting_side
                     )
                 else:
-                    combined_msg += "<b>{}:</b> {}|{}\n".format(
+                    combined_msg += "<b>{}:</b> {}|{}|{}\n".format(
                         BotInfo.parse_for_tg_logs(position.bot_id),
                         "CLOSED",
                         position.symbol,
+                        effective_quoting_side
                     )
             combined_msg += "\nLongs/Shorts:"
             for position in portfolio_positions:
