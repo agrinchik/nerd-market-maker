@@ -12,9 +12,7 @@ run_bot_process() {
 
 cleanup() {
     pgrep -f "market_maker.mm_bot -e live" | xargs kill
-    pgrep -f "run_bot.sh live" | xargs kill
     pgrep -f "market_maker.nerd_supervisor -e live" | xargs kill
-    pgrep -f "run_supervisor.sh live" | xargs kill
 }
 
 

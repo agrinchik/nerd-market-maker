@@ -12,9 +12,7 @@ run_bot_process() {
 
 cleanup() {
     pgrep -f "market_maker.mm_bot -e test" | xargs kill
-    pgrep -f "run_bot.sh test" | xargs kill
     pgrep -f "market_maker.nerd_supervisor -e test" | xargs kill
-    pgrep -f "run_supervisor.sh test" | xargs kill
 }
 
 if [[ "$1" == "stop" ]]; then
