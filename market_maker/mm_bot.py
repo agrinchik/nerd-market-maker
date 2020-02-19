@@ -418,7 +418,7 @@ class NerdMarketMakerBot:
                     else:
                         result = False
 
-        log_info(logger, "is_order_placement_allowed(): order={}, result={}".format(order, result), False)
+        log_debug(logger, "is_order_placement_allowed(): order={}, result={}".format(order, result), False)
         return result
 
     def is_quoting_side_ok(self, is_long):
@@ -428,7 +428,7 @@ class NerdMarketMakerBot:
             result = effective_quoting_side in [QUOTING_SIDE_BOTH, QUOTING_SIDE_LONG]
         else:
             result = effective_quoting_side in [QUOTING_SIDE_BOTH, QUOTING_SIDE_SHORT]
-        log_info(logger, "is_quoting_side_ok(): is_long={}, result={}".format(is_long, result), False)
+            log_debug(logger, "is_quoting_side_ok(): is_long={}, result={}".format(is_long, result), False)
         return result
 
     def converge_orders(self, buy_orders, sell_orders):
