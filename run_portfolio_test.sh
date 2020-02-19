@@ -1,26 +1,24 @@
-#! /bin/bash
+#! /usr/bin/env zsh
 
-NUMBER_OF_BOTS=$1
+EXCHANGE=bitmex
+NUMBER_OF_BOTS=1
 PROCESS_DELAY_SECONDS=10 #7200
 
 run_bot_process() {
     _botid=${1}
     _number_of_bots=${2}
-    ./run_bot.sh test ${_botid} ${_number_of_bots} &
+    ./run_bot.sh test ${EXCHANGE} ${_botid} ${_number_of_bots} &
 }
 
 cleanup() {
-    kill $(pgrep -f "marketmaker.py --botid")
-    kill $(pgrep -f "run_bot.sh test")
+    pgrep -f "market_maker.mm_bot -e test" | xargs kill
+    pgrep -f "run_bot.sh test" | xargs kill
+    pgrep -f "market_maker.nerd_supervisor -e test" | xargs kill
+    pgrep -f "run_supervisor.sh test" | xargs kill
 }
 
-if [ "$#" -ne 1 ]; then
-    echo "Usage: run_portfolio_test.sh <NUMBER OF BOTS>"
-    exit 0
-fi
-
-if [ "$1" == "stop" ]; then
-    echo "Stopping all NerdMarketMaker TEST bot instances.."
+if [[ "$1" == "stop" ]]; then
+    echo "Stopping all NerdMarketMakerBot TEST instances.."
     cleanup
     echo "Done!"
     sleep 3
@@ -29,15 +27,29 @@ if [ "$1" == "stop" ]; then
     exit 0
 fi
 
+if [[ -d "/opt/anaconda3" ]]; then
+    source /opt/anaconda3/etc/profile.d/conda.sh
+elif [[ -d "/home/alex/anaconda3" ]]; then
+    source /home/alex/anaconda3/etc/profile.d/conda.sh
+elif [[ -d "/Users/alex/anaconda3" ]]; then
+    source /Users/alex/anaconda3/etc/profile.d/conda.sh
+fi
+conda activate nerd-market-maker
+
 cleanup
 
-echo Executing portfolio of NerdMarketMaker bot instances in TEST environment ...
+echo Executing portfolio of NerdMarketMakerBot instances in TEST environment ...
 
 for (( i=1; i<=${NUMBER_OF_BOTS}; i++ ))
 do
-     botid=$(printf "Bot%03d" $i)
+    botid=$(printf "Bot%03d" $i)
 
-     run_bot_process ${botid} ${NUMBER_OF_BOTS}
-     sleep ${PROCESS_DELAY_SECONDS}
+    run_bot_process ${botid} ${NUMBER_OF_BOTS}
+
+    sleep ${PROCESS_DELAY_SECONDS}
 
 done
+
+echo Executing NerdSupervisor in TEST environment ...
+
+./run_supervisor.sh test ${NUMBER_OF_BOTS} &

@@ -11,7 +11,7 @@ from market_maker.utils.bitmex.utils import XBt_to_XBT
 from market_maker.utils.log import log_error, log_info
 from market_maker.settings import settings
 from market_maker.auth.bitmex.APIKeyAuth import generate_expires, generate_signature
-from market_maker.utils.log import setup_custom_logger
+from market_maker.utils.log import setup_bot_custom_logger
 from market_maker.utils.math import toNearest
 from future.utils import iteritems
 from future.standard_library import hooks
@@ -19,6 +19,7 @@ with hooks():  # Python 2/3 compat
     from urllib.parse import urlparse, urlunparse
 from market_maker.exchange import ExchangeInfo
 from market_maker.utils import math
+from market_maker.db.db_manager import DatabaseManager
 
 ORDER_POSITION_STATUS_INCREASE = 0
 ORDER_POSITION_STATUS_PARTIAL_CLOSE = 1
@@ -169,7 +170,7 @@ class BitMEXWebsocket():
                                          header=self.__get_auth()
                                          )
 
-        setup_custom_logger('websocket', log_level=settings.LOG_LEVEL)
+        setup_bot_custom_logger('websocket', log_level=settings.LOG_LEVEL)
         self.wst = threading.Thread(target=lambda: self.ws.run_forever(sslopt=sslopt_ca_certs))
         self.wst.daemon = True
         self.wst.start()
@@ -294,6 +295,7 @@ class BitMEXWebsocket():
                                     log_info(self.logger, "Execution (position partial close): {} {} contracts of {} at {}".format(order_side, order_size, symbol, order_price), True)
                                 elif order_position_status == ORDER_POSITION_STATUS_FULL_CLOSE:
                                     log_info(self.logger, "Execution (position fully closed): {} {} contracts of {} at {}".format(order_side, order_size, symbol, order_price), True)
+                                    DatabaseManager.invert_quoting_side_bot_settings(self.logger, settings.EXCHANGE, settings.BOTID)
 
                         # Update this item.
                         item.update(updateData)

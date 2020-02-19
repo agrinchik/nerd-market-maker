@@ -104,10 +104,8 @@ class ExchangeInfo(object):
 
     @staticmethod
     def get_apikey():
-        config_entry = settings.PORTFOLIO_BOT_CONFIG[settings.BOTID]
-        return config_entry["apikey"]
+        return settings.APIKEY
 
     @staticmethod
     def get_apisecret():
-        config_entry = settings.PORTFOLIO_BOT_CONFIG[settings.BOTID]
-        return config_entry["secret"]
+        return settings.SECRET

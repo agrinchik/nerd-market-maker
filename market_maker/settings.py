@@ -3,9 +3,8 @@ from __future__ import absolute_import
 import importlib
 import os
 import sys
-import argparse
-
 from market_maker.utils.bitmex.dotdict import dotdict
+from market_maker.db.model import *
 
 
 def import_path(fullpath):
@@ -22,51 +21,37 @@ def import_path(fullpath):
     return module
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(description='NerdMarketMaker')
-
-    parser.add_argument('-b', '--botid',
-                        type=str,
-                        required=True,
-                        help='Bot ID')
-
-    parser.add_argument('-n', '--number_of_bots',
-                        type=int,
-                        required=True,
-                        help='Number of bots')
-
-    parser.add_argument('--live',
-                        action='store_true',
-                        help=('Execution Live flag'))
-
-    parser.add_argument('--debug',
-                        action='store_true',
-                        help=('Print Debugs'))
-
-    return parser.parse_args()
-
-
-def resolve_settings_filename(is_live_flag):
-    if is_live_flag:
+def resolve_settings_filename(env):
+    if env == "live":
         return "settings_live"
-    else:
+    elif env == "test":
         return "settings_test"
 
 
-args = parse_args()
+args = ArgParser.parse_args_common()
 
-settings_filename = resolve_settings_filename(args.live)
+settings_filename = resolve_settings_filename(args.env)
 userSettings = import_path(os.path.join('.', settings_filename))
 
-# Assemble settings.
+# Read settings from database.
 settings = {}
-settings.update(vars(userSettings))
+db_common_settings = CommonSettings.get(CommonSettings.env == args.env)
+app_common_settings = CommonSettings.convert_to_app_settings(db_common_settings)
+settings.update(app_common_settings)
 
-settings["BOTID"] = args.botid
+if args.botid:
+    db_bot_settings = BotSettings.get(BotSettings.exchange == args.exchange, BotSettings.bot_id == args.botid)
+    settings["EXCHANGE"] = db_bot_settings.exchange
+    settings["BOTID"] = db_bot_settings.bot_id
+    settings["INSTANCEID"] = db_bot_settings.bot_id
+    settings["SYMBOL"] = db_bot_settings.symbol
+    settings["APIKEY"] = db_bot_settings.apikey
+    settings["SECRET"] = db_bot_settings.secret
+    settings["DEFAULT_QUOTING_SIDE"] = db_bot_settings.default_quoting_side
+    settings["QUOTING_SIDE_OVERRIDE"] = db_bot_settings.quoting_side_override
+else:
+    settings["INSTANCEID"] = args.instanceid
 settings["NUMBER_OF_BOTS"] = args.number_of_bots
-config_entry = settings["PORTFOLIO_BOT_CONFIG"][settings["BOTID"]]
-settings["EXCHANGE"] = config_entry["exchange"]
-settings["SYMBOL"] = config_entry["symbol"]
 
 # Main export
 settings = dotdict(settings)
