@@ -2,7 +2,7 @@
 
 EXCHANGE=bitmex
 NUMBER_OF_BOTS=8
-PROCESS_DELAY_SECONDS=10
+PROCESS_DELAY_SECONDS=7200 # 10
 
 run_bot_process() {
     _botid=${1}
