@@ -138,6 +138,8 @@ class BitMEXWebsocket():
         pos_dict = pos[0]
         pos_dict_copy = pos_dict.copy()
         pos_dict_copy["unrealisedPnl"] = XBt_to_XBT(pos_dict["unrealisedPnl"])
+        if not pos_dict_copy["avgEntryPrice"]:
+            pos_dict_copy["avgEntryPrice"] = 0
         return pos_dict_copy
 
     #

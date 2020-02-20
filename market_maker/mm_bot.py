@@ -395,23 +395,32 @@ class NerdMarketMakerBot:
         position = self.exchange.get_position()
         position_avg_price = position['avgEntryPrice']
         position_qty = position['currentQty']
-        is_order_buy_side = True if order["side"] == "Buy" else False
+        is_order_long = True if order["side"] == "Buy" else False
         order_price = order["price"]
 
         if settings.STOP_QUOTING_IF_INSIDE_LOSS_RANGE is False or position_qty == 0:
-            result = True
+            if self.is_quoting_side_ok(is_order_long):
+                result = True
+            else:
+                result = False
         else:
             if position_qty > 0:
-                if is_order_buy_side is True:
-                    result = True
+                if is_order_long:
+                    if self.is_quoting_side_ok(is_order_long):
+                        result = True
+                    else:
+                        result = False
                 else:
                     if order_price >= position_avg_price:
                         result = True
                     else:
                         result = False
             else:
-                if is_order_buy_side is False:
-                    result = True
+                if not is_order_long:
+                    if self.is_quoting_side_ok(is_order_long):
+                        result = True
+                    else:
+                        result = False
                 else:
                     if order_price <= position_avg_price:
                         result = True
@@ -428,7 +437,8 @@ class NerdMarketMakerBot:
             result = effective_quoting_side in [QUOTING_SIDE_BOTH, QUOTING_SIDE_LONG]
         else:
             result = effective_quoting_side in [QUOTING_SIDE_BOTH, QUOTING_SIDE_SHORT]
-            log_debug(logger, "is_quoting_side_ok(): is_long={}, result={}".format(is_long, result), False)
+
+        log_debug(logger, "is_quoting_side_ok(): is_long={}, result={}".format(is_long, result), False)
         return result
 
     def converge_orders(self, buy_orders, sell_orders):
@@ -469,13 +479,13 @@ class NerdMarketMakerBot:
 
         while buys_matched < len(buy_orders):
             buy_order = buy_orders[buys_matched]
-            if self.is_order_placement_allowed(buy_order) and self.is_quoting_side_ok(True):
+            if self.is_order_placement_allowed(buy_order):
                 to_create.append(buy_order)
             buys_matched += 1
 
         while sells_matched < len(sell_orders):
             sell_order = sell_orders[sells_matched]
-            if self.is_order_placement_allowed(sell_order) and self.is_quoting_side_ok(False):
+            if self.is_order_placement_allowed(sell_order):
                 to_create.append(sell_order)
             sells_matched += 1
 
