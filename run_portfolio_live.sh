@@ -37,8 +37,12 @@ conda activate nerd-market-maker
 
 cleanup
 
-echo Executing portfolio of NerdMarketMakerBot instances in LIVE environment ...
+echo Executing NerdSupervisor in LIVE environment ...
+./run_supervisor.sh live ${NUMBER_OF_BOTS} &
 
+sleep 10
+
+echo Executing portfolio of NerdMarketMakerBot instances in LIVE environment ...
 for (( i=1; i<=${NUMBER_OF_BOTS}; i++ ))
 do
     botid=$(printf "Bot%03d" $i)
@@ -49,6 +53,3 @@ do
 
 done
 
-echo Executing NerdSupervisor in LIVE environment ...
-
-./run_supervisor.sh live ${NUMBER_OF_BOTS} &
