@@ -1,7 +1,7 @@
 #! /usr/bin/env zsh
 
 EXCHANGE=bitmex
-NUMBER_OF_BOTS=4
+NUMBER_OF_BOTS=8
 PROCESS_DELAY_SECONDS=10
 
 run_bot_process() {
