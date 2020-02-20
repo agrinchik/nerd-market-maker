@@ -390,7 +390,7 @@ class NerdMarketMakerBot:
 
         return {'price': price, 'orderQty': quantity, 'side': "Sell" if is_long is True else "Buy"}
 
-    def is_order_placement_allowed(self, order):
+    def is_order_placement_allowed(self, order, quoting_side):
         result = True
         position = self.exchange.get_position()
         position_avg_price = position['avgEntryPrice']
@@ -399,14 +399,14 @@ class NerdMarketMakerBot:
         order_price = order["price"]
 
         if settings.STOP_QUOTING_IF_INSIDE_LOSS_RANGE is False or position_qty == 0:
-            if self.is_quoting_side_ok(is_order_long):
+            if self.is_quoting_side_ok(is_order_long, quoting_side):
                 result = True
             else:
                 result = False
         else:
             if position_qty > 0:
                 if is_order_long:
-                    if self.is_quoting_side_ok(is_order_long):
+                    if self.is_quoting_side_ok(is_order_long, quoting_side):
                         result = True
                     else:
                         result = False
@@ -417,7 +417,7 @@ class NerdMarketMakerBot:
                         result = False
             else:
                 if not is_order_long:
-                    if self.is_quoting_side_ok(is_order_long):
+                    if self.is_quoting_side_ok(is_order_long, quoting_side):
                         result = True
                     else:
                         result = False
@@ -430,13 +430,12 @@ class NerdMarketMakerBot:
         log_debug(logger, "is_order_placement_allowed(): order={}, result={}".format(order, result), False)
         return result
 
-    def is_quoting_side_ok(self, is_long):
+    def is_quoting_side_ok(self, is_long, quoting_side):
         result = None
-        effective_quoting_side = settings["QUOTING_SIDE_OVERRIDE"] if settings["QUOTING_SIDE_OVERRIDE"] else settings["DEFAULT_QUOTING_SIDE"]
         if is_long:
-            result = effective_quoting_side in [QUOTING_SIDE_BOTH, QUOTING_SIDE_LONG]
+            result = quoting_side in [QUOTING_SIDE_BOTH, QUOTING_SIDE_LONG]
         else:
-            result = effective_quoting_side in [QUOTING_SIDE_BOTH, QUOTING_SIDE_SHORT]
+            result = quoting_side in [QUOTING_SIDE_BOTH, QUOTING_SIDE_SHORT]
 
         log_debug(logger, "is_quoting_side_ok(): is_long={}, result={}".format(is_long, result), False)
         return result
@@ -453,6 +452,7 @@ class NerdMarketMakerBot:
         buys_matched = 0
         sells_matched = 0
         existing_orders = self.exchange.get_orders()
+        effective_quoting_side = DatabaseManager.get_effective_quoting_side(settings.EXCHANGE, settings.BOTID)
 
         # Check all existing orders and match them up with what we want to place.
         # If there's an open one, we might be able to amend it to fit what we want.
@@ -470,7 +470,7 @@ class NerdMarketMakerBot:
                         # If price has changed, and the change is more than our RELIST_INTERVAL, amend.
                         desired_order['price'] != order['price'] and
                         abs((desired_order['price'] / order['price']) - 1) > settings.RELIST_INTERVAL):
-                    if self.is_order_placement_allowed(desired_order) is True:
+                    if self.is_order_placement_allowed(desired_order, effective_quoting_side) is True:
                         to_amend.append({'orderID': order['orderID'], 'orderQty': order['cumQty'] + desired_order['orderQty'],
                                         'price': desired_order['price'], 'side': order['side']})
             except IndexError:
@@ -479,13 +479,13 @@ class NerdMarketMakerBot:
 
         while buys_matched < len(buy_orders):
             buy_order = buy_orders[buys_matched]
-            if self.is_order_placement_allowed(buy_order):
+            if self.is_order_placement_allowed(buy_order, effective_quoting_side):
                 to_create.append(buy_order)
             buys_matched += 1
 
         while sells_matched < len(sell_orders):
             sell_order = sell_orders[sells_matched]
-            if self.is_order_placement_allowed(sell_order):
+            if self.is_order_placement_allowed(sell_order, effective_quoting_side):
                 to_create.append(sell_order)
             sells_matched += 1
 
@@ -588,9 +588,16 @@ class NerdMarketMakerBot:
     # Running
     ###
 
-    def update_app_settings(self):
+    def handle_db_dynamic_settings_changed(self):
+        effective_quoting_side = DatabaseManager.get_effective_quoting_side(settings.EXCHANGE, settings.BOTID)
+        if settings["QUOTING_SIDE_OVERRIDE"] != effective_quoting_side:
+            settings["QUOTING_SIDE_OVERRIDE"] = effective_quoting_side
+            self.exchange.cancel_all_orders()
+
+    def update_dynamic_app_settings(self):
         result = self.dynamic_settings.update_app_settings()
-        if result is True:
+
+        if result:
             self.exchange.cancel_all_orders()
 
     def check_connection(self):
@@ -632,7 +639,8 @@ class NerdMarketMakerBot:
                 sleep(RESTART_TIMEOUT)
                 self.restart()
 
-            self.update_app_settings()
+            self.update_dynamic_app_settings()
+            self.handle_db_dynamic_settings_changed()
             self.sanity_check()  # Ensures health of mm - several cut-out points here
             self.print_status(False)  # Print skew, delta, etc
             self.check_suspend_trading()

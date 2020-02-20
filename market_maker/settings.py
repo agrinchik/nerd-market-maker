@@ -18,7 +18,6 @@ if args.botid:
     settings["SYMBOL"] = db_bot_settings.symbol
     settings["APIKEY"] = db_bot_settings.apikey
     settings["SECRET"] = db_bot_settings.secret
-    settings["DEFAULT_QUOTING_SIDE"] = db_bot_settings.default_quoting_side
     settings["QUOTING_SIDE_OVERRIDE"] = db_bot_settings.quoting_side_override
 else:
     settings["INSTANCEID"] = args.instanceid

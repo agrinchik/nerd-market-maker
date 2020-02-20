@@ -110,7 +110,7 @@ class OrderManager:
                 log_info(self.logger, "Execution (position partial close): {} {} quantity of {} at {}".format(order_side, order_size, symbol, order_price), True)
             elif order_position_status == ORDER_POSITION_STATUS_FULL_CLOSE:
                 log_info(self.logger, "Execution (position fully closed): {} {} quantity of {} at {}".format(order_side, order_size, symbol, order_price), True)
-                DatabaseManager.set_quoting_side_bot_settings(self.logger, settings.EXCHANGE, settings.BOTID, position_qty)
+                DatabaseManager.invert_quoting_side_bot_settings(self.logger, settings.EXCHANGE, settings.BOTID, position_qty)
 
 
 
