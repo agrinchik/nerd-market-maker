@@ -1,28 +1,27 @@
 #! /usr/bin/env zsh
 
 EXCHANGE=bitmex
-NUMBER_OF_BOTS=8
-PROCESS_DELAY_SECONDS=7200 # 10
+NUMBER_OF_ROBOTS=8
+PROCESS_DELAY_SECONDS=10  #  7200
 
-run_bot_process() {
-    _botid=${1}
-    _number_of_bots=${2}
-    ./run_bot.sh live ${EXCHANGE} ${_botid} ${_number_of_bots} &
+run_robot_process() {
+    _robotid=${1}
+    _number_of_robots=${2}
+    ./run_robot.sh live ${EXCHANGE} ${_robotid} ${_number_of_robots} &
 }
 
 cleanup() {
-    pgrep -f "market_maker.mm_bot -e live" | xargs kill
+    pgrep -f "market_maker.mm_robot -e live" | xargs kill
     pgrep -f "market_maker.nerd_supervisor -e live" | xargs kill
 }
 
-
 if [[ "$1" == "stop" ]]; then
-    echo "Stopping all NerdMarketMakerBot LIVE instances.."
+    echo "Stopping all NerdMarketMakerRobot LIVE instances.."
     cleanup
     echo "Done!"
     sleep 3
-    echo "Checking bot instances are still running:"
-    ps -ef | grep bot
+    echo "Checking robot instances are still running:"
+    ps -ef | grep robot
     exit 0
 fi
 
@@ -38,16 +37,16 @@ conda activate nerd-market-maker
 cleanup
 
 echo Executing NerdSupervisor in LIVE environment ...
-./run_supervisor.sh live ${NUMBER_OF_BOTS} &
+./run_supervisor.sh live ${NUMBER_OF_ROBOTS} &
 
 sleep 10
 
 echo Executing portfolio of NerdMarketMakerBot instances in LIVE environment ...
-for (( i=1; i<=${NUMBER_OF_BOTS}; i++ ))
+for (( i=1; i<=${NUMBER_OF_ROBOTS}; i++ ))
 do
-    botid=$(printf "Bot%03d" $i)
+    robotid=$(printf "Robot%03d" $i)
 
-    run_bot_process ${botid} ${NUMBER_OF_BOTS}
+    run_robot_process ${robotid} ${NUMBER_OF_ROBOTS}
 
     sleep ${PROCESS_DELAY_SECONDS}
 

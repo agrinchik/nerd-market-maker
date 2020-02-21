@@ -1,12 +1,12 @@
 import logging
 import requests
 from market_maker.settings import settings
-from common.bot_info import BotInfo
+from common.robot_info import RobotInfo
 
 
-def setup_bot_custom_logger(name, log_level=settings.LOG_LEVEL):
-    botId = settings.BOTID
-    log_text_format = "%(asctime)s - {} - %(levelname)s - %(module)s - %(message)s".format(botId)
+def setup_robot_custom_logger(name, log_level=settings.LOG_LEVEL):
+    robotId = settings.ROBOTID
+    log_text_format = "%(asctime)s - {} - %(levelname)s - %(module)s - %(message)s".format(robotId)
     formatter = logging.Formatter(fmt=log_text_format)
 
     handler = logging.StreamHandler()
@@ -15,7 +15,7 @@ def setup_bot_custom_logger(name, log_level=settings.LOG_LEVEL):
     logger = logging.getLogger(name)
     level_name = logging.getLevelName(log_level)
     logger.setLevel(level_name)
-    log_filename = "./logs/{}/{}_{}".format(settings.ENV.lower(), settings.BOTID.lower(), settings.LOG_FILENAME)
+    log_filename = "./logs/{}/{}_{}".format(settings.ENV.lower(), settings.ROBOTID.lower(), settings.LOG_FILENAME)
     logging.basicConfig(filename=log_filename, filemode='a', format=log_text_format)
     #logger.addHandler(handler)
     return logger
@@ -37,7 +37,7 @@ def setup_supervisor_custom_logger(name, log_level=settings.LOG_LEVEL):
 
 
 def get_telegram_message_text(txt):
-    instance_id = BotInfo.parse_for_tg_logs(settings.BOTID) if settings.BOTID else settings.INSTANCEID
+    instance_id = RobotInfo.parse_for_tg_logs(settings.ROBOTID) if settings.ROBOTID else settings.INSTANCEID
     return "<b>{} - {}</b>:\n{}".format(instance_id, settings.ENV.upper(), txt)
 
 

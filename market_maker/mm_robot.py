@@ -24,7 +24,7 @@ from market_maker.db.db_manager import DatabaseManager
 #
 # Helpers
 #
-logger = log.setup_bot_custom_logger('root')
+logger = log.setup_robot_custom_logger('root')
 
 
 class ExchangeInterface:
@@ -35,7 +35,7 @@ class ExchangeInterface:
     def create_exchange_interface(self):
         result = None
         if ExchangeInfo.is_bitmex():
-            prefix = "{}_{}".format(settings.BOTID, settings.ORDERID_PREFIX)
+            prefix = "{}_{}".format(settings.ROBOTID, settings.ORDERID_PREFIX)
             result = bitmex.BitMEX(symbol=self.symbol,
                                     orderIDPrefix=prefix, postOnly=settings.POST_ONLY,
                                     timeout=settings.TIMEOUT,
@@ -172,7 +172,7 @@ class ExchangeInterface:
         return self.xchange.cancel_orders(orders)
 
 
-class NerdMarketMakerBot:
+class NerdMarketMakerRobot:
     def __init__(self):
         self.exchange = ExchangeInterface()
         # Once exchange is created, register exit handler that will always cancel orders
@@ -182,7 +182,7 @@ class NerdMarketMakerBot:
 
         logger.info("Using symbol %s." % self.exchange.symbol)
 
-        logger.info("NerdMarketMakerBot initializing, connecting to exchange. Live run: executing real trades.")
+        logger.info("NerdMarketMakerRobot initializing, connecting to exchange. Live run: executing real trades.")
 
         self.start_time = datetime.now()
         self.starting_qty = self.exchange.get_delta()
@@ -211,7 +211,7 @@ class NerdMarketMakerBot:
         self.dynamic_settings.initialize_params()
 
     def print_status(self, send_to_telegram):
-        """Print the current status of NerdMarkerMakerBot"""
+        """Print the current status of NerdMarkerMakerRobot"""
 
         margin = self.exchange.get_margin()
         position = self.exchange.get_position()
@@ -452,7 +452,7 @@ class NerdMarketMakerBot:
         buys_matched = 0
         sells_matched = 0
         existing_orders = self.exchange.get_orders()
-        effective_quoting_side = DatabaseManager.get_effective_quoting_side(settings.EXCHANGE, settings.BOTID)
+        effective_quoting_side = DatabaseManager.get_effective_quoting_side(settings.EXCHANGE, settings.ROBOTID)
 
         # Check all existing orders and match them up with what we want to place.
         # If there's an open one, we might be able to amend it to fit what we want.
@@ -589,7 +589,7 @@ class NerdMarketMakerBot:
     ###
 
     def handle_db_dynamic_settings_changed(self):
-        effective_quoting_side = DatabaseManager.get_effective_quoting_side(settings.EXCHANGE, settings.BOTID)
+        effective_quoting_side = DatabaseManager.get_effective_quoting_side(settings.EXCHANGE, settings.ROBOTID)
         if settings["QUOTING_SIDE_OVERRIDE"] != effective_quoting_side:
             settings["QUOTING_SIDE_OVERRIDE"] = effective_quoting_side
             self.exchange.cancel_all_orders()
@@ -609,7 +609,7 @@ class NerdMarketMakerBot:
         margin = self.exchange.get_margin()
         instrument = self.exchange.get_instrument(position["symbol"])
         DatabaseManager.update_wallet_db(logger, position, margin)
-        DatabaseManager.update_position_db(logger, position, instrument)
+        DatabaseManager.update_position_db(logger, self.exchange, position, instrument)
 
     def exit(self, status=settings.FORCE_STOP_EXIT_STATUS_CODE, stackframe=None):
         logger.info("exit(): status={}, stackframe={}".format(status, stackframe))
@@ -651,14 +651,14 @@ class NerdMarketMakerBot:
             sleep(settings.LOOP_INTERVAL)
 
     def restart(self):
-        logger.info("Restarting the NerdMarketMakerBot ...")
-        raise ForceRestartException("NerdMarketMakerBot will be restarted")
+        logger.info("Restarting the NerdMarketMakerRobot ...")
+        raise ForceRestartException("NerdMarketMakerRobot will be restarted")
 
 
 def run():
-    log_info(logger, 'Started NerdMarketMakerBot\nBotID: {}\nExchange: {}\nSymbol: {}'.format(settings.BOTID, settings.EXCHANGE, settings.SYMBOL), True)
+    log_info(logger, 'Started NerdMarketMakerRobot\nRobotID: {}\nExchange: {}\nSymbol: {}'.format(settings.ROBOTID, settings.EXCHANGE, settings.SYMBOL), True)
 
-    nmmb = NerdMarketMakerBot()
+    nmmb = NerdMarketMakerRobot()
     try:
         nmmb.run_loop()
     except ForceRestartException as fe:
@@ -668,7 +668,7 @@ def run():
     except SystemExit as se:
         nmmb.exit(se.code)
     except Exception as e:
-        log_error(logger, "UNEXPECTED EXCEPTION! {}\nNerdMarketMakerBot will be terminated.".format(e), True)
+        log_error(logger, "UNEXPECTED EXCEPTION! {}\nNerdMarketMakerRobot will be terminated.".format(e), True)
         nmmb.exit(settings.FORCE_STOP_EXIT_STATUS_CODE)
 
 

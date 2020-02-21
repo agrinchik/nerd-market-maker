@@ -11,20 +11,20 @@ class ArgParser(object):
                             required=True,
                             help='Environment: live or test')
 
-        parser.add_argument('-n', '--number_of_bots',
+        parser.add_argument('-n', '--number_of_robots',
                             type=int,
                             required=True,
-                            help='Number of bots')
+                            help='Number of robots')
 
         parser.add_argument('-x', '--exchange',
                             type=str,
                             required=False,
                             help='Exchange')
 
-        parser.add_argument('-b', '--botid',
+        parser.add_argument('-r', '--robotid',
                             type=str,
                             required=False,
-                            help='Bot ID')
+                            help='Robot ID')
 
         parser.add_argument('-i', '--instanceid',
                             type=str,

@@ -2,13 +2,13 @@
 
 ENV=$1
 EXCHANGE=$2
-BOTID=$3
-NUMBER_OF_BOTS=$4
+ROBOTID=$3
+NUMBER_OF_ROBOTS=$4
 ENV_UPPERCASE=$(echo "${ENV}" | tr '[:lower:]' '[:upper:]')
 
 
 if [[ "$#" -ne 4 ]]; then
-    echo "Usage: run_bot.sh <ENV> <EXCHANGE> <BOTID> <NUMBER_OF_BOTS>"
+    echo "Usage: run_robot.sh <ENV> <EXCHANGE> <ROBOTID> <NUMBER_OF_ROBOTS>"
     exit 0
 fi
 
@@ -22,15 +22,15 @@ fi
 conda activate nerd-market-maker
 
 while true
-    echo Launching a NerdMarketMakerBot instance in ${ENV_UPPERCASE}: BotID=${BOTID}
+    echo Launching a NerdMarketMakerBot instance in ${ENV_UPPERCASE}: BotID=${ROBOTID}
 
-    do python -m market_maker.mm_bot -e ${ENV} --exchange ${EXCHANGE} --botid ${BOTID} --number_of_bots ${NUMBER_OF_BOTS}
+    do python -m market_maker.mm_robot -e ${ENV} --exchange ${EXCHANGE} --robotid ${ROBOTID} --number_of_robots ${NUMBER_OF_ROBOTS}
     st=$?
     if [[ "$st" == "99"  ||  "$st" == "15" ]]; then
-        echo "NerdMarketMakerBot instance (${BOTID}) has finished with status code=${st} and the bash script will be terminated!"
+        echo "NerdMarketMakerRobot instance (${ROBOTID}) has finished with status code=${st} and the bash script will be terminated!"
         exit 0
     else
-        echo "NerdMarketMakerBot instance (${BOTID}) has finished and will be restarted: status code=${st}"
+        echo "NerdMarketMakerRobot instance (${ROBOTID}) has finished and will be restarted: status code=${st}"
         sleep 5
     fi
 done

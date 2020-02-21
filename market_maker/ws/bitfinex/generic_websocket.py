@@ -103,13 +103,13 @@ class GenericWebsocket:
         self.logger.info("handle_exception(): Exception occurred: {}, Message={}".format(context["exception"], msg))
 
         if msg == "Fatal error on SSL transport":
-            log_error(self.logger, "Bitfinex Websocket exception occurred: {}. The NerdMarketMaker bot will be restarted.".format(msg), True)
+            log_error(self.logger, "Bitfinex Websocket exception occurred: {}. The NerdMarketMakerRobot will be restarted.".format(msg), True)
             os._exit(settings.FORCE_RESTART_EXIT_STATUS_CODE)
         if msg == "Fatal read error on socket transport":
-            log_error(self.logger, "Bitfinex Websocket exception occurred: {}. The NerdMarketMaker bot will be restarted.".format(msg), False)
+            log_error(self.logger, "Bitfinex Websocket exception occurred: {}. The NerdMarketMakerRobot will be restarted.".format(msg), False)
             os._exit(settings.FORCE_RESTART_EXIT_STATUS_CODE)
         else:
-            log_error(self.logger, "Unexpected Bitfinex Websocket exception occurred: {}. The NerdMarketMaker bot will be restarted.".format(msg), True)
+            log_error(self.logger, "Unexpected Bitfinex Websocket exception occurred: {}. The NerdMarketMakerRobot will be restarted.".format(msg), True)
             os._exit(settings.FORCE_RESTART_EXIT_STATUS_CODE)
 
     def run(self):
@@ -129,7 +129,7 @@ class GenericWebsocket:
                 asyncio.set_event_loop(loop)
                 loop.run_until_complete(self._run_socket())
             except Exception as e:
-                log_error(self.logger, "Unexpected exception, the NerdMarketMaker bot will be restarted. Exception: {}".format(e), True)
+                log_error(self.logger, "Unexpected exception, the NerdMarketMakerRobot will be restarted. Exception: {}".format(e), True)
                 os._exit(settings.FORCE_RESTART_EXIT_STATUS_CODE)
 
         worker_loop = asyncio.new_event_loop()

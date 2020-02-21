@@ -5,7 +5,7 @@ import os
 import atexit
 import signal
 from common.exception import *
-from common.bot_info import BotInfo
+from common.robot_info import RobotInfo
 from market_maker.utils.log import log_info
 from market_maker.utils.log import log_error
 from market_maker.settings import settings
@@ -26,13 +26,13 @@ class NerdSupervisor:
 
         logger.info("NerdSupervisor initializing...")
 
-    def get_bot_id_list(self):
-        return [BotInfo.parse_from_number(i) for i in range(1, settings.NUMBER_OF_BOTS + 1)]
+    def get_robot_id_list(self):
+        return [RobotInfo.parse_from_number(i) for i in range(1, settings.NUMBER_OF_ROBOTS + 1)]
 
     def get_portfolio_positions(self):
         try:
-            bot_id_list = self.get_bot_id_list()
-            query = Position.select().where(Position.bot_id.in_(bot_id_list))
+            robot_id_list = self.get_robot_id_list()
+            query = Position.select().where(Position.robot_id.in_(robot_id_list))
             return query
         except Exception as e:
             log_error(logger, "Database exception has occurred: {}. Restarting the NerdSupervisor ...".format(e), True)
@@ -40,9 +40,9 @@ class NerdSupervisor:
 
     def get_portfolio_balance(self):
         try:
-            bot_id_list = self.get_bot_id_list()
+            robot_id_list = self.get_robot_id_list()
             query = Wallet.select(fn.SUM(Wallet.wallet_balance))\
-                          .where(Wallet.bot_id.in_(bot_id_list))
+                          .where(Wallet.robot_id.in_(robot_id_list))
             return query.scalar()
         except Exception as e:
             log_error(logger, "Database exception has occurred: {}. Restarting the NerdSupervisor ...".format(e), True)
@@ -60,35 +60,34 @@ class NerdSupervisor:
 
     def print_status(self, send_to_telegram):
         """Print the current status of NerdSupervisor"""
-        num_bots = settings.NUMBER_OF_BOTS
+        num_robots = settings.NUMBER_OF_ROBOTS
         portfolio_positions = self.get_portfolio_positions()
         portfolio_balance = self.get_portfolio_balance()
 
         if self.is_need_to_send_tg_state(portfolio_balance):
             combined_msg = "<b>Portfolio Status:</b>\n"
             for position in portfolio_positions:
-                effective_quoting_side = DatabaseManager.get_effective_quoting_side(position.exchange, position.bot_id)
-                if position.current_qty != 0:
-                    combined_msg += "<b>{}:</b> {}|{}|{}|{}|{}\n".format(
-                        BotInfo.parse_for_tg_logs(position.bot_id),
+                if position.exchange and position.current_qty != 0:
+                    effective_quoting_side = DatabaseManager.get_effective_quoting_side(position.exchange, position.robot_id)
+                    combined_msg += "<b>{}:</b> {}|{}|{}|{}|{:.2f}%|{}\n".format(
+                        RobotInfo.parse_for_tg_logs(position.robot_id),
+                        self.get_position_arrow_status(position),
                         position.symbol,
                         math.get_round_value(position.avg_entry_price, position.tick_log),
                         math.get_round_value(position.current_qty, position.tick_log),
-                        math.get_round_value(position.unrealised_pnl, position.tick_log),
-                        effective_quoting_side
+                        position.unrealised_pnl_pct,
+                        effective_quoting_side[0]
                     )
                 else:
-                    combined_msg += "<b>{}:</b> {}|{}|{}\n".format(
-                        BotInfo.parse_for_tg_logs(position.bot_id),
-                        "CLOSED",
-                        position.symbol,
-                        effective_quoting_side
+                    combined_msg += "<b>{}:</b> {}\n".format(
+                        RobotInfo.parse_for_tg_logs(position.robot_id),
+                        "CLOSED"
                     )
             combined_msg += "\nLongs/Shorts:"
             for position in portfolio_positions:
                 combined_msg += "  <b>{}</b>".format(self.get_position_arrow_status(position))
 
-            combined_msg += "\n\nTotal Balance [{} {}]: {}\n".format(num_bots, "bots" if num_bots > 1 else "bot", math.get_round_value(portfolio_balance, 8))
+            combined_msg += "\n\nTotal Balance [{} {}]: {}\n".format(num_robots, "robots" if num_robots > 1 else "robot", math.get_round_value(portfolio_balance, 8))
             log_info(logger, combined_msg, send_to_telegram)
             self.last_tg_sent_state = portfolio_balance
 
