@@ -615,6 +615,7 @@ class NerdMarketMakerRobot:
         logger.info("exit(): status={}, stackframe={}".format(status, stackframe))
         logger.info("Shutting down. All open orders will be cancelled.")
         try:
+            self.update_db()
             self.exchange.cancel_all_orders()
             self.exchange.xchange.exit()
         except errors.AuthenticationError as e:

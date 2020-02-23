@@ -36,11 +36,6 @@ conda activate nerd-market-maker
 
 cleanup
 
-echo Executing NerdSupervisor in TEST environment ...
-./run_supervisor.sh test ${NUMBER_OF_ROBOTS} &
-
-sleep 10
-
 echo Executing portfolio of NerdMarketMakerBot instances in TEST environment ...
 for (( i=1; i<=${NUMBER_OF_ROBOTS}; i++ ))
 do
@@ -52,3 +47,5 @@ do
 
 done
 
+echo Executing NerdSupervisor in TEST environment ...
+./run_supervisor.sh test ${NUMBER_OF_ROBOTS} &

@@ -297,7 +297,6 @@ class BitMEXWebsocket():
                                     log_info(self.logger, "Execution (position partial close): {} {} contracts of {} at {}".format(order_side, order_size, symbol, order_price), True)
                                 elif order_position_status == ORDER_POSITION_STATUS_FULL_CLOSE:
                                     log_info(self.logger, "Execution (position fully closed): {} {} contracts of {} at {}".format(order_side, order_size, symbol, order_price), True)
-                                    DatabaseManager.invert_quoting_side_robot_settings(self.logger, settings.EXCHANGE, settings.ROBOTID, curr_position)
 
                         # Update this item.
                         item.update(updateData)
