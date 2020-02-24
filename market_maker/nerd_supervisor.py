@@ -69,7 +69,7 @@ class NerdSupervisor:
             for position in portfolio_positions:
                 if position.exchange and position.current_qty != 0:
                     effective_quoting_side = DatabaseManager.get_effective_quoting_side(position.exchange, position.robot_id)
-                    combined_msg += "<b>{}:</b> {}|{}|{}|{}|{:.2f}%|{}\n".format(
+                    combined_msg += "<b>{}:</b> <b>{}</b>|{}|{}|{}|{:.2f}%|{}\n".format(
                         RobotInfo.parse_for_tg_logs(position.robot_id),
                         self.get_position_arrow_status(position),
                         position.symbol,

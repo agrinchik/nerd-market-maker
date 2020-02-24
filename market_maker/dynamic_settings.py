@@ -367,7 +367,7 @@ class DynamicSettings(object):
             self.curr_risk_profile_id = risk_profile["id"]
             self.curr_risk_level = risk_profile["risk_level"]
             self.max_number_dca_orders = risk_profile["max_number_dca_orders"]
-            self.interval_pct = risk_profile["interval_pct"]
+            self.interval_pct = risk_profile["interval_pct"] * settings.INTERVAL_ADJUST_MULT
             self.min_spread_pct = round(self.interval_pct * 2 * DEFAULT_MIN_SPREAD_ADJUSTMENT_FACTOR, 8)
             self.relist_interval_pct = round(self.interval_pct * DEFAULT_RELIST_INTERVAL_ADJUSTMENT_FACTOR, 8)
             self.order_pairs = risk_profile["order_pairs"]
@@ -386,7 +386,7 @@ class DynamicSettings(object):
             self.curr_risk_profile_id = risk_profile["id"]
             self.curr_risk_level = risk_profile["risk_level"]
             self.max_number_dca_orders = risk_profile["max_number_dca_orders"]
-            self.interval_pct = risk_profile["interval_pct"]
+            self.interval_pct = risk_profile["interval_pct"] * settings.INTERVAL_ADJUST_MULT
             self.min_spread_pct = round(self.interval_pct * 2 * DEFAULT_MIN_SPREAD_ADJUSTMENT_FACTOR, 8)
             self.relist_interval_pct = round(self.interval_pct * DEFAULT_RELIST_INTERVAL_ADJUSTMENT_FACTOR, 8)
             self.order_pairs = risk_profile["order_pairs"]

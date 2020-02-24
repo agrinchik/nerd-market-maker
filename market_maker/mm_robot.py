@@ -177,7 +177,7 @@ class NerdMarketMakerRobot:
         self.exchange = ExchangeInterface()
         # Once exchange is created, register exit handler that will always cancel orders
         # on any error.
-        atexit.register(self.exit)
+        #atexit.register(self.exit) TODO: Need to review
         signal.signal(signal.SIGTERM, self.exit)
 
         logger.info("Using symbol %s." % self.exchange.symbol)
@@ -513,7 +513,7 @@ class NerdMarketMakerRobot:
                     sleep(0.5)
                     return self.place_orders()
                 else:
-                    log_error(logger, "Unknown error on amend: %s. Exiting" % errorObj, True)
+                    log_error(logger, "Unknown error on amend: %s. Restarting" % errorObj, True)
                     sys.exit(settings.FORCE_RESTART_EXIT_STATUS_CODE)
 
         if len(to_create) > 0:
@@ -577,12 +577,12 @@ class NerdMarketMakerRobot:
 
         # Messaging if the position limits are reached
         if self.long_position_limit_exceeded():
-            logger.info("Long delta limit exceeded")
-            logger.info("Current Position: {}, Maximum Position: {}".format(self.exchange.get_delta(), settings.MAX_POSITION))
+            logger.debug("Long delta limit exceeded")
+            logger.debug("Current Position: {}, Maximum Position: {}".format(self.exchange.get_delta(), settings.MAX_POSITION))
 
         if self.short_position_limit_exceeded():
-            logger.info("Short delta limit exceeded")
-            logger.info("Current Position: {}, Minimum Position: {}".format(self.exchange.get_delta(), settings.MIN_POSITION))
+            logger.debug("Short delta limit exceeded")
+            logger.debug("Current Position: {}, Minimum Position: {}".format(self.exchange.get_delta(), settings.MIN_POSITION))
 
     ###
     # Running
@@ -669,8 +669,8 @@ def run():
     except SystemExit as se:
         nmmb.exit(se.code)
     except Exception as e:
-        log_error(logger, "UNEXPECTED EXCEPTION! {}\nNerdMarketMakerRobot will be terminated.".format(e), True)
-        nmmb.exit(settings.FORCE_STOP_EXIT_STATUS_CODE)
+        log_error(logger, "UNEXPECTED EXCEPTION! {}\nNerdMarketMakerRobot will be restarted.".format(e), True)
+        nmmb.exit(settings.FORCE_RESTART_EXIT_STATUS_CODE)
 
 
 if __name__ == "__main__":

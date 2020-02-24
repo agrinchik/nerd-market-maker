@@ -14,6 +14,6 @@ class RobotInfo(object):
     def parse_for_tg_logs(robot_id_str):
         if not robot_id_str or len(robot_id_str) != 8:
             raise Exception("Invalid Robot Id: {}".format(robot_id_str))
-        robot_id_str_u = robot_id_str.upper()
-        return "{}_{}".format(robot_id_str_u[0:5], robot_id_str_u[5:8])
+        #robot_id_str_u = robot_id_str.upper()
+        return robot_id_str #"{}_{}".format(robot_id_str_u[0:5], robot_id_str_u[5:8])
 

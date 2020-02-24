@@ -331,7 +331,7 @@ class BfxWebsocket(GenericWebsocket):
                 "Notification SUCCESS: {}".format(notificationText))
 
     async def _balance_update_handler(self, data):
-        self.logger.info('Balance update: {}'.format(data[2]))
+        self.logger.debug('Balance update: {}'.format(data[2]))
         self._emit('balance_update', data[2])
 
     async def _order_closed_handler(self, data):

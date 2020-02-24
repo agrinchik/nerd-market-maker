@@ -42,7 +42,7 @@ class PositionManager:
         self.logger.debug("confirm_position_update(): raw_ws_data={}".format(raw_ws_data))
         position = Position.from_raw_position(raw_ws_data[2])
         self.open_positions[position["symbol"]] = position
-        self.logger.info("Position update: {}".format(position))
+        self.logger.debug("Position update: {}".format(position))
         self.bfxapi._emit('position_update', position)
 
     async def confirm_position_closed(self, raw_ws_data):

@@ -261,7 +261,7 @@ class BitMEX(BaseExchange):
                     orders = postdict['orders'] if 'orders' in postdict else postdict
 
                     IDs = json.dumps({'clOrdID': [order['clOrdID'] for order in orders]})
-                    orderResults = self._curl_bitmex('/order', query={'filter': IDs}, verb='GET')
+                    orderResults = self._curl_bitmex('order', query={'filter': IDs}, verb='GET')
 
                     for i, order in enumerate(orderResults):
                         if (
