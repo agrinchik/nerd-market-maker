@@ -615,11 +615,13 @@ class NerdMarketMakerRobot:
         logger.info("exit(): status={}, stackframe={}".format(status, stackframe))
         logger.info("Shutting down. All open orders will be cancelled.")
         try:
-            self.update_db()
             self.exchange.cancel_all_orders()
             self.exchange.xchange.exit()
-        except errors.AuthenticationError as e:
+            self.update_db()
+        except errors.AuthenticationError as ae:
             logger.info("Was not authenticated; could not cancel orders.")
+        except ForceRestartException as fre:
+            logger.info("Exception occurred: {}".format(fre))
         except Exception as e:
             logger.info("Unable to cancel orders: %s" % e)
 
