@@ -82,28 +82,28 @@ class OrderManager:
     def get_current_position(self):
         return self.bfxapi.positionManager.get_open_positions().get(self.bfxapi.symbol)
 
-    def get_order_position_status(self, position_qty, order_side, order_price, order_size):
-        self.logger.info("get_order_position_status(): curr_position={}, order_side={}, order_price={}, order_size={}".format(position_qty, order_side, order_price, order_size))
+    def get_order_position_status(self, curr_position_qty, order_side, order_price, order_size):
+        self.logger.info("get_order_position_status(): curr_position_qty={}, order_side={}, order_price={}, order_size={}".format(curr_position_qty, order_side, order_price, order_size))
         is_order_long = True if order_side == "Buy" else False
-        if position_qty < 0 and is_order_long and abs(position_qty) == order_size or position_qty > 0 and not is_order_long and abs(position_qty) == order_size:
+        if curr_position_qty == 0:
             return ORDER_POSITION_STATUS_FULL_CLOSE
-        if position_qty >= 0 and is_order_long or position_qty <= 0 and not is_order_long:
+        if curr_position_qty > 0 and is_order_long or curr_position_qty < 0 and not is_order_long:
             return ORDER_POSITION_STATUS_INCREASE
-        if position_qty > 0 and not is_order_long or position_qty < 0 and is_order_long:
+        if curr_position_qty > 0 and not is_order_long or curr_position_qty < 0 and is_order_long:
             return ORDER_POSITION_STATUS_PARTIAL_CLOSE
 
     def process_order_execution(self, order, update_order):
         # Log order execution
         order_status = Order.get_order_status(update_order)
         is_canceled = order_status == OrderStatus.CANCELED
-        if is_canceled is False:
+        if not is_canceled:
             curr_position = self.get_current_position()
-            position_qty = curr_position['currentQty'] if curr_position is not None else 0
+            curr_position_qty = curr_position['currentQty'] if curr_position else 0
             order_size = update_order['cumQty'] - order['cumQty']
             order_side = update_order['side']
             order_price = update_order['price']
             symbol = update_order['symbol']
-            order_position_status = self.get_order_position_status(position_qty, order_side, order_price, order_size)
+            order_position_status = self.get_order_position_status(curr_position_qty, order_side, order_price, order_size)
             if order_position_status == ORDER_POSITION_STATUS_INCREASE:
                 log_info(self.logger, "Execution (position increase): {} {} quantity of {} at {}".format(order_side, order_size, symbol, order_price), True)
             elif order_position_status == ORDER_POSITION_STATUS_PARTIAL_CLOSE:
