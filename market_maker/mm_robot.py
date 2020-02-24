@@ -196,7 +196,7 @@ class NerdMarketMakerRobot:
     def whereAmI(self):
         return os.path.dirname(os.path.realpath(__import__("__main__").__file__))
 
-    def get_deposit_load_pct(self, running_qty):
+    def get_deposit_usage_pct(self, running_qty):
         if running_qty < 0:
             return abs(running_qty / settings.MIN_POSITION) * 100
         else:
@@ -223,7 +223,7 @@ class NerdMarketMakerRobot:
 
         combined_msg = "Wallet Balance: {}\n".format(math.get_round_value(wallet_balance, 8))
         combined_msg += "Last Price: {}\n".format(math.get_round_value(last_price, 8))
-        combined_msg += "Position: {} ({}%)\n".format(math.get_round_value(self.running_qty, tick_log), round(self.get_deposit_load_pct(self.running_qty), 2))
+        combined_msg += "Position: {} ({}%)\n".format(math.get_round_value(self.running_qty, tick_log), round(self.get_deposit_usage_pct(self.running_qty), 2))
         if position['currentQty'] != 0:
             combined_msg += "Avg Entry Price: {}\n".format(math.get_round_value(position['avgEntryPrice'], tick_log))
             combined_msg += "Distance To Avg Price: {:.2f}% ({})\n".format(self.exchange.get_distance_to_avg_price_pct(), self.exchange.get_position_pnl_text_status())

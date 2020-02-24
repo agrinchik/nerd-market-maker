@@ -21,164 +21,164 @@ BITFINEX_DEFAULT_LEVERAGE = 3.33
 PARAMS_UPDATE_INTERVAL = 300  # 5 minutes
 
 
-# Risk management configuration matrix - pre-configured parameters based on distance to average price (bands) and deposit load values (bands)
+# Risk management configuration matrix - pre-configured parameters based on distance to average price (bands) and deposit usage values (bands)
 RISK_MANAGEMENT_BANDS_MATRIX = [
     {
         "id": 1,
-        "deposit_load_band_start": 0,
-        "deposit_load_band_end": 9.99999999,
+        "deposit_usage_band_start": 0,
+        "deposit_usage_band_end": 9.99999999,
         "distance_to_avg_price_band_start": 0,
         "distance_to_avg_price_band_end": 0.99999999,
         "risk_profile": "RP1"
     },
     {
         "id": 2,
-        "deposit_load_band_start": 10,
-        "deposit_load_band_end": 24.99999999,
+        "deposit_usage_band_start": 10,
+        "deposit_usage_band_end": 24.99999999,
         "distance_to_avg_price_band_start": 0,
         "distance_to_avg_price_band_end": 0.99999999,
         "risk_profile": "RP2"
     },
     {
         "id": 3,
-        "deposit_load_band_start": 25,
-        "deposit_load_band_end": 49.99999999,
+        "deposit_usage_band_start": 25,
+        "deposit_usage_band_end": 49.99999999,
         "distance_to_avg_price_band_start": 0,
         "distance_to_avg_price_band_end": 0.99999999,
         "risk_profile": "RP3"
     },
     {
         "id": 4,
-        "deposit_load_band_start": 50,
-        "deposit_load_band_end": 74.99999999,
+        "deposit_usage_band_start": 50,
+        "deposit_usage_band_end": 74.99999999,
         "distance_to_avg_price_band_start": 0,
         "distance_to_avg_price_band_end": 0.99999999,
         "risk_profile": "RP4"
     },
     {
         "id": 5,
-        "deposit_load_band_start": 75,
-        "deposit_load_band_end": 999,
+        "deposit_usage_band_start": 75,
+        "deposit_usage_band_end": 999,
         "distance_to_avg_price_band_start": 0,
         "distance_to_avg_price_band_end": 0.99999999,
         "risk_profile": "RP5"
     },
     {
         "id": 6,
-        "deposit_load_band_start": 0,
-        "deposit_load_band_end": 9.99999999,
+        "deposit_usage_band_start": 0,
+        "deposit_usage_band_end": 9.99999999,
         "distance_to_avg_price_band_start": 1,
         "distance_to_avg_price_band_end": 4.99999999,
         "risk_profile": "RP2"
     },
     {
         "id": 7,
-        "deposit_load_band_start": 10,
-        "deposit_load_band_end": 24.99999999,
+        "deposit_usage_band_start": 10,
+        "deposit_usage_band_end": 24.99999999,
         "distance_to_avg_price_band_start": 1,
         "distance_to_avg_price_band_end": 4.99999999,
         "risk_profile": "RP3"
     },
     {
         "id": 8,
-        "deposit_load_band_start": 25,
-        "deposit_load_band_end": 49.99999999,
+        "deposit_usage_band_start": 25,
+        "deposit_usage_band_end": 49.99999999,
         "distance_to_avg_price_band_start": 1,
         "distance_to_avg_price_band_end": 4.99999999,
         "risk_profile": "RP4"
     },
     {
         "id": 9,
-        "deposit_load_band_start": 50,
-        "deposit_load_band_end": 74.99999999,
+        "deposit_usage_band_start": 50,
+        "deposit_usage_band_end": 74.99999999,
         "distance_to_avg_price_band_start": 1,
         "distance_to_avg_price_band_end": 4.99999999,
         "risk_profile": "RP5"
     },
     {
         "id": 10,
-        "deposit_load_band_start": 75,
-        "deposit_load_band_end": 999,
+        "deposit_usage_band_start": 75,
+        "deposit_usage_band_end": 999,
         "distance_to_avg_price_band_start": 1,
         "distance_to_avg_price_band_end": 4.99999999,
         "risk_profile": "RP6"
     },
     {
         "id": 11,
-        "deposit_load_band_start": 0,
-        "deposit_load_band_end": 9.99999999,
+        "deposit_usage_band_start": 0,
+        "deposit_usage_band_end": 9.99999999,
         "distance_to_avg_price_band_start": 5,
         "distance_to_avg_price_band_end": 9.99999999,
         "risk_profile": "RP3"
     },
     {
         "id": 12,
-        "deposit_load_band_start": 10,
-        "deposit_load_band_end": 24.99999999,
+        "deposit_usage_band_start": 10,
+        "deposit_usage_band_end": 24.99999999,
         "distance_to_avg_price_band_start": 5,
         "distance_to_avg_price_band_end": 9.99999999,
         "risk_profile": "RP4"
     },
     {
         "id": 13,
-        "deposit_load_band_start": 25,
-        "deposit_load_band_end": 49.99999999,
+        "deposit_usage_band_start": 25,
+        "deposit_usage_band_end": 49.99999999,
         "distance_to_avg_price_band_start": 5,
         "distance_to_avg_price_band_end": 9.99999999,
         "risk_profile": "RP5"
     },
     {
         "id": 14,
-        "deposit_load_band_start": 50,
-        "deposit_load_band_end": 74.99999999,
+        "deposit_usage_band_start": 50,
+        "deposit_usage_band_end": 74.99999999,
         "distance_to_avg_price_band_start": 5,
         "distance_to_avg_price_band_end": 9.99999999,
         "risk_profile": "RP6"
     },
     {
         "id": 15,
-        "deposit_load_band_start": 75,
-        "deposit_load_band_end": 999,
+        "deposit_usage_band_start": 75,
+        "deposit_usage_band_end": 999,
         "distance_to_avg_price_band_start": 5,
         "distance_to_avg_price_band_end": 9.99999999,
         "risk_profile": "RP7"
     },
     {
         "id": 16,
-        "deposit_load_band_start": 0,
-        "deposit_load_band_end": 9.99999999,
+        "deposit_usage_band_start": 0,
+        "deposit_usage_band_end": 9.99999999,
         "distance_to_avg_price_band_start": 10,
         "distance_to_avg_price_band_end": 999,
         "risk_profile": "RP4"
     },
     {
         "id": 17,
-        "deposit_load_band_start": 10,
-        "deposit_load_band_end": 24.99999999,
+        "deposit_usage_band_start": 10,
+        "deposit_usage_band_end": 24.99999999,
         "distance_to_avg_price_band_start": 10,
         "distance_to_avg_price_band_end": 999,
         "risk_profile": "RP5"
     },
     {
         "id": 18,
-        "deposit_load_band_start": 25,
-        "deposit_load_band_end": 49.99999999,
+        "deposit_usage_band_start": 25,
+        "deposit_usage_band_end": 49.99999999,
         "distance_to_avg_price_band_start": 10,
         "distance_to_avg_price_band_end": 999,
         "risk_profile": "RP6"
     },
     {
         "id": 19,
-        "deposit_load_band_start": 50,
-        "deposit_load_band_end": 74.99999999,
+        "deposit_usage_band_start": 50,
+        "deposit_usage_band_end": 74.99999999,
         "distance_to_avg_price_band_start": 10,
         "distance_to_avg_price_band_end": 999,
         "risk_profile": "RP7"
     },
     {
         "id": 20,
-        "deposit_load_band_start": 75,
-        "deposit_load_band_end": 999,
+        "deposit_usage_band_start": 75,
+        "deposit_usage_band_end": 999,
         "distance_to_avg_price_band_start": 10,
         "distance_to_avg_price_band_end": 999,
         "risk_profile": "RP7"
@@ -262,9 +262,9 @@ class DynamicSettings(object):
         self.order_start_size = 0
         self.order_pairs = 0
         self.distance_to_avg_price_pct = 0
-        self.deposit_load_pct = 0
-        self.deposit_load_intensity = 0
-        self.deposit_load_intensity_pct = 0
+        self.deposit_usage_pct = 0
+        self.deposit_usage_intensity = 0
+        self.deposit_usage_intensity_pct = 0
 
         self.params_last_update = datetime.datetime.now() - timedelta(days=1000)
         self.curr_risk_profile_id = ""
@@ -283,8 +283,8 @@ class DynamicSettings(object):
         avg_entry_price = position['avgEntryPrice']
         distance_to_avg_price_pct = self.get_distance_to_avg_price_pct(current_qty, avg_entry_price, ticker_last_price)
         running_qty = self.exchange.get_delta()
-        deposit_load_pct = self.get_deposit_load_pct(running_qty)
-        risk_profile = self.get_risk_profile(distance_to_avg_price_pct, deposit_load_pct)
+        deposit_usage_pct = self.get_deposit_usage_pct(running_qty)
+        risk_profile = self.get_risk_profile(distance_to_avg_price_pct, deposit_usage_pct)
 
         self.update_dynamic_params(wallet_balance, ticker_last_price, risk_profile)
         self.update_settings_value("MIN_POSITION", self.min_position)
@@ -320,7 +320,7 @@ class DynamicSettings(object):
             result = abs((last_price - avg_entry_price) * 100 / last_price)
         return result
 
-    def get_deposit_load_pct(self, running_qty):
+    def get_deposit_usage_pct(self, running_qty):
         if running_qty < 0:
             return abs(running_qty / settings.MIN_POSITION) * 100
         else:
@@ -337,11 +337,11 @@ class DynamicSettings(object):
         current_qty = position['currentQty']
         avg_entry_price = position['avgEntryPrice']
         self.distance_to_avg_price_pct = self.get_distance_to_avg_price_pct(current_qty, avg_entry_price, ticker_last_price)
-        self.deposit_load_pct = self.get_deposit_load_pct(running_qty)
+        self.deposit_usage_pct = self.get_deposit_usage_pct(running_qty)
         curr_time = datetime.datetime.now()
 
         params_seconds_from_last_update = (curr_time - self.params_last_update).total_seconds()
-        risk_profile = self.get_risk_profile(self.distance_to_avg_price_pct, self.deposit_load_pct)
+        risk_profile = self.get_risk_profile(self.distance_to_avg_price_pct, self.deposit_usage_pct)
         risk_profile_id = risk_profile["id"]
 
         is_params_exceeded_update_interval_flag = params_seconds_from_last_update >= PARAMS_UPDATE_INTERVAL
@@ -379,8 +379,8 @@ class DynamicSettings(object):
             self.max_position = round(self.max_possible_position_margin)
             self.order_step_size = self.get_order_step_size(last_wallet_balance)
             self.order_start_size = round(self.max_possible_position_margin / self.max_number_dca_orders - self.order_step_size * (self.max_number_dca_orders - 1) / 2)
-            self.deposit_load_intensity = round(self.order_start_size / (100 * self.interval_pct), 8)
-            self.deposit_load_intensity_pct = self.deposit_load_intensity * 100 / self.max_possible_position_margin if self.max_possible_position_margin != 0 else 0
+            self.deposit_usage_intensity = round(self.order_start_size / (100 * self.interval_pct), 8)
+            self.deposit_usage_intensity_pct = self.deposit_usage_intensity * 100 / self.max_possible_position_margin if self.max_possible_position_margin != 0 else 0
 
         elif ExchangeInfo.is_bitfinex():
             self.curr_risk_profile_id = risk_profile["id"]
@@ -404,24 +404,24 @@ class DynamicSettings(object):
             self.max_position = round(self.max_possible_position_margin / ticker_last_price, 8)
             self.order_step_size = self.get_order_step_size(last_wallet_balance)
             self.order_start_size = round(self.max_possible_position_margin / (ticker_last_price * self.max_number_dca_orders) - self.order_step_size * (self.max_number_dca_orders - 1) / 2, 8)
-            self.deposit_load_intensity = round(self.order_start_size * ticker_last_price / (100 * self.interval_pct), 2)
-            self.deposit_load_intensity_pct = self.deposit_load_intensity * 100 / self.max_possible_position_margin if self.max_possible_position_margin != 0 else 0
+            self.deposit_usage_intensity = round(self.order_start_size * ticker_last_price / (100 * self.interval_pct), 2)
+            self.deposit_usage_intensity_pct = self.deposit_usage_intensity * 100 / self.max_possible_position_margin if self.max_possible_position_margin != 0 else 0
 
-    def get_risk_profile(self, distance_to_avg_price_pct, deposit_load_pct):
+    def get_risk_profile(self, distance_to_avg_price_pct, deposit_usage_pct):
         for rmm_entry in RISK_MANAGEMENT_BANDS_MATRIX:
             distance_to_avg_price_band_start = rmm_entry["distance_to_avg_price_band_start"]
             distance_to_avg_price_band_end = rmm_entry["distance_to_avg_price_band_end"]
-            deposit_load_band_start = rmm_entry["deposit_load_band_start"]
-            deposit_load_band_end = rmm_entry["deposit_load_band_end"]
+            deposit_usage_band_start = rmm_entry["deposit_usage_band_start"]
+            deposit_usage_band_end = rmm_entry["deposit_usage_band_end"]
             risk_profile_id = rmm_entry["risk_profile"]
 
-            if distance_to_avg_price_pct >= distance_to_avg_price_band_start and distance_to_avg_price_pct <= distance_to_avg_price_band_end and deposit_load_pct >= deposit_load_band_start and deposit_load_pct <= deposit_load_band_end:
+            if distance_to_avg_price_pct >= distance_to_avg_price_band_start and distance_to_avg_price_pct <= distance_to_avg_price_band_end and deposit_usage_pct >= deposit_usage_band_start and deposit_usage_pct <= deposit_usage_band_end:
                 for rpc_entry in RISK_PROFILE_CONFIGURATION:
                     id = rpc_entry["id"]
                     if id == risk_profile_id:
                         return rpc_entry
 
-        raise Exception("Unable to retrieve risk profile configuration for the following parameters: distance_to_avg_price_pct={}, deposit_load_pct={}".format(distance_to_avg_price_pct, deposit_load_pct))
+        raise Exception("Unable to retrieve risk profile configuration for the following parameters: distance_to_avg_price_pct={}, deposit_usage_pct={}".format(distance_to_avg_price_pct, deposit_usage_pct))
 
     def get_order_step_size(self, last_wallet_balance):
         # TODO: Reimplement later
@@ -439,9 +439,9 @@ class DynamicSettings(object):
         txt = self.append_log_text(txt, "min/max position = {}/{}".format(self.min_position, self.max_position))
         txt = self.append_log_text(txt, "order_start_size = {}".format(self.order_start_size))
         txt = self.append_log_text(txt, "distance_to_avg_price_pct = {}%".format(round(self.distance_to_avg_price_pct, 2)))
-        txt = self.append_log_text(txt, "deposit_load_pct = {}%".format(round(self.deposit_load_pct, 2)))
-        txt = self.append_log_text(txt, "deposit_load_intensity (USD/1% interval) = ${}".format(self.deposit_load_intensity))
-        txt = self.append_log_text(txt, "deposit_load_intensity (USD/1% interval), % = {}%".format(round(self.deposit_load_intensity_pct, 2)))
+        txt = self.append_log_text(txt, "deposit_usage_pct = {}%".format(round(self.deposit_usage_pct, 2)))
+        txt = self.append_log_text(txt, "deposit_usage_intensity (USD/1% interval) = ${}".format(self.deposit_usage_intensity))
+        txt = self.append_log_text(txt, "deposit_usage_intensity (USD/1% interval), % = {}%".format(round(self.deposit_usage_intensity_pct, 2)))
         txt = self.append_log_text(txt, "---------------------")
         txt = self.append_log_text(txt, "Last Price = {}".format(ticker_last_price))
 
