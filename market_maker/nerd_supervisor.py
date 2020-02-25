@@ -75,7 +75,7 @@ class NerdSupervisor:
                         position.symbol,
                         math.get_round_value(position.avg_entry_price, position.tick_log),
                         math.get_round_value(position.current_qty, position.tick_log),
-                        position.unrealised_pnl_pct,
+                        position.distance_to_avg_price_pct,
                         effective_quoting_side[0]
                     )
                 else:
