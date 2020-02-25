@@ -76,8 +76,13 @@ class ExchangeInterface:
         result = 0
         position = self.get_position()
         last_price = self.get_ticker()["last"]
-        if position['currentQty'] != 0:
-            result = round(-(last_price - position['avgEntryPrice']) * 100 / last_price, 2)
+        curr_quantity = position['currentQty']
+        avg_entry_price = position['avgEntryPrice']
+        if curr_quantity != 0:
+            if curr_quantity > 0:
+                result = round((last_price - avg_entry_price) * 100 / avg_entry_price, 2)
+            else:
+                result = round((avg_entry_price - last_price) * 100 / avg_entry_price, 2)
         return result
 
     def get_unrealized_pnl(self):
@@ -97,23 +102,6 @@ class ExchangeInterface:
         last_price = self.get_ticker()["last"]
         if position['currentQty'] != 0:
             result = abs(round((last_price - position['liquidationPrice']) * 100 / last_price, 2))
-        return result
-
-    def get_position_pnl_text_status(self):
-        result = ""
-        position = self.get_position()
-        last_price = self.get_ticker()["last"]
-        curr_quantity = position['currentQty']
-        avg_entry_price = position['avgEntryPrice']
-        if curr_quantity != 0:
-            if curr_quantity > 0 and last_price >= avg_entry_price:
-                result = "GAIN"
-            elif curr_quantity > 0 and last_price < avg_entry_price:
-                result = "LOSS"
-            elif curr_quantity < 0 and last_price >= avg_entry_price:
-                result = "LOSS"
-            elif curr_quantity < 0 and last_price < avg_entry_price:
-                result = "GAIN"
         return result
 
     def get_margin(self):
@@ -226,7 +214,7 @@ class NerdMarketMakerRobot:
         combined_msg += "Position: {} ({}%)\n".format(math.get_round_value(self.running_qty, tick_log), round(self.get_deposit_usage_pct(self.running_qty), 2))
         if position['currentQty'] != 0:
             combined_msg += "Avg Entry Price: {}\n".format(math.get_round_value(position['avgEntryPrice'], tick_log))
-            combined_msg += "Distance To Avg Price: {:.2f}% ({})\n".format(self.exchange.get_distance_to_avg_price_pct(), self.exchange.get_position_pnl_text_status())
+            combined_msg += "Distance To Avg Price: {:.2f}%\n".format(self.exchange.get_distance_to_avg_price_pct())
             combined_msg += "Unrealized PNL: {} ({:.2f}%)\n".format(math.get_round_value(self.exchange.get_unrealized_pnl(), tick_log), self.exchange.get_unrealized_pnl_pct())
             combined_msg += "Liquidation Price (Dist %): {} ({:.2f}%)\n".format(math.get_round_value(float(position['liquidationPrice']), tick_log), self.exchange.get_distance_to_liq_price_pct())
         log_debug(logger, combined_msg, send_to_telegram)
