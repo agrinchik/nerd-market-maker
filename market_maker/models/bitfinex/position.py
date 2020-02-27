@@ -27,6 +27,33 @@ class PositionModel:
     META = 19
 
 
+class PositionStatus:
+    """
+    Enum used to describe all of the different position statuses
+    """
+    ACTIVE = 'ACTIVE'
+    CLOSED = 'CLOSED'
+
+
+class PositionTradeInfoReason:
+    TRADE = 'TRADE'
+
+
+class PositionTradeInfo:
+    def __init__(self, meta_dict):
+        self.reason = meta_dict["reason"] if meta_dict and meta_dict["reason"] else None
+        self.trade_price = float(meta_dict["trade_price"]) if meta_dict and meta_dict["trade_price"] else None
+        self.trade_amount = float(meta_dict["trade_amount"]) if meta_dict and meta_dict["trade_price"] else None
+
+    def get_trade_side_str(self):
+        result = ""
+        if self.trade_amount and self.trade_amount > 0:
+            result = "Buy"
+        if self.trade_amount and self.trade_amount < 0:
+            result = "Sell"
+        return result
+
+
 class Position:
     """
     SYMBOL	string	Pair (tBTCUSD, ...).
@@ -46,7 +73,7 @@ class Position:
     TYPE	string	The type of the position
     COLLATERAL string
     COLLATERAL_MIN string
-    META string
+    META json string Additional meta information about the position
     """
 
     def __init__(self):
@@ -69,6 +96,7 @@ class Position:
         return {
             #"account": 0,
             "symbol": raw_position[PositionModel.SYMBOL],
+            "status": raw_position[PositionModel.STATUS],
             #"currency": "string",
             #"underlying": "string",
             #"quoteCurrency": "string",
@@ -158,5 +186,21 @@ class Position:
             "timestamp": Position.get_list_value(raw_position, PositionModel.MTS_UPDATE, 0),
             #"lastPrice": 0,
             #"lastValue": 0
+            "meta": Position.get_list_value(raw_position, PositionModel.META, {})
         }
 
+    @staticmethod
+    def get_position_status(position):
+        status_str = position["status"]
+        if status_str.startswith(PositionStatus.ACTIVE):
+            return PositionStatus.ACTIVE
+        if status_str.startswith(PositionStatus.CLOSED):
+            return PositionStatus.CLOSED
+
+    @staticmethod
+    def get_position_trade_info(position):
+        position_meta_info = position["meta"]
+        if position_meta_info["reason"] == PositionTradeInfoReason.TRADE:
+            return PositionTradeInfo(position_meta_info)
+        else:
+            return None

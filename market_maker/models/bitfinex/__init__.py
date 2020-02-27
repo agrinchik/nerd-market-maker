@@ -8,7 +8,7 @@ from .trade import Trade
 from .order_book import OrderBook
 from .subscription import Subscription
 from .wallet import Wallet
-from .position import Position
+from .position import Position, PositionStatus
 
 
 NAME = 'models'

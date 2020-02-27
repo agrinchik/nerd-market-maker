@@ -4,14 +4,7 @@ Module used to house all of the functions/classes used to handle orders
 
 import logging
 
-from market_maker.models.bitfinex import Order, OrderStatus
-from market_maker.utils.log import log_info
-from market_maker.settings import settings
-from market_maker.db.db_manager import DatabaseManager
-
-ORDER_POSITION_STATUS_INCREASE = 0
-ORDER_POSITION_STATUS_PARTIAL_CLOSE = 1
-ORDER_POSITION_STATUS_FULL_CLOSE = 2
+from market_maker.models.bitfinex import Order
 
 
 class OrderManager:
@@ -61,9 +54,8 @@ class OrderManager:
         self.logger.debug("confirm_order_update(): raw_ws_data={}".format(raw_ws_data))
         order = Order.from_raw_order_api_v2(raw_ws_data[2])
         orderId = order["orderID"]
-        self.process_order_execution(self.open_orders[orderId], order)
         self.open_orders[orderId] = order
-        self.logger.info("Order update: {}".format(order))
+        self.logger.debug("Order update: {}".format(order))
         self.logger.debug("open_orders: {}".format(self.get_open_orders()))
         self.bfxapi._emit('order_update', order)
 
@@ -72,7 +64,6 @@ class OrderManager:
         order = Order.from_raw_order_api_v2(raw_ws_data[2])
         orderId = order["orderID"]
         if orderId in self.open_orders:
-            self.process_order_execution(self.open_orders[orderId], order)
             del self.open_orders[orderId]
             self.bfxapi._emit('order_confirmed', order)
             self.logger.info("Order closed: {}".format(order))
@@ -82,36 +73,6 @@ class OrderManager:
     def get_current_position(self):
         return self.bfxapi.positionManager.get_open_positions().get(self.bfxapi.symbol)
 
-    def get_order_position_status(self, curr_position_qty, order_side, order_price, order_size):
-        self.logger.info("get_order_position_status(): curr_position_qty={}, order_side={}, order_price={}, order_size={}".format(curr_position_qty, order_side, order_price, order_size))
-        is_order_long = True if order_side == "Buy" else False
-        if curr_position_qty == 0:
-            return ORDER_POSITION_STATUS_FULL_CLOSE
-        if curr_position_qty > 0 and is_order_long or curr_position_qty < 0 and not is_order_long:
-            return ORDER_POSITION_STATUS_INCREASE
-        if curr_position_qty > 0 and not is_order_long or curr_position_qty < 0 and is_order_long:
-            return ORDER_POSITION_STATUS_PARTIAL_CLOSE
-
-    def process_order_execution(self, order, update_order):
-        # Log order execution
-        order_status = Order.get_order_status(update_order)
-        is_canceled = order_status == OrderStatus.CANCELED
-        if not is_canceled:
-            curr_position = self.get_current_position()
-            curr_position_qty = curr_position['currentQty'] if curr_position else 0
-            order_size = update_order['cumQty'] - order['cumQty']
-            order_side = update_order['side']
-            order_price = update_order['price']
-            symbol = update_order['symbol']
-            order_position_status = self.get_order_position_status(curr_position_qty, order_side, order_price, order_size)
-            if order_position_status == ORDER_POSITION_STATUS_INCREASE:
-                log_info(self.logger, "Execution (position increase): {} {} quantity of {} at {}".format(order_side, order_size, symbol, order_price), True)
-            elif order_position_status == ORDER_POSITION_STATUS_PARTIAL_CLOSE:
-                log_info(self.logger, "Execution (position partial close): {} {} quantity of {} at {}".format(order_side, order_size, symbol, order_price), True)
-            elif order_position_status == ORDER_POSITION_STATUS_FULL_CLOSE:
-                log_info(self.logger, "Execution (position fully closed): {} {} quantity of {} at {}".format(order_side, order_size, symbol, order_price), True)
-                last_position_qty = -order_size
-                DatabaseManager.invert_quoting_side_robot_settings(self.logger, settings.EXCHANGE, settings.ROBOTID, last_position_qty)
 
 
 
