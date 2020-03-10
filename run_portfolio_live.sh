@@ -13,6 +13,8 @@ run_robot_process() {
 cleanup() {
     pgrep -f "market_maker.mm_robot -e live" | xargs kill
     pgrep -f "market_maker.nerd_supervisor -e live" | xargs kill
+    pgrep -f "run_robot.sh live" | xargs kill
+    pgrep -f "run_supervisor.sh live" | xargs kill
 }
 
 if [[ "$1" == "stop" ]]; then
