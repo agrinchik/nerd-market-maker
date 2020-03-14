@@ -11,7 +11,6 @@ DEFAULT_RELIST_INTERVAL_ADJUSTMENT_FACTOR = 1.2
 BITMEX_DEFAULT_LEVERAGE = 100
 BITMEX_DEFAULT_INITIAL_MARGIN_BASE_PCT = 0.01
 BITMEX_DEFAULT_TAKER_FEE_PCT = 0.00075
-BITMEX_DEFAULT_MIN_POSITION_SHORTS_ADJUSTMENT_FACTOR = 1.4
 
 BITFINEX_DEFAULT_MAINTENANCE_RATIO_PCT = 0.15
 BITFINEX_DISTANCE_TO_LIQUIDATION_PRICE_PCT = 0.25
@@ -189,50 +188,50 @@ RISK_PROFILE_CONFIGURATION = [
     {
         "id": "RP1",
         "risk_level": 95,
-        "max_number_dca_orders": 15,
-        "interval_pct": 0.0025,
-        "order_pairs": 6
+        "max_number_dca_orders": 5,
+        "interval_pct": 0.01,
+        "order_pairs": 4
     },
     {
         "id": "RP2",
         "risk_level": 70,
-        "max_number_dca_orders": 15,
-        "interval_pct": 0.005,
-        "order_pairs": 6
+        "max_number_dca_orders": 5,
+        "interval_pct": 0.02,
+        "order_pairs": 4
     },
     {
         "id": "RP3",
         "risk_level": 60,
-        "max_number_dca_orders": 15,
-        "interval_pct": 0.0075,
-        "order_pairs": 6
+        "max_number_dca_orders": 5,
+        "interval_pct": 0.03,
+        "order_pairs": 4
     },
     {
         "id": "RP4",
         "risk_level": 50,
-        "max_number_dca_orders": 15,
-        "interval_pct": 0.01,
-        "order_pairs": 6
+        "max_number_dca_orders": 5,
+        "interval_pct": 0.04,
+        "order_pairs": 4
     },
     {
         "id": "RP5",
         "risk_level": 40,
-        "max_number_dca_orders": 15,
-        "interval_pct": 0.015,
-        "order_pairs": 5
+        "max_number_dca_orders": 5,
+        "interval_pct": 0.06,
+        "order_pairs": 4
     },
     {
         "id": "RP6",
         "risk_level": 30,
-        "max_number_dca_orders": 15,
-        "interval_pct": 0.02,
+        "max_number_dca_orders": 5,
+        "interval_pct": 0.08,
         "order_pairs": 4
     },
     {
         "id": "RP7",
         "risk_level": 20,
-        "max_number_dca_orders": 15,
-        "interval_pct": 0.025,
+        "max_number_dca_orders": 5,
+        "interval_pct": 0.1,
         "order_pairs": 2
     }
 ]
@@ -256,6 +255,7 @@ class DynamicSettings(object):
         self.interval_pct = 0
         self.min_spread_pct = 0
         self.relist_interval_pct = 0
+        self.max_short_position_ratio = 0
         self.min_position = 0
         self.max_position = 0
         self.order_step_size = 0
@@ -375,7 +375,8 @@ class DynamicSettings(object):
             self.position_margin_amount = round(last_wallet_balance * self.position_margin_pct, 8)
             self.order_margin_amount = round(last_wallet_balance * self.order_margin_pct, 8)
             self.max_possible_position_margin = round(self.position_margin_amount * self.default_leverage * ticker_last_price)
-            self.min_position = round(-1 * self.max_possible_position_margin * BITMEX_DEFAULT_MIN_POSITION_SHORTS_ADJUSTMENT_FACTOR)
+            self.max_short_position_ratio = round(1 + 1/(self.position_margin_pct * BITMEX_DEFAULT_LEVERAGE), 8)
+            self.min_position = round(-1 * last_wallet_balance * self.max_short_position_ratio * ticker_last_price)
             self.max_position = round(self.max_possible_position_margin)
             self.order_step_size = self.get_order_step_size(last_wallet_balance)
             self.order_start_size = round(self.max_possible_position_margin / self.max_number_dca_orders - self.order_step_size * (self.max_number_dca_orders - 1) / 2)
