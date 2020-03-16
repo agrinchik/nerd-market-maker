@@ -188,49 +188,49 @@ RISK_PROFILE_CONFIGURATION = [
     {
         "id": "RP1",
         "risk_level": 95,
-        "max_number_dca_orders": 5,
+        "max_number_dca_orders": 4,
         "interval_pct": 0.01,
         "order_pairs": 4
     },
     {
         "id": "RP2",
         "risk_level": 70,
-        "max_number_dca_orders": 5,
+        "max_number_dca_orders": 4,
         "interval_pct": 0.02,
         "order_pairs": 4
     },
     {
         "id": "RP3",
         "risk_level": 60,
-        "max_number_dca_orders": 5,
+        "max_number_dca_orders": 4,
         "interval_pct": 0.03,
         "order_pairs": 4
     },
     {
         "id": "RP4",
         "risk_level": 50,
-        "max_number_dca_orders": 5,
+        "max_number_dca_orders": 4,
         "interval_pct": 0.04,
         "order_pairs": 4
     },
     {
         "id": "RP5",
         "risk_level": 40,
-        "max_number_dca_orders": 5,
+        "max_number_dca_orders": 4,
         "interval_pct": 0.06,
         "order_pairs": 4
     },
     {
         "id": "RP6",
         "risk_level": 30,
-        "max_number_dca_orders": 5,
+        "max_number_dca_orders": 4,
         "interval_pct": 0.08,
         "order_pairs": 4
     },
     {
         "id": "RP7",
         "risk_level": 20,
-        "max_number_dca_orders": 5,
+        "max_number_dca_orders": 4,
         "interval_pct": 0.1,
         "order_pairs": 2
     }

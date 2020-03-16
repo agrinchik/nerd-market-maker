@@ -440,7 +440,8 @@ class NerdMarketMakerRobot:
         buys_matched = 0
         sells_matched = 0
         existing_orders = self.exchange.get_orders()
-        effective_quoting_side = DatabaseManager.get_effective_quoting_side(settings.EXCHANGE, settings.ROBOTID)
+        robot_settings = DatabaseManager.retrieve_robot_settings(settings.EXCHANGE, settings.ROBOTID)
+        effective_quoting_side = QuotingSide.get_effective_quoting_side(robot_settings)
 
         # Check all existing orders and match them up with what we want to place.
         # If there's an open one, we might be able to amend it to fit what we want.
@@ -577,7 +578,8 @@ class NerdMarketMakerRobot:
     ###
 
     def handle_db_dynamic_settings_changed(self):
-        effective_quoting_side = DatabaseManager.get_effective_quoting_side(settings.EXCHANGE, settings.ROBOTID)
+        robot_settings = DatabaseManager.retrieve_robot_settings(settings.EXCHANGE, settings.ROBOTID)
+        effective_quoting_side = QuotingSide.get_effective_quoting_side(robot_settings)
         if settings["QUOTING_SIDE_OVERRIDE"] != effective_quoting_side:
             settings["QUOTING_SIDE_OVERRIDE"] = effective_quoting_side
             self.exchange.cancel_all_orders()

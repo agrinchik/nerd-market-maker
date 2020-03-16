@@ -12,6 +12,7 @@ from market_maker.settings import settings
 from market_maker.utils import log, math
 from market_maker.db.model import *
 from market_maker.db.db_manager import DatabaseManager
+from market_maker.db.quoting_side import *
 
 DEFAULT_LOOP_INTERVAL = 1
 
@@ -67,21 +68,25 @@ class NerdSupervisor:
         if self.is_need_to_send_tg_state(portfolio_balance):
             combined_msg = "<b>Portfolio Status:</b>\n"
             for position in portfolio_positions:
+                robot_settings = DatabaseManager.retrieve_robot_settings(position.exchange, position.robot_id)
+                effective_quoting_side = QuotingSide.get_effective_quoting_side(robot_settings)
                 if position.exchange and position.current_qty != 0:
-                    effective_quoting_side = DatabaseManager.get_effective_quoting_side(position.exchange, position.robot_id)
-                    combined_msg += "<b>{}:</b> <b>{}</b>|{}|{}|{}|{:.2f}%|{}\n".format(
+                    combined_msg += "<b>{}:</b> <b>{}</b>|{}|{}|{}|{:.2f}%|{}:{}\n".format(
                         RobotInfo.parse_for_tg_logs(position.robot_id),
                         self.get_position_arrow_status(position),
                         position.symbol,
                         math.get_round_value(position.avg_entry_price, position.tick_log),
                         math.get_round_value(position.current_qty, position.tick_log),
                         position.distance_to_avg_price_pct,
+                        robot_settings.quoting_mode[0],
                         effective_quoting_side[0]
                     )
                 else:
-                    combined_msg += "<b>{}:</b> {}\n".format(
+                    combined_msg += "<b>{}:</b> {}|{}:{}\n".format(
                         RobotInfo.parse_for_tg_logs(position.robot_id),
-                        "CLOSED"
+                        "CLOSED",
+                        robot_settings.quoting_mode[0],
+                        effective_quoting_side[0]
                     )
             combined_msg += "\nLongs/Shorts:"
             for position in portfolio_positions:
