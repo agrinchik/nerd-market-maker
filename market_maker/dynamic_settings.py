@@ -446,4 +446,4 @@ class DynamicSettings(object):
         txt = self.append_log_text(txt, "---------------------")
         txt = self.append_log_text(txt, "Last Price = {}".format(ticker_last_price))
 
-        log_info(self.logger, txt, True)
+        log_info(self.logger, txt, False)
