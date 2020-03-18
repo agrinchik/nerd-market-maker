@@ -198,6 +198,9 @@ class NerdMarketMakerRobot:
         self.check_stop_trading()
         self.dynamic_settings.initialize_params()
 
+    def get_pct_value(self, val):
+        return "{}%".format(round(val * 100, 2))
+
     def print_status(self, send_to_telegram):
         """Print the current status of NerdMarkerMakerRobot"""
 
@@ -217,7 +220,7 @@ class NerdMarketMakerRobot:
             combined_msg += "Distance To Avg Price: {:.2f}%\n".format(self.exchange.get_distance_to_avg_price_pct())
             combined_msg += "Unrealized PNL: {} ({:.2f}%)\n".format(math.get_round_value(self.exchange.get_unrealized_pnl(), tick_log), self.exchange.get_unrealized_pnl_pct())
             combined_msg += "Liquidation Price (Dist %): {} ({:.2f}%)\n".format(math.get_round_value(float(position['liquidationPrice']), tick_log), self.exchange.get_distance_to_liq_price_pct())
-        combined_msg += "Interval, % (RP) = {:.2f}% ({})\n".format(self.dynamic_settings.interval_pct, self.dynamic_settings.curr_risk_profile_id)
+        combined_msg += "Interval, % (RP) = {} ({})\n".format(self.get_pct_value(self.dynamic_settings.interval_pct), self.dynamic_settings.curr_risk_profile_id)
         combined_msg += "Min/Max Position = {}/{}\n".format(self.dynamic_settings.min_position, self.dynamic_settings.max_position)
         combined_msg += "Lot Size = {}\n".format(self.dynamic_settings.order_start_size)
         log_debug(logger, combined_msg, send_to_telegram)
