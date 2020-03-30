@@ -24,6 +24,7 @@ try:
         settings["INTERVAL_ADJUST_MULT"] = db_robot_settings.interval_adjust_mult
     else:
         settings["INSTANCEID"] = args.instanceid
+        settings["EXCHANGE"] = args.exchange
     settings["NUMBER_OF_ROBOTS"] = args.number_of_robots
 
 except Exception as e:

@@ -3,8 +3,26 @@ import requests
 from market_maker.settings import settings
 from common.robot_info import RobotInfo
 
+LOG_TO_CONSOLE = False
+
+
+class LoggerHolder:
+    __logger = None
+
+    @classmethod
+    def get_instance(cls):
+        return cls.__logger
+
+    @classmethod
+    def set_instance(cls, logger):
+        if not cls.__logger:
+            cls.__logger = logger
+
 
 def setup_robot_custom_logger(name, log_level=settings.LOG_LEVEL):
+    if LoggerHolder.get_instance():
+        return LoggerHolder.get_instance()
+
     robotId = settings.ROBOTID
     log_text_format = "%(asctime)s - {} - %(levelname)s - %(module)s - %(message)s".format(robotId)
     formatter = logging.Formatter(fmt=log_text_format)
@@ -15,13 +33,19 @@ def setup_robot_custom_logger(name, log_level=settings.LOG_LEVEL):
     logger = logging.getLogger(name)
     level_name = logging.getLevelName(log_level)
     logger.setLevel(level_name)
-    log_filename = "./logs/{}/{}_{}".format(settings.ENV.lower(), settings.ROBOTID.lower(), settings.LOG_FILENAME)
-    logging.basicConfig(filename=log_filename, filemode='a', format=log_text_format)
-    #logger.addHandler(handler)
+    if not LOG_TO_CONSOLE:
+        log_filename = "./logs/{}/{}_{}".format(settings.ENV.lower(), settings.ROBOTID.lower(), settings.LOG_FILENAME)
+        logging.basicConfig(filename=log_filename, filemode='a', format=log_text_format)
+    else:
+        logger.addHandler(handler)
+    LoggerHolder.set_instance(logger)
     return logger
 
 
-def setup_supervisor_custom_logger(name, log_level=settings.LOG_LEVEL):
+def setup_supervisor_custom_logger(name, log_level=settings.SUPERVISOR_LOG_LEVEL):
+    if LoggerHolder.get_instance():
+        return LoggerHolder.get_instance()
+
     log_text_format = "%(asctime)s  - %(levelname)s - %(module)s - %(message)s"
     formatter = logging.Formatter(fmt=log_text_format)
 
@@ -30,9 +54,12 @@ def setup_supervisor_custom_logger(name, log_level=settings.LOG_LEVEL):
 
     logger = logging.getLogger(name)
     logger.setLevel(log_level)
-    log_filename = "./logs/{}/nerd_supervisor_log_out.txt".format(settings.ENV.lower())
-    logging.basicConfig(filename=log_filename, filemode='a', format=log_text_format)
-    #logger.addHandler(handler)
+    if not LOG_TO_CONSOLE:
+        log_filename = "./logs/{}/nerd_supervisor_log_out.txt".format(settings.ENV.lower())
+        logging.basicConfig(filename=log_filename, filemode='a', format=log_text_format)
+    else:
+        logger.addHandler(handler)
+    LoggerHolder.set_instance(logger)
     return logger
 
 

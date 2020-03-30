@@ -1,13 +1,14 @@
 #! /usr/bin/env zsh
 
 ENV=$1
-NUMBER_OF_ROBOTS=$2
+EXCHANGE=$2
+NUMBER_OF_ROBOTS=$3
 ENV_LOWERCASE=$(echo "${ENV}" | tr '[:upper:]' '[:lower:]')
 ENV_UPPERCASE=$(echo "${ENV}" | tr '[:lower:]' '[:upper:]')
 
 
-if [[ "$#" -ne 2 ]]; then
-    echo "Usage: run_supervisor.sh <ENV> <NUMBER_OF_ROBOTS>"
+if [[ "$#" -ne 3 ]]; then
+    echo "Usage: run_supervisor.sh <ENV> <EXCHANGE> <NUMBER_OF_ROBOTS>"
     exit 0
 fi
 
@@ -23,7 +24,7 @@ conda activate nerd-market-maker
 while true
     echo Launching a NerdSupervisor in ${ENV_UPPERCASE} environment
 
-    do python -m market_maker.nerd_supervisor -e ${ENV_LOWERCASE} --number_of_robots ${NUMBER_OF_ROBOTS} -i "SUPERVISOR"
+    do python -m market_maker.nerd_supervisor -e ${ENV_LOWERCASE} --exchange ${EXCHANGE} --number_of_robots ${NUMBER_OF_ROBOTS} -i "SUPERVISOR"
     st=$?
     if [[ "$st" == "99"  ||  "$st" == "15" ]]; then
         echo "NerdSupervisor has finished with status code=${st} and the bash script will be terminated!"

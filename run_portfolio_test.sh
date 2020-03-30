@@ -50,4 +50,4 @@ do
 done
 
 echo Executing NerdSupervisor in TEST environment ...
-./run_supervisor.sh test ${NUMBER_OF_ROBOTS} &
+./run_supervisor.sh test ${EXCHANGE} ${NUMBER_OF_ROBOTS} &

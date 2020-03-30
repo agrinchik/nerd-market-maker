@@ -3,11 +3,12 @@ backports.ssl-match-hostname==3.5.0.1
 future==0.16.0
 packaging==16.8
 pyparsing==2.2.0
-requests==2.13.0
 websocket-client==0.53.0
 peewee==3.13.1
 mysqlclient==1.4.6
 pymysql==0.9.3
+backtrader==1.9.74.123
+ccxt==1.18.240
 
 # Bitfinex code requirements:
 eventemitter==0.2.0
