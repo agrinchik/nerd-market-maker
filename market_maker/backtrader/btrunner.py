@@ -1,7 +1,7 @@
 import time
 import backtrader as bt
 import datetime as dt
-from market_maker.backtrader.ccxtbt import CCXTStore, CCXTFeed
+from market_maker.backtrader.ccxtbt import CCXTStore
 from market_maker.utils import log
 from market_maker.settings import settings
 from market_maker.backtrader.strategy.strategy_enum import BTStrategyEnum
@@ -114,12 +114,6 @@ class BacktraderRunner(object):
         )
         # Add the feed
         cerebro.adddata(data3)
-
-        self.add_filter(data0)
-
-    def add_filter(self, data):
-        # Add the filter for dynamic updates of defined indicators
-        data.addfilter(PartialBarFilter)
 
     def init_strategy_params(self, strategy_enum):
         self._strategy_params = dict()
