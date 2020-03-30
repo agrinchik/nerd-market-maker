@@ -19,6 +19,7 @@ logger = log.setup_supervisor_custom_logger('root')
 
 class BacktraderRunner(object):
     def __init__(self):
+        self._cerebro = None
         self._strategy_enum = None
         self._strategy_params = None
 
@@ -122,17 +123,21 @@ class BacktraderRunner(object):
         strategy_class = self._strategy_enum.value.clazz
         cerebro.addstrategy(strategy_class, **self._strategy_params)
 
+    def get_market_snapshot(self):
+        strategy = self._cerebro.runningstrats[0] if len(self._cerebro.runningstrats) > 0 else None
+        return strategy.get_market_snapshot() if strategy else None
+
     def start(self):
         try:
             strategy = "MM001_MarketMonitorStrategy"
             self._strategy_enum = BTStrategyEnum.get_strategy_enum_by_str(strategy)
             self.init_strategy_params(self._strategy_enum)
 
-            cerebro = bt.Cerebro(quicknotify=True)
-            self.init_cerebro(cerebro)
-            self.add_strategy(cerebro)
+            self._cerebro = bt.Cerebro(quicknotify=True)
+            self.init_cerebro(self._cerebro)
+            self.add_strategy(self._cerebro)
 
-            cerebro.run()
+            self._cerebro.run()
 
         except Exception as e:
             log_error(logger, traceback.format_exc(limit=3, chain=False), True)

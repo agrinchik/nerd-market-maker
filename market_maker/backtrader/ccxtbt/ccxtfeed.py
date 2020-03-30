@@ -173,7 +173,7 @@ class CCXTFeed(with_metaclass(MetaCCXTFeed, DataBase)):
             if tstamp > self._last_ts:
                 tstamp_val_epoch = tstamp / 1000
                 tstamp_dt = datetime.fromtimestamp(tstamp_val_epoch).strftime('%Y-%m-%d %H:%M:%S')
-                logger.info('Adding OHLCV {}: timestamp={}, ohlcv={}'.format(granularity, tstamp_dt, ohlcv))
+                logger.debug('Adding OHLCV {}: timestamp={}, ohlcv={}'.format(granularity, tstamp_dt, ohlcv))
                 self._data.append(ohlcv)
                 self._last_ts = tstamp
 
@@ -209,7 +209,7 @@ class CCXTFeed(with_metaclass(MetaCCXTFeed, DataBase)):
             tstamp = ohlcv[0]
             tstamp_val_epoch = tstamp / 1000
             tstamp_dt = datetime.fromtimestamp(tstamp_val_epoch).strftime('%Y-%m-%d %H:%M:%S')
-            logger.info('Adding OHLCV {}: timestamp={}, ohlcv={}'.format(granularity, tstamp_dt, ohlcv))
+            logger.debug('Adding OHLCV {}: timestamp={}, ohlcv={}'.format(granularity, tstamp_dt, ohlcv))
             self._data.append(ohlcv)
             self._last_ts = tstamp
 

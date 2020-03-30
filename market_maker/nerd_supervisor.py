@@ -22,9 +22,28 @@ DEFAULT_LOOP_INTERVAL = 1
 logger = log.setup_supervisor_custom_logger('root')
 
 
-class NerdSupervisor:
+class MarketInterface:
     def __init__(self):
-        self.btt = None
+        self.mit = None
+        self.btrunner = None
+
+    def mi_thread(self):
+        self.btrunner = BacktraderRunner()
+        self.btrunner.start()
+
+    def start(self):
+        self.mit = threading.Thread(name="Market Interface Thread", target=self.mi_thread)
+        self.mit.daemon = True
+        self.mit.start()
+        logger.info("********* Started Market Interface *********")
+
+    def get_market_snapshot(self):
+        return self.btrunner.get_market_snapshot()
+
+
+class NerdSupervisor:
+    def __init__(self, mi):
+        self.mi = mi
         self.last_tg_sent_state = None
         atexit.register(self.exit)
         signal.signal(signal.SIGTERM, self.exit)
@@ -43,8 +62,7 @@ class NerdSupervisor:
     def get_portfolio_balance(self):
         try:
             robot_id_list = DatabaseManager.get_robot_id_list(settings.NUMBER_OF_ROBOTS)
-            query = Wallet.select(fn.SUM(Wallet.wallet_balance))\
-                          .where(Wallet.robot_id.in_(robot_id_list))
+            query = Wallet.select(fn.SUM(Wallet.wallet_balance)).where(Wallet.robot_id.in_(robot_id_list))
             return query.scalar()
         except Exception as e:
             log_error(logger, "Database exception has occurred: {}. Restarting the NerdSupervisor ...".format(e), True)
@@ -106,20 +124,13 @@ class NerdSupervisor:
 
         os._exit(status)
 
-    def bt_thread(self):
-        btrunner = BacktraderRunner()
-        btrunner.start()
-
-    def start_backtrader_daemon(self):
-        self.btt = threading.Thread(name="BT Thread", target=self.bt_thread)
-        self.btt.daemon = True
-        self.btt.start()
-        logger.info("Started Backtrader Daemon")
-
     def run_loop(self):
         while True:
             self.print_status(True)
             sleep(DEFAULT_LOOP_INTERVAL)
+            market_snapshot = self.mi.get_market_snapshot()
+            if market_snapshot:
+                logger.info("market_snapshot={}".format(market_snapshot))
 
     def restart(self):
         logger.info("Restarting the NerdSupervisor ...")
@@ -127,13 +138,14 @@ class NerdSupervisor:
 
 
 def run():
-    log_info(logger, 'Started NerdSupervisor', True)
-
-    ns = NerdSupervisor()
     try:
-        ns.start_backtrader_daemon()
+        log_info(logger, '========== Started NerdSupervisor ==========', True)
+        mi = MarketInterface()
+        mi.start()
 
+        ns = NerdSupervisor(mi)
         ns.run_loop()
+
     except ForceRestartException as fe:
         ns.exit(settings.FORCE_RESTART_EXIT_STATUS_CODE)
     except KeyboardInterrupt as ki:

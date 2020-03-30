@@ -2,6 +2,7 @@ import backtrader as bt
 import backtrader.indicators as btind
 from market_maker.utils import log
 from market_maker.backtrader.utils import UTC_to_CurrTZ
+import math
 
 logger = log.setup_supervisor_custom_logger('root')
 
@@ -29,27 +30,56 @@ class MM001_MarketMonitorStrategy(bt.Strategy):
         self.sma_data3 = btind.SimpleMovingAverage(self.data3.close, period=14)
         self.atr_data3_pct = (self.atr_data3 / self.sma_data3) * 100
 
+    def get_last_ohlc_val(self, line):
+        return line[0] if line[0] and not math.isnan(line[0]) else line[-1]
+
+    def get_ind_value(self, ind, idx):
+        return ind[idx] if len(ind) > 0 else 'N/A'
+
+    def get_market_snapshot(self):
+        result = {}
+        datas = self.datas
+        result["OHLCV"] = {}
+        for i, data in enumerate(datas):
+            key = "data{}".format(i)
+            ohlcv = [   self.get_last_ohlc_val(data.open),
+                        self.get_last_ohlc_val(data.high),
+                        self.get_last_ohlc_val(data.low),
+                        self.get_last_ohlc_val(data.close),
+                        self.get_last_ohlc_val(data.volume)
+                    ]
+            result["OHLCV"][key] = ohlcv
+        ind_entry = result["Indicators"] = {}
+        ind_entry["atr_data0"] = self.get_ind_value(self.atr_data0, 0)
+        ind_entry["sma_data0"] = self.get_ind_value(self.sma_data0, 0)
+        ind_entry["atr_data0_pct"] = self.get_ind_value(self.atr_data0_pct, 0)
+        ind_entry["atr_data1"] = self.get_ind_value(self.atr_data1, 0)
+        ind_entry["sma_data1"] = self.get_ind_value(self.sma_data1, 0)
+        ind_entry["atr_data1_pct"] = self.get_ind_value(self.atr_data1_pct, 0)
+        ind_entry["atr_data2"] = self.get_ind_value(self.atr_data2, 0)
+        ind_entry["sma_data2"] = self.get_ind_value(self.sma_data2, 0)
+        ind_entry["atr_data2_pct"] = self.get_ind_value(self.atr_data2_pct, 0)
+        ind_entry["atr_data3"] = self.get_ind_value(self.atr_data3, 0)
+        ind_entry["sma_data3"] = self.get_ind_value(self.sma_data3, 0)
+        ind_entry["atr_data3_pct"] = self.get_ind_value(self.atr_data3_pct, 0)
+        return result
+
     def islivedata(self):
         return self.data.islive()
 
     def notify_data(self, data, status, *args, **kwargs):
         self.status = self.data._getstatusname(status)
-        logger.info("notify_data() - status={}".format(self.status))
+        logger.debug("notify_data() - status={}".format(self.status))
         if status == data.LIVE:
-            logger.info("**** Initialized the Backtrader in LIVE mode: {} ****".format(self.data.symbol))
-            logger.info("=" * 120)
-            logger.info("LIVE DATA - MM001_MarketMonitorStrategy initialized")
-            logger.info("=" * 120)
+            logger.debug("**** Initialized the Backtrader in LIVE mode: {} ****".format(self.data.symbol))
+            logger.debug("=" * 120)
+            logger.debug("LIVE DATA - MM001_MarketMonitorStrategy initialized")
+            logger.debug("=" * 120)
 
     def next(self):
         try:
-            logger.info("len(self.datas)={}".format(len(self.datas)))
-            logger.info("len(self.data0)={}".format(len(self.data0)))
-            logger.info("len(self.data1)={}".format(len(self.data1)))
-            logger.info("len(self.data2)={}".format(len(self.data2)))
-            logger.info("len(self.data3)={}".format(len(self.data3)))
             if self.islivedata():
-                logger.info("BEGIN next(): status={}".format(self.status))
+                logger.debug("BEGIN next(): status={}".format(self.status))
 
             if self.islivedata() and self.status != "LIVE":
                 logger.info("%s - %.8f" % (self.status, self.data0.close[0]))
@@ -61,20 +91,21 @@ class MM001_MarketMonitorStrategy(bt.Strategy):
             raise e
 
     def log_data(self, idx, data):
-        logger.info('self.data{}.datetime[0] = {}'.format(idx, UTC_to_CurrTZ(data.datetime.datetime(0))))
-        logger.info('self.data{}.open[0] = {}'.format(idx, data.open[0]))
-        logger.info('self.data{}.high[0] = {}'.format(idx, data.high[0]))
-        logger.info('self.data{}.low[0] = {}'.format(idx, data.low[0]))
-        logger.info('self.data{}.close[0] = {}'.format(idx, data.close[0]))
-        logger.info('self.data{}.volume[0] = {}'.format(idx, data.volume[0]))
+        logger.debug("len(self.data{})={}".format(idx, len(data)))
+        logger.debug('self.data{}.datetime[0] = {}'.format(idx, UTC_to_CurrTZ(data.datetime.datetime(0))))
+        logger.debug('self.data{}.open[0] = {}'.format(idx, data.open[0]))
+        logger.debug('self.data{}.high[0] = {}'.format(idx, data.high[0]))
+        logger.debug('self.data{}.low[0] = {}'.format(idx, data.low[0]))
+        logger.debug('self.data{}.close[0] = {}'.format(idx, data.close[0]))
+        logger.debug('self.data{}.volume[0] = {}'.format(idx, data.volume[0]))
 
     def log_indicators(self, idx, atr, sma, atr_pct):
-        logger.info('self.sma_data{} = {}'.format(idx, sma))
-        logger.info('self.atr_data{} = {}'.format(idx, atr))
-        logger.info('self.atr_data{}_pct = {}%'.format(idx, round(atr_pct, 2)))
+        logger.debug('self.sma_data{} = {}'.format(idx, sma))
+        logger.debug('self.atr_data{} = {}'.format(idx, atr))
+        logger.debug('self.atr_data{}_pct = {}%'.format(idx, round(atr_pct, 2)))
 
     def print_all_debug_info(self):
-        logger.info('---------------------- INSIDE NEXT DEBUG --------------------------')
+        logger.debug('---------------------- INSIDE NEXT DEBUG --------------------------')
         self.log_data(0, self.data0)
         self.log_data(1, self.data1)
         self.log_data(2, self.data2)
@@ -84,4 +115,4 @@ class MM001_MarketMonitorStrategy(bt.Strategy):
         self.log_indicators(1, self.atr_data1[0], self.sma_data1[0], self.atr_data1_pct[0])
         self.log_indicators(2, self.atr_data2[0], self.sma_data2[0], self.atr_data2_pct[0])
         self.log_indicators(3, self.atr_data3[0], self.sma_data3[0], self.atr_data3_pct[0])
-        logger.info('----------------------')
+        logger.debug('----------------------')
