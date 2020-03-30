@@ -9,44 +9,12 @@ from market_maker.backtrader.broker_mappings import BrokerMappings
 from market_maker.db.db_manager import DatabaseManager
 from market_maker.utils.log import log_info
 from market_maker.utils.log import log_error
-from future.utils import iteritems
 import traceback
 
-PARTIAL_BAR_FILTER_ENABLED = False
 OHLCV_BAR_LIMIT = 200
 PREFETCH_BARS = 200
 
 logger = log.setup_supervisor_custom_logger('root')
-
-
-class PartialBarFilter(object):
-    def __init__(self, data):
-        pass
-
-    def recurse_backwards(self, parent_ind):
-        parent_ind.backwards()
-        logger.debug("recurse_backwards(): Called backwards() on parent_ind={}. len(parent_ind)={}".format(parent_ind.__class__.__name__, len(parent_ind)))
-        for child_ind in parent_ind.getindicators():
-            self.recurse_backwards(child_ind)
-
-    def __call__(self, data):
-        if PARTIAL_BAR_FILTER_ENABLED and data._state == CCXTFeed._ST_LIVE:
-            logger.debug("!!! PartialBarFilter: BEGIN data._state={}".format(data._state))
-            strategy = data.store.cerebro.runningstrats[0]
-            indicators_map = strategy.get_updateable_indicators_map()
-            for data, ind_arr in iteritems(indicators_map):
-                granularity_name = data.get_granularity()[0]
-                for i, ind in enumerate(ind_arr):
-                    logger.debug("!!! BEFORE {} {}: len(ind)={}, ind[-1]={}, ind[0]={}".format(granularity_name, i, len(ind), ind[-1], ind[0]))
-                    self.recurse_backwards(ind)
-                    ind._next()
-                    logger.debug("!!! AFTER {} {}: len(ind), ind[-1]={}, ind[0]={}".format(granularity_name, i, len(ind), ind[-1], ind[0]))
-                logger.debug("Applied PartialBarFilter: len(data)={}".format(len(data)))
-
-            return False  # the length of the stream was not changed
-
-    def last(self, data):
-        return False  # nothing delivered here
 
 
 class BacktraderRunner(object):

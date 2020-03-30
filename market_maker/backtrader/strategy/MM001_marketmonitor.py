@@ -29,14 +29,6 @@ class MM001_MarketMonitorStrategy(bt.Strategy):
         self.sma_data3 = btind.SimpleMovingAverage(self.data3.close, period=14)
         self.atr_data3_pct = (self.atr_data3 / self.sma_data3) * 100
 
-    def get_updateable_indicators_map(self):
-        data1 = self.data1
-        data2 = self.data2
-        data3 = self.data3
-        return {data1: [self.atr_data1, self.sma_data1, self.atr_data1_pct],
-                data2: [self.atr_data2, self.sma_data2, self.atr_data2_pct],
-                data3: [self.atr_data3, self.sma_data3, self.atr_data3_pct]}
-
     def islivedata(self):
         return self.data.islive()
 
