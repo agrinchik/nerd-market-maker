@@ -27,7 +27,7 @@ while true
     do python -m market_maker.mm_robot -e ${ENV} --exchange ${EXCHANGE} --robotid ${ROBOTID} --number_of_robots ${NUMBER_OF_ROBOTS}
     st=$?
     if [[ "$st" == "99"  ||  "$st" == "15" ]]; then
-        echo "NerdMarketMakerRobot instance (${ROBOTID}) has finished with status code=${st} and the bash script will be terminated!"
+        echo "NerdMarketMakerRobot instance (${ROBOTID}) has finished with status code=${st} and the script will be terminated!"
         exit 0
     else
         echo "NerdMarketMakerRobot instance (${ROBOTID}) has finished and will be restarted: status code=${st}"

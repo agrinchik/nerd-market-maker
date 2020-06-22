@@ -5,7 +5,6 @@ from common.robot_info import RobotInfo
 
 LOG_TO_CONSOLE = True
 
-
 class LoggerHolder:
     __logger = None
 

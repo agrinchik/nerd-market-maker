@@ -103,6 +103,11 @@ class CCXTFeed(with_metaclass(MetaCCXTFeed, DataBase)):
             self._state = self._ST_LIVE
             self.put_notification(self.LIVE)
 
+    def check_all_datas_live(self):
+        _cerebro = self.store.cerebro
+        strategy = _cerebro.runningstrats[0] if len(_cerebro.strats) > 0 and len(_cerebro.runningstrats) > 0 else None
+        return strategy.is_all_datas_live_state()
+
     def _load(self):
         if self._state == self._ST_OVER:
             return False
@@ -112,14 +117,17 @@ class CCXTFeed(with_metaclass(MetaCCXTFeed, DataBase)):
                 if self._timeframe == bt.TimeFrame.Ticks:
                     return self._load_ticks()
                 else:
-                    if self.p.merge_partial_live_bars:
-                        self._fetch_partial_ohlcv()
-                        ret = self._merge_ohlcvs()
+                    if self.check_all_datas_live():
+                        if self.p.merge_partial_live_bars:
+                            self._fetch_partial_ohlcv()
+                            ret = self._merge_ohlcvs()
+                        else:
+                            self._fetch_ohlcv()
+                            ret = self._load_ohlcv()
+                        logger.debug('--- Load OHLCV Returning: {}'.format(ret))
+                        return ret
                     else:
-                        self._fetch_ohlcv()
-                        ret = self._load_ohlcv()
-                    logger.debug('--- Load OHLCV Returning: {}'.format(ret))
-                    return ret
+                        return None
 
             elif self._state == self._ST_HISTORBACK:
                 ret = self._load_ohlcv()

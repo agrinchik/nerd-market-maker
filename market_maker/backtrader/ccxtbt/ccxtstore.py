@@ -101,9 +101,11 @@ class CCXTStore(with_metaclass(MetaSingleton, object)):
         '''Returns broker with *args, **kwargs from registered ``BrokerCls``'''
         return cls.BrokerCls(*args, **kwargs)
 
-    def __init__(self, cerebro, exchange, currency, config, retries, rate_limit_factor):
+    def __init__(self, cerebro, exchange, currency, config, retries, rate_limit_factor, sandbox=False):
         self.cerebro = cerebro
         self.exchange = getattr(ccxt, exchange)(config)
+        if sandbox:
+            self.exchange.set_sandbox_mode(True)
         self.currency = currency
         self.retries = retries
         self.rate_limit_factor = rate_limit_factor

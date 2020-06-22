@@ -7,12 +7,11 @@ from market_maker.settings import settings
 from market_maker.backtrader.strategy.strategy_enum import BTStrategyEnum
 from market_maker.backtrader.broker_mappings import BrokerMappings
 from market_maker.db.db_manager import DatabaseManager
-from market_maker.utils.log import log_info
 from market_maker.utils.log import log_error
 import traceback
 
-OHLCV_BAR_LIMIT = 200
-PREFETCH_BARS = 200
+OHLCV_BAR_LIMIT = 100
+PREFETCH_BARS = 100
 
 logger = log.setup_supervisor_custom_logger('root')
 
@@ -49,7 +48,8 @@ class BacktraderRunner(object):
         broker_config = self.get_broker_config(db_robot_settings)
         target_currency = self.get_target_currency(symbol)
         reference_currency = self.get_reference_currency(symbol)
-        store = CCXTStore(cerebro=cerebro, exchange=exchange, currency=target_currency, config=broker_config, retries=5, rate_limit_factor=settings.NUMBER_OF_ROBOTS)
+        is_sandbox_mode = True if settings.ENV == "test" else False
+        store = CCXTStore(cerebro=cerebro, exchange=exchange, currency=target_currency, config=broker_config, retries=5, rate_limit_factor=settings.NUMBER_OF_ROBOTS, sandbox=is_sandbox_mode)
 
         broker_mapping = BrokerMappings.get_broker_mapping(exchange)
         broker = store.getbroker(broker_mapping=broker_mapping)
@@ -124,13 +124,15 @@ class BacktraderRunner(object):
         cerebro.addstrategy(strategy_class, **self._strategy_params)
 
     def get_market_snapshot(self):
-        strategy = self._cerebro.runningstrats[0] if len(self._cerebro.runningstrats) > 0 else None
-        return strategy.get_market_snapshot() if strategy else None
+        strategy = self._cerebro.runningstrats[0] if len(self._cerebro.strats) > 0 and len(self._cerebro.runningstrats) > 0 else None
+        if strategy is not None and strategy.is_datas_live() and strategy.is_live_status() and strategy.is_all_datas_live_state():
+            return strategy.get_market_snapshot()
+        else:
+            return None
 
     def start(self):
         try:
-            strategy = "MM001_MarketMonitorStrategy"
-            self._strategy_enum = BTStrategyEnum.get_strategy_enum_by_str(strategy)
+            self._strategy_enum = BTStrategyEnum.MM001_MARKET_SNAPSHOT_STRATEGY_ID
             self.init_strategy_params(self._strategy_enum)
 
             self._cerebro = bt.Cerebro(quicknotify=True)

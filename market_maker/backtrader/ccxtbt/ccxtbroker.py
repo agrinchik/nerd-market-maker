@@ -185,43 +185,8 @@ class CCXTBroker(with_metaclass(MetaCCXTBroker, BrokerBase)):
             pos = pos.clone()
         return pos
 
-    def log_datas(self):
-        combined_msg = "next() - Datas:\n"
-        strategy = self.cerebro.runningstrats[0]
-        datas = strategy.datas
-        for i, data in enumerate(datas):
-            combined_msg += "TF{}: len(data{})={}\n".format(i, i, len(data))
-            if len(data.datetime) > 1:
-                combined_msg += "data{}.datetime[-1] = {}, ".format(i, UTC_to_CurrTZ(data.datetime.datetime(-1)))
-                combined_msg += "data{}.open[-1]={}, ".format(i, data.open[-1])
-                combined_msg += "data{}.high[-1]={}, ".format(i, data.high[-1])
-                combined_msg += "data{}.low[-1]={}, ".format(i, data.low[-1])
-                combined_msg += "data{}.close[-1]={}, ".format(i, data.close[-1])
-                combined_msg += "data{}.volume[-1]={}\n".format(i, data.volume[-1])
-            combined_msg += "data{}.datetime[0]  = {}, ".format(i, UTC_to_CurrTZ(data.datetime.datetime(0)))
-            combined_msg += "data{}.open[0]={}, ".format(i, data.open[0])
-            combined_msg += "data{}.high[0]={}, ".format(i, data.high[0])
-            combined_msg += "data{}.low[0]={}, ".format(i, data.low[0])
-            combined_msg += "data{}.close[0]={}, ".format(i, data.close[0])
-            combined_msg += "data{}.volume[0]={}\n".format(i, data.volume[0])
-        combined_msg += 'Indicators:\n'
-        combined_msg += 'strategy.atr_data0 = {}\n'.format(strategy.atr_data0[0] if len(strategy.atr_data0) > 0 else 'N/A')
-        combined_msg += 'strategy.sma_data0 = {}\n'.format(strategy.sma_data0[0] if len(strategy.sma_data0) > 0 else 'N/A')
-        combined_msg += 'strategy.atr_data0_pct = {}%\n'.format(round(strategy.atr_data0_pct[0], 2) if len(strategy.atr_data0_pct) > 0 else 'N/A')
-        combined_msg += 'strategy.atr_data1 = {}\n'.format(strategy.atr_data1[0] if len(strategy.atr_data1) > 0 else 'N/A')
-        combined_msg += 'strategy.sma_data1 = {}\n'.format(strategy.sma_data1[0] if len(strategy.sma_data1) > 0 else 'N/A')
-        combined_msg += 'strategy.atr_data1_pct = {}%\n'.format(round(strategy.atr_data1_pct[0], 2) if len(strategy.atr_data1_pct) > 0 else 'N/A')
-        combined_msg += 'strategy.atr_data2 = {}\n'.format(strategy.atr_data2[0] if len(strategy.atr_data2) > 0 else 'N/A')
-        combined_msg += 'strategy.sma_data2 = {}\n'.format(strategy.sma_data2[0] if len(strategy.sma_data2) > 0 else 'N/A')
-        combined_msg += 'strategy.atr_data2_pct = {}%\n'.format(round(strategy.atr_data2_pct[0], 2) if len(strategy.atr_data2_pct) > 0 else 'N/A')
-        combined_msg += 'strategy.atr_data3 = {}\n'.format(strategy.atr_data3[0] if len(strategy.atr_data3) > 0 else 'N/A')
-        combined_msg += 'strategy.sma_data3 = {}\n'.format(strategy.sma_data3[0] if len(strategy.sma_data3) > 0 else 'N/A')
-        combined_msg += 'strategy.atr_data3_pct = {}%\n'.format(round(strategy.atr_data3_pct[0], 2) if len(strategy.atr_data3_pct) > 0 else 'N/A')
-        logger.debug(combined_msg)
-
     def next(self):
         logger.debug('Broker next() called')
-        self.log_datas()
 
         for o_order in list(self.open_orders):
             oID = o_order.ccxt_order['id']

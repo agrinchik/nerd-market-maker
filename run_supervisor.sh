@@ -27,7 +27,7 @@ while true
     do python -m market_maker.nerd_supervisor -e ${ENV_LOWERCASE} --exchange ${EXCHANGE} --number_of_robots ${NUMBER_OF_ROBOTS} -i "SUPERVISOR"
     st=$?
     if [[ "$st" == "99"  ||  "$st" == "15" ]]; then
-        echo "NerdSupervisor has finished with status code=${st} and the bash script will be terminated!"
+        echo "NerdSupervisor has finished with status code=${st} and the script will be terminated!"
         exit 0
     else
         echo "NerdSupervisor has finished and will be restarted: status code=${st}"
