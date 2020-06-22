@@ -3,7 +3,7 @@ import requests
 from market_maker.settings import settings
 from common.robot_info import RobotInfo
 
-LOG_TO_CONSOLE = True
+LOG_TO_CONSOLE = False
 
 class LoggerHolder:
     __logger = None
