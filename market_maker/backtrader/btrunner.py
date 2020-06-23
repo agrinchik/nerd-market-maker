@@ -80,8 +80,8 @@ class BacktraderRunner(object):
             fromdate=hist_start_date1,
             compression=timeframe1,
             ohlcv_limit=OHLCV_BAR_LIMIT,
-            fetch_ohlcv_params={'partial': 'true'},
-            merge_partial_live_bars=True,
+            fetch_ohlcv_params={'partial': 'false'},
+            merge_partial_live_bars=False,
         )
         # Add the feed
         cerebro.adddata(data1)
@@ -95,8 +95,8 @@ class BacktraderRunner(object):
             fromdate=hist_start_date2,
             compression=timeframe2,
             ohlcv_limit=OHLCV_BAR_LIMIT,
-            fetch_ohlcv_params={'partial': 'true'},
-            merge_partial_live_bars=True,
+            fetch_ohlcv_params={'partial': 'false'},
+            merge_partial_live_bars=False,
         )
         # Add the feed
         cerebro.adddata(data2)
@@ -110,8 +110,8 @@ class BacktraderRunner(object):
             fromdate=hist_start_date3,
             compression=timeframe3,
             ohlcv_limit=OHLCV_BAR_LIMIT,
-            fetch_ohlcv_params={'partial': 'true'},
-            merge_partial_live_bars=True,
+            fetch_ohlcv_params={'partial': 'false'},
+            merge_partial_live_bars=False,
         )
         # Add the feed
         cerebro.adddata(data3)
