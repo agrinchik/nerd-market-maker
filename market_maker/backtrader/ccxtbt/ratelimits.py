@@ -88,7 +88,7 @@ class RateLimitConfig(object):
                 "apply_factor": False
             },
             "fetch_ohlcv": {
-                "base_limit_rate": 2000,
+                "base_limit_rate": 4000,
                 "apply_factor": False
             },
             "fetch_order": {

@@ -138,15 +138,15 @@ class NerdSupervisor:
 
 
 def run():
-    #try:
-    log_info(logger, '========== Started NerdSupervisor ==========', True)
-    mi = MarketInterface()
-    mi.start()
+    try:
+        log_info(logger, '========== Started NerdSupervisor ==========', True)
+        mi = MarketInterface()
+        mi.start()
 
-    ns = NerdSupervisor(mi)
-    ns.run_loop()
+        ns = NerdSupervisor(mi)
+        ns.run_loop()
 
-    '''except ForceRestartException as fe:
+    except ForceRestartException as fe:
         ns.exit(settings.FORCE_RESTART_EXIT_STATUS_CODE)
     except KeyboardInterrupt as ki:
         ns.exit(settings.FORCE_STOP_EXIT_STATUS_CODE)
@@ -154,7 +154,7 @@ def run():
         ns.exit(se.code)
     except Exception as e:
         log_error(logger, "UNEXPECTED EXCEPTION! {}\nNerdSupervisor will be terminated.".format(e), True)
-        ns.exit(settings.FORCE_STOP_EXIT_STATUS_CODE)'''
+        ns.exit(settings.FORCE_STOP_EXIT_STATUS_CODE)
 
 
 if __name__ == "__main__":
