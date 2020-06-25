@@ -3,12 +3,11 @@
 ENV=$1
 EXCHANGE=$2
 ROBOTID=$3
-NUMBER_OF_ROBOTS=$4
 ENV_UPPERCASE=$(echo "${ENV}" | tr '[:lower:]' '[:upper:]')
 
 
-if [[ "$#" -ne 4 ]]; then
-    echo "Usage: run_robot.sh <ENV> <EXCHANGE> <ROBOTID> <NUMBER_OF_ROBOTS>"
+if [[ "$#" -ne 3 ]]; then
+    echo "Usage: run_robot.sh <ENV> <EXCHANGE> <ROBOTID>"
     exit 0
 fi
 
@@ -24,7 +23,7 @@ conda activate nerd-market-maker
 while true
     echo Launching a NerdMarketMakerBot instance in ${ENV_UPPERCASE}: BotID=${ROBOTID}
 
-    do python -m market_maker.mm_robot -e ${ENV} --exchange ${EXCHANGE} --robotid ${ROBOTID} --number_of_robots ${NUMBER_OF_ROBOTS}
+    do python -m market_maker.mm_robot -e ${ENV} --exchange ${EXCHANGE} --robotid ${ROBOTID}
     st=$?
     if [[ "$st" == "99"  ||  "$st" == "15" ]]; then
         echo "NerdMarketMakerRobot instance (${ROBOTID}) has finished with status code=${st} and the script will be terminated!"

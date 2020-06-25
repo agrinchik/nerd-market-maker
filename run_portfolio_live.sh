@@ -1,13 +1,12 @@
 #! /usr/bin/env zsh
 
+ENV=live
 EXCHANGE=bitmex
-NUMBER_OF_ROBOTS=2
 PROCESS_DELAY_SECONDS=5  #  7200
 
 run_robot_process() {
     _robotid=${1}
-    _number_of_robots=${2}
-    ./run_robot.sh live ${EXCHANGE} ${_robotid} ${_number_of_robots} &
+    ./run_robot.sh live ${EXCHANGE} ${_robotid} &
 }
 
 cleanup() {
@@ -39,15 +38,12 @@ conda activate nerd-market-maker
 cleanup
 
 echo Executing portfolio of NerdMarketMakerBot instances in LIVE environment ...
-for (( i=1; i<=${NUMBER_OF_ROBOTS}; i++ ))
+while read robotid
 do
-    robotid=$(printf "Robot%03d" $i)
-
-    run_robot_process ${robotid} ${NUMBER_OF_ROBOTS}
+    run_robot_process ${robotid}
 
     sleep ${PROCESS_DELAY_SECONDS}
-
-done
+done < <(python -m market_maker.db.get_enabled_robots -e ${ENV} -x ${EXCHANGE})
 
 echo Executing NerdSupervisor in LIVE environment ...
-./run_supervisor.sh live ${EXCHANGE} ${NUMBER_OF_ROBOTS} &
+./run_supervisor.sh ${ENV} ${EXCHANGE} &

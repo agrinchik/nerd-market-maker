@@ -11,11 +11,6 @@ class ArgParser(object):
                             required=True,
                             help='Environment: live or test')
 
-        parser.add_argument('-n', '--number_of_robots',
-                            type=int,
-                            required=True,
-                            help='Number of robots')
-
         parser.add_argument('-x', '--exchange',
                             type=str,
                             required=False,

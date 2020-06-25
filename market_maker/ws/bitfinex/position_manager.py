@@ -97,4 +97,3 @@ class PositionManager:
         elif trade_position_status == TRADE_POSITION_STATUS_FULL_CLOSE:
             log_info(self.logger, "Execution (position fully closed): {} {} quantity of {} at {}".format(trade_side, trade_size, symbol, trade_price), True)
             last_position_qty = curr_position_qty
-            DatabaseManager.invert_quoting_side_robot_settings(self.logger, settings.EXCHANGE, settings.ROBOTID, last_position_qty)

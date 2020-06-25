@@ -40,18 +40,19 @@ class BacktraderRunner(object):
         return "USD"  # TODO: Reimplement
 
     def init_cerebro(self, cerebro):
-        exchange = settings.EXCHANGE
-        robot_id = DatabaseManager.get_robot_id_list(settings.NUMBER_OF_ROBOTS)[0]
-        db_robot_settings = DatabaseManager.retrieve_robot_settings(exchange, robot_id)
+        robots_id_list = DatabaseManager.get_enabled_robots_id_list(settings.EXCHANGE)
+        robot_id = robots_id_list[0]
+        num_robots = len(robots_id_list)
+        db_robot_settings = DatabaseManager.retrieve_robot_settings(settings.EXCHANGE, robot_id)
         symbol = db_robot_settings.symbol
 
         broker_config = self.get_broker_config(db_robot_settings)
         target_currency = self.get_target_currency(symbol)
         reference_currency = self.get_reference_currency(symbol)
         is_sandbox_mode = True if settings.ENV == "test" else False
-        store = CCXTStore(cerebro=cerebro, exchange=exchange, currency=target_currency, config=broker_config, retries=5, rate_limit_factor=settings.NUMBER_OF_ROBOTS, sandbox=is_sandbox_mode)
+        store = CCXTStore(cerebro=cerebro, exchange=settings.EXCHANGE, currency=target_currency, config=broker_config, retries=5, rate_limit_factor=num_robots, sandbox=is_sandbox_mode)
 
-        broker_mapping = BrokerMappings.get_broker_mapping(exchange)
+        broker_mapping = BrokerMappings.get_broker_mapping(settings.EXCHANGE)
         broker = store.getbroker(broker_mapping=broker_mapping)
         broker.setcommission(0)
         cerebro.setbroker(broker)
@@ -131,15 +132,15 @@ class BacktraderRunner(object):
             return None
 
     def start(self):
-        try:
-            self._strategy_enum = BTStrategyEnum.MM001_MARKET_SNAPSHOT_STRATEGY_ID
-            self.init_strategy_params(self._strategy_enum)
+        #try:
+        self._strategy_enum = BTStrategyEnum.MM001_MARKET_SNAPSHOT_STRATEGY_ID
+        self.init_strategy_params(self._strategy_enum)
 
-            self._cerebro = bt.Cerebro(quicknotify=True)
-            self.init_cerebro(self._cerebro)
-            self.add_strategy(self._cerebro)
+        self._cerebro = bt.Cerebro(quicknotify=True)
+        self.init_cerebro(self._cerebro)
+        self.add_strategy(self._cerebro)
 
-            self._cerebro.run()
+        self._cerebro.run()
 
-        except Exception as e:
-            log_error(logger, traceback.format_exc(limit=3, chain=False), True)
+        #except Exception as e:
+        #    log_error(logger, traceback.format_exc(limit=3, chain=False), True)

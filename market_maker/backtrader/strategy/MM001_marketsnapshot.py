@@ -13,19 +13,7 @@ class MarketRegimeIndicator(bt.Indicator):
     This is an implementation of an indicator based on strategy from TradingView - S002 Alex (Noro) SILA v1.6.1L strategy.
     '''
     lines = ('marketregime',
-             'trends',
-             'l_WOWtrend',
-             'l_BMAtrend',
-             'l_BARtrend',
-             'l_SUPtrend',
-             'l_DItrend',
-             'l_TTStrend',
-             'l_RSItrend',
-             'l_WTOtrend',
-             'l_MACDtrend1',
-             'l_MACDtrend2',
-             'l_IStrend',
-             'l_EVtrend'
+             'trends'
     )
 
     params = (
@@ -234,8 +222,8 @@ class MarketRegimeIndicator(bt.Indicator):
         self.SmoothedTrueRange.append(self._nz(self.SmoothedTrueRange, -1) - (self._nz(self.SmoothedTrueRange, -1) / 14) + self.TrueRange[0])
         self.SmoothedDirectionalMovementPlus.append(self._nz(self.SmoothedDirectionalMovementPlus, -1) - (self._nz(self.SmoothedDirectionalMovementPlus, -1) / 14) + self.DirectionalMovementPlus[-1])
         self.SmoothedDirectionalMovementMinus.append(self._nz(self.SmoothedDirectionalMovementMinus, -1) - (self._nz(self.SmoothedDirectionalMovementMinus, -1) / 14) + self.DirectionalMovementMinus[-1])
-        self.DIPlus.append(self.SmoothedDirectionalMovementPlus[-1] / self.SmoothedTrueRange[-1] * 100)
-        self.DIMinus.append(self.SmoothedDirectionalMovementMinus[-1] / self.SmoothedTrueRange[-1] * 100)
+        self.DIPlus.append(self.SmoothedDirectionalMovementPlus[-1] / self.SmoothedTrueRange[-1] * 100 if self.SmoothedTrueRange[-1] != 0 else 0)
+        self.DIMinus.append(self.SmoothedDirectionalMovementMinus[-1] / self.SmoothedTrueRange[-1] * 100 if self.SmoothedTrueRange[-1] != 0 else 0)
         if self.p.usedi is True:
             if self.DIPlus[-1] > self.DIMinus[-1]:
                 self.DItrend.append(1)
@@ -350,18 +338,6 @@ class MarketRegimeIndicator(bt.Indicator):
 
         trends_sum = self.WOWtrend[-1] + self.BMAtrend[-1] + self.BARtrend[-1] + self.SUPtrend[-1] + self.DItrend[-1] + self.TTStrend[-1] + self.RSItrend[-1] + self.WTOtrend[-1] + self.MACDtrend1[-1] + self.MACDtrend2[-1] + self.IStrend[-1] + self.EVtrend[-1]
         self.l.trends[0] = trends_sum
-        self.l.l_WOWtrend[0] = self.WOWtrend[-1]
-        self.l.l_BMAtrend[0] = self.BMAtrend[-1]
-        self.l.l_BARtrend[0] = self.BARtrend[-1]
-        self.l.l_SUPtrend[0] = self.SUPtrend[-1]
-        self.l.l_DItrend[0] = self.DItrend[-1]
-        self.l.l_TTStrend[0] = self.TTStrend[-1]
-        self.l.l_RSItrend[0] = self.RSItrend[-1]
-        self.l.l_WTOtrend[0] = self.WTOtrend[-1]
-        self.l.l_MACDtrend1[0] = self.MACDtrend1[-1]
-        self.l.l_MACDtrend2[0] = self.MACDtrend2[-1]
-        self.l.l_IStrend[0] = self.IStrend[-1]
-        self.l.l_EVtrend[0] = self.EVtrend[-1]
 
         if trends_sum >= self.p.sensup:
             self.l.marketregime[0] = 1
@@ -395,11 +371,7 @@ class MM001_MarketSnapshotStrategy(bt.Strategy):
         datas = self.datas
         result["Indicators"] = {}
         ind_entry = result["Indicators"]["Market Regime"] = {}
-        ind_entry["5m.trends (ALL)"] = "{} ({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})".format(self.market_regime_5m.trends[0],
-                                                                                                    self.market_regime_5m.l_WOWtrend[0], self.market_regime_5m.l_BMAtrend[0], self.market_regime_5m.l_BARtrend[0],
-                                                                                                    self.market_regime_5m.l_SUPtrend[0], self.market_regime_5m.l_DItrend[0], self.market_regime_5m.l_TTStrend[0],
-                                                                                                    self.market_regime_5m.l_RSItrend[0], self.market_regime_5m.l_WTOtrend[0], self.market_regime_5m.l_MACDtrend1[0],
-                                                                                                    self.market_regime_5m.l_MACDtrend2[0], self.market_regime_5m.l_IStrend[0], self.market_regime_5m.l_EVtrend[0])
+        ind_entry["5m.trends"] = self.market_regime_5m.trends[0]
         ind_entry["5m.marketregime"] = self.market_regime_5m.marketregime[0]
         ind_entry["1h.trends"] = self.market_regime_1h.trends[0]
         ind_entry["1h.marketregime"] = self.market_regime_1h.marketregime[0]
