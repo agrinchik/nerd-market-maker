@@ -140,6 +140,7 @@ class NerdSupervisor:
         logger.debug("self.curr_market_regime={}, market_regime={}".format(self.curr_market_regime, market_regime))
         if market_regime is not None:
             if market_regime != self.curr_market_regime:
+                logger.debug("handle_market_regime_changed(): Market Regime has changed: self.curr_market_regime={}, market_regime={}".format(self.curr_market_regime, market_regime))
                 self.curr_market_regime = market_regime
                 portfolio_positions = DatabaseManager.get_portfolio_positions(logger, self.robot_ids_list)
                 for position in portfolio_positions:
