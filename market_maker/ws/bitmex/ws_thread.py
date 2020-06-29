@@ -298,7 +298,7 @@ class BitMEXWebsocket():
                                 elif order_position_status == ORDER_POSITION_STATUS_PARTIAL_CLOSE:
                                     log_info(self.logger, "Execution (position partial close): {} {} contracts of {} at {}".format(order_side, order_size, symbol, order_price), True)
                                 elif order_position_status == ORDER_POSITION_STATUS_FULL_CLOSE:
-                                    log_info(self.logger, "Execution (position fully closed): {} {} contracts of {} at {}\nPnL: {}".format(order_side, order_size, symbol, order_price, unrealisedPnl), True)
+                                    log_info(self.logger, "Execution (position fully closed): {} {} contracts of {} at {}\nPnL: {:.8f}".format(order_side, order_size, symbol, order_price, unrealisedPnl), True)
 
                         # Update this item.
                         item.update(updateData)

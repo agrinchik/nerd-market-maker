@@ -20,7 +20,7 @@ from market_maker.db.quoting_side import *
 CHAR_ARROW_UP = "⇧"
 CHAR_ARROW_DOWN = "⇩"
 CHAR_HYPHEN = "-"
-DEFAULT_LOOP_INTERVAL = 1
+DEFAULT_LOOP_INTERVAL = 4
 logger = log.setup_supervisor_custom_logger('root')
 
 
@@ -77,10 +77,8 @@ class NerdSupervisor:
             return CHAR_ARROW_DOWN
         return CHAR_HYPHEN
 
-    def print_status(self, send_to_telegram):
+    def print_status(self, portfolio_positions, portfolio_balance, send_to_telegram):
         """Print the current status of NerdSupervisor"""
-        portfolio_positions = DatabaseManager.get_portfolio_positions(logger, self.robot_ids_list)
-        portfolio_balance = DatabaseManager.get_portfolio_balance(logger, self.robot_ids_list)
 
         if self.is_need_to_send_tg_state(portfolio_balance):
             combined_msg = bold("Portfolio Status:\n")
@@ -134,7 +132,7 @@ class NerdSupervisor:
         if market_regime == MarketRegime.RANGE:
             return QuotingSide.BOTH
 
-    def handle_market_regime_changed(self, market_regime_hist):
+    def handle_market_regime_changed(self, market_regime_hist, portfolio_positions):
         logger.debug("self.market_regime_hist={}".format(market_regime_hist))
         if market_regime_hist is not None and len(market_regime_hist) > 1:
             new_market_regime = market_regime_hist[-1]
@@ -142,19 +140,20 @@ class NerdSupervisor:
             self.curr_market_regime_hist = market_regime_hist
             if new_market_regime != prev_market_regime:
                 log_info(logger, "Market Regime has changed: {} => {}".format(MarketRegime.get_name(prev_market_regime), MarketRegime.get_name(new_market_regime)), True)
-                portfolio_positions = DatabaseManager.get_portfolio_positions(logger, self.robot_ids_list)
-                for position in portfolio_positions:
-                    if position.current_qty == 0:
-                        new_quoting_side = self.resolve_quoting_side(new_market_regime)
-                        DatabaseManager.update_robot_quoting_side(logger, settings.exchange, position.robot_id, new_quoting_side)
-                        log_info(logger, "Setting {} quoting side to {} (as no open positions)".format(position.robot_id, new_quoting_side), True)
+            for position in portfolio_positions:
+                if position.current_qty == 0:
+                    new_quoting_side = self.resolve_quoting_side(new_market_regime)
+                    DatabaseManager.update_robot_quoting_side(logger, settings.exchange, position.robot_id, new_quoting_side)
+                    log_info(logger, "Setting {} quoting side to {} (no open positions)".format(position.robot_id, new_quoting_side), True)
 
     def run_loop(self):
         while True:
-            self.print_status(True)
+            portfolio_positions = DatabaseManager.get_portfolio_positions(logger, self.robot_ids_list)
+            portfolio_balance = DatabaseManager.get_portfolio_balance(logger, self.robot_ids_list)
+            self.print_status(portfolio_positions, portfolio_balance, True)
             sleep(DEFAULT_LOOP_INTERVAL)
             market_regime_hist = self.mi.get_market_regime()
-            self.handle_market_regime_changed(market_regime_hist)
+            self.handle_market_regime_changed(market_regime_hist, portfolio_positions)
 
     def restart(self):
         logger.info("Restarting the NerdSupervisor ...")

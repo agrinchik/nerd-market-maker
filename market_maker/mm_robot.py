@@ -218,7 +218,7 @@ class NerdMarketMakerRobot:
         if position['currentQty'] != 0:
             combined_msg += "Avg Entry Price: {}\n".format(math.get_round_value(position['avgEntryPrice'], tick_log))
             combined_msg += "Distance To Avg Price: {:.2f}%\n".format(self.exchange.get_distance_to_avg_price_pct())
-            combined_msg += "Unrealized PNL: {} ({:.2f}%)\n".format(math.get_round_value(self.exchange.get_unrealized_pnl(), tick_log), self.exchange.get_unrealized_pnl_pct())
+            combined_msg += "Unrealized PNL: {:.8f} ({:.2f}%)\n".format(math.get_round_value(self.exchange.get_unrealized_pnl(), tick_log), self.exchange.get_unrealized_pnl_pct())
             combined_msg += "Liquidation Price (Dist %): {} ({:.2f}%)\n".format(math.get_round_value(float(position['liquidationPrice']), tick_log), self.exchange.get_distance_to_liq_price_pct())
         combined_msg += "Interval, % (RP) = {} ({})\n".format(self.get_pct_value(self.dynamic_settings.interval_pct), self.dynamic_settings.curr_risk_profile_id)
         combined_msg += "Min/Max Position = {}/{}\n".format(self.dynamic_settings.min_position, self.dynamic_settings.max_position)
@@ -632,11 +632,11 @@ class NerdMarketMakerRobot:
                 self.restart()
 
             self.update_dynamic_app_settings()
-            self.sanity_check()  # Ensures health of mm - several cut-out points here
+            self.sanity_check()       # Ensures health of mm - several cut-out points here
             self.print_status(False)  # Print skew, delta, etc
             self.check_suspend_trading()
             self.check_stop_trading()
-            self.place_orders()  # Creates desired orders and converges to existing orders
+            self.place_orders()       # Creates desired orders and converges to existing orders
             self.update_db()
 
             sleep(settings.LOOP_INTERVAL)
