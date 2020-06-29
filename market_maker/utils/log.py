@@ -34,7 +34,7 @@ def setup_robot_custom_logger(name, log_level=settings.LOG_LEVEL):
     logger.setLevel(level_name)
     if not LOG_TO_CONSOLE:
         log_filename = "./logs/{}/{}_{}".format(settings.ENV.lower(), settings.ROBOTID.lower(), settings.LOG_FILENAME)
-        logging.basicConfig(filename=log_filename, filemode='a', format=log_text_format)
+        logging.basicConfig(filename=log_filename, filemode='a+', format=log_text_format)
     else:
         logger.addHandler(handler)
     LoggerHolder.set_instance(logger)
@@ -55,7 +55,7 @@ def setup_supervisor_custom_logger(name, log_level=settings.SUPERVISOR_LOG_LEVEL
     logger.setLevel(log_level)
     if not LOG_TO_CONSOLE:
         log_filename = "./logs/{}/nerd_supervisor_log_out.txt".format(settings.ENV.lower())
-        logging.basicConfig(filename=log_filename, filemode='a', format=log_text_format)
+        logging.basicConfig(filename=log_filename, filemode='a+', format=log_text_format)
     else:
         logger.addHandler(handler)
     LoggerHolder.set_instance(logger)

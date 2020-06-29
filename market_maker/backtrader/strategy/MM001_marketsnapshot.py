@@ -111,7 +111,7 @@ class MarketRegimeIndicator(bt.Indicator):
         # Using MACD indicator: MACD value above/below zero - bullish/bearish market
         self.MACDtrend2 = [0, 0]
 
-        # Impulse System - bullish/bearish/neutral market
+        # Impulse System - bullish/bearish/range market
         self.ema_val = btind.ExponentialMovingAverage(self.data.close, period=13)
         self.IStrend = [0, 0]
 
@@ -311,7 +311,7 @@ class MarketRegimeIndicator(bt.Indicator):
         else:
             self.MACDtrend2.append(0)
 
-        # Impulse System - bullish/bearish/neutral market
+        # Impulse System - bullish/bearish/range market
         if self.p.useis is True:
             if self.macd_ind.histo[0] > self.macd_ind.histo[-1] and self.ema_val[0] > self.ema_val[-1]:
                 self.IStrend.append(1)
@@ -375,6 +375,7 @@ class MM001_MarketSnapshotStrategy(bt.Strategy):
         ind_entry["5m.marketregime"] = self.market_regime_5m.marketregime[0]
         ind_entry["1h.trends"] = self.market_regime_1h.trends[0]
         ind_entry["1h.marketregime"] = self.market_regime_1h.marketregime[0]
+        ind_entry["1h.marketregime_hist"] = [self.market_regime_1h.marketregime[-4], self.market_regime_1h.marketregime[-3], self.market_regime_1h.marketregime[-2], self.market_regime_1h.marketregime[-1], self.market_regime_1h.marketregime[0]]
         ind_entry["1D.trends"] = self.market_regime_1D.trends[0]
         ind_entry["1D.marketregime"] = self.market_regime_1D.marketregime[0]
         result["OHLCV"] = {}

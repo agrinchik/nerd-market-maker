@@ -285,18 +285,20 @@ class BitMEXWebsocket():
                         if table == 'order':
                             is_canceled = 'ordStatus' in updateData and updateData['ordStatus'] == 'Canceled'
                             if 'cumQty' in updateData and not is_canceled:
-                                curr_position = self.current_qty()
+                                position = self.position(self.symbol)
+                                curr_position = position['currentQty']
                                 order_size = updateData['cumQty'] - item['cumQty']
                                 order_side = item['side']
                                 symbol = item['symbol']
                                 order_price = item['price']
                                 order_position_status = self.get_order_position_status(curr_position, order_side, order_price, order_size)
+                                unrealisedPnl = position['unrealisedPnl']
                                 if order_position_status == ORDER_POSITION_STATUS_INCREASE:
                                     log_info(self.logger, "Execution (position increase): {} {} contracts of {} at {}".format(order_side, order_size, symbol, order_price), True)
                                 elif order_position_status == ORDER_POSITION_STATUS_PARTIAL_CLOSE:
                                     log_info(self.logger, "Execution (position partial close): {} {} contracts of {} at {}".format(order_side, order_size, symbol, order_price), True)
                                 elif order_position_status == ORDER_POSITION_STATUS_FULL_CLOSE:
-                                    log_info(self.logger, "Execution (position fully closed): {} {} contracts of {} at {}".format(order_side, order_size, symbol, order_price), True)
+                                    log_info(self.logger, "Execution (position fully closed): {} {} contracts of {} at {}\nPnL: {}".format(order_side, order_size, symbol, order_price, unrealisedPnl), True)
 
                         # Update this item.
                         item.update(updateData)
