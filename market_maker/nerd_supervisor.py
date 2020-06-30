@@ -143,9 +143,10 @@ class NerdSupervisor:
             new_quoting_side = self.resolve_quoting_side(new_market_regime)
             for position in portfolio_positions:
                 pos_robot_id = position.robot_id
+                pos_exchange = position.exchange
                 robot_quoting_side = robot_settings_dict[pos_robot_id].quoting_side
                 if position.current_qty == 0 and new_quoting_side != robot_quoting_side:
-                    DatabaseManager.update_robot_quoting_side(logger, settings.exchange, position.robot_id, new_quoting_side)
+                    DatabaseManager.update_robot_quoting_side(logger, pos_exchange, position.robot_id, new_quoting_side)
                     log_info(logger, "As {} has no open positions and quoting side has changed, setting the new quoting side={}".format(position.robot_id, new_quoting_side), True)
 
     def run_loop(self):
