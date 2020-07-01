@@ -631,7 +631,6 @@ class NerdMarketMakerRobot:
             self.sanity_check()       # Ensures health of mm - several cut-out points here
             self.print_status(False)  # Print skew, delta, etc
             self.check_suspend_trading()
-            self.check_stop_trading()
             self.place_orders()       # Creates desired orders and converges to existing orders
             self.update_db()
 
