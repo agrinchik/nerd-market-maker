@@ -20,6 +20,7 @@ from market_maker.db.quoting_side import *
 from market_maker.dynamic_settings import DynamicSettings
 from datetime import datetime
 from market_maker.db.db_manager import DatabaseManager
+import numpy as np
 
 #
 # Helpers
@@ -195,7 +196,6 @@ class NerdMarketMakerRobot:
         self.sanity_check()
         self.print_status(False)
         self.check_suspend_trading()
-        self.check_stop_trading()
         self.dynamic_settings.initialize_params()
 
     def get_pct_value(self, val):
@@ -226,23 +226,29 @@ class NerdMarketMakerRobot:
         log_debug(logger, combined_msg, send_to_telegram)
 
     def check_suspend_trading(self):
+        position_size = self.exchange.get_delta()
+        if position_size == 0:
+            return
+
         curr_time = datetime.now()
         symbol = self.exchange.symbol
         ticker = self.exchange.get_ticker(symbol)
         ticker_last_price = ticker["last"]
         price_change_last_checked_seconds_ago = (curr_time - self.price_change_last_check).total_seconds()
-        price_change_diff_pct = abs((ticker_last_price - self.price_change_last_price) * 100 / self.price_change_last_price)
+        price_change = ticker_last_price - self.price_change_last_price
+        price_change_pct = abs(price_change * 100 / self.price_change_last_price)
 
         if settings.STOP_QUOTING_CHECK_IMPULSE_PRICE_CHANGE is True:
-            if self.is_trading_suspended is False:
+            if not self.is_trading_suspended:
                 if self.price_change_last_price == -1:
                     self.price_change_last_check = curr_time
                     self.price_change_last_price = ticker_last_price
                     return
 
                 if price_change_last_checked_seconds_ago > settings.STOP_QUOTING_PRICE_CHANGE_CHECK_TIME_PERIOD_SECONDS:
-                    if price_change_diff_pct > settings.STOP_QUOTING_PRICE_CHANGE_EXCEEDED_THRESHOLD_PCT:
-                        log_info(logger, "WARNING: Trading would be SUSPENDED as during last {} seconds the {} price had moved very fast and exceeded the threshold = {}%.".
+                    is_adverse_price_movement = True if np.sign(position_size) * np.sign(price_change) < 0 else False
+                    if is_adverse_price_movement and price_change_pct > settings.STOP_QUOTING_PRICE_CHANGE_EXCEEDED_THRESHOLD_PCT:
+                        log_info(logger, "WARNING: Trading would be SUSPENDED as during last {} seconds the {} price had moved very fast in the adverse direction and exceeded the threshold = {}%.".
                                  format(settings.STOP_QUOTING_PRICE_CHANGE_CHECK_TIME_PERIOD_SECONDS, symbol, settings.STOP_QUOTING_PRICE_CHANGE_EXCEEDED_THRESHOLD_PCT), True)
                         self.is_trading_suspended = True
                         self.exchange.cancel_all_orders()
@@ -250,22 +256,12 @@ class NerdMarketMakerRobot:
                     self.price_change_last_price = ticker_last_price
             else:
                 if price_change_last_checked_seconds_ago > settings.RESUME_QUOTING_PRICE_CHANGE_CHECK_TIME_PERIOD_SECONDS:
-                    if price_change_diff_pct < settings.RESUME_QUOTING_PRICE_CHANGE_WENT_BELOW_THRESHOLD_PCT:
+                    if price_change_pct < settings.RESUME_QUOTING_PRICE_CHANGE_WENT_BELOW_THRESHOLD_PCT:
                         log_info(logger, "WARNING: Trading would be RESUMED as during last {} seconds the {} price had moved below the threshold = {}%".
                                  format(settings.RESUME_QUOTING_PRICE_CHANGE_CHECK_TIME_PERIOD_SECONDS, symbol, settings.RESUME_QUOTING_PRICE_CHANGE_WENT_BELOW_THRESHOLD_PCT), True)
                         self.is_trading_suspended = False
                     self.price_change_last_check = curr_time
                     self.price_change_last_price = ticker_last_price
-
-    def check_capital_stoploss(self):
-        margin = self.exchange.get_margin()
-        curr_wallet_balance = margin["walletBalance"]
-        # TODO:
-        pass
-
-    def check_stop_trading(self):
-        # TODO:
-        pass
 
     def get_ticker(self):
         instrument = self.exchange.get_instrument()
