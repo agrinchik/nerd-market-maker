@@ -442,8 +442,7 @@ class NerdMarketMakerRobot:
         buys_matched = 0
         sells_matched = 0
         existing_orders = self.exchange.get_orders()
-        robot_settings = DatabaseManager.retrieve_robot_settings(settings.EXCHANGE, settings.ROBOTID)
-        quoting_side = robot_settings.quoting_side
+        quoting_side = settings.QUOTING_SIDE
 
         # Check all existing orders and match them up with what we want to place.
         # If there's an open one, we might be able to amend it to fit what we want.
@@ -585,6 +584,12 @@ class NerdMarketMakerRobot:
         if result:
             self.exchange.cancel_all_orders()
 
+    def handle_db_dynamic_settings_changed(self):
+        robot_settings = DatabaseManager.retrieve_robot_settings(settings.EXCHANGE, settings.ROBOTID)
+        if settings["QUOTING_SIDE"] != robot_settings.quoting_side:
+            settings["QUOTING_SIDE"] = robot_settings.quoting_side
+            self.exchange.cancel_all_orders()
+
     def check_connection(self):
         """Ensure the WS connections are still open."""
         return self.exchange.is_open()
@@ -628,6 +633,7 @@ class NerdMarketMakerRobot:
                 self.restart()
 
             self.update_dynamic_app_settings()
+            self.handle_db_dynamic_settings_changed()
             self.sanity_check()       # Ensures health of mm - several cut-out points here
             self.print_status(False)  # Print skew, delta, etc
             self.check_suspend_trading()

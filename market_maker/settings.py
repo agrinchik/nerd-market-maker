@@ -20,6 +20,7 @@ try:
         settings["SYMBOL"] = db_robot_settings.symbol
         settings["APIKEY"] = db_robot_settings.apikey
         settings["SECRET"] = db_robot_settings.secret
+        settings["QUOTING_SIDE"] = db_robot_settings.quoting_side
         settings["INTERVAL_ADJUST_MULT"] = db_robot_settings.interval_adjust_mult
     else:
         settings["INSTANCEID"] = args.instanceid
