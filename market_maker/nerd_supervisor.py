@@ -47,7 +47,7 @@ class MarketInterface:
         try:
             market_snapshot = self.btrunner.get_market_snapshot()
             if market_snapshot:
-                market_regime_hist = market_snapshot["Indicators"]["Market Regime"]["1h.marketregime_hist"]
+                market_regime_hist = market_snapshot["Indicators"]["Market Regime"]["marketregime_hist"]
                 return market_regime_hist
             else:
                 return None

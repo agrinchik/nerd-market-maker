@@ -17,8 +17,8 @@ class MarketRegimeIndicator(bt.Indicator):
     )
 
     params = (
-        ("sensup", 7),
-        ("sensdn", 7),
+        ("sensup", 2),
+        ("sensdn", 2),
         ("usewow", True),
         ("usebma", True),
         ("usebc", True),
@@ -31,7 +31,7 @@ class MarketRegimeIndicator(bt.Indicator):
         ("usemacdind2", True),
         ("useis", True),
         ("useev", True),
-        ("usealw", False),
+        ("usealw", True),
     )
 
     def _nz(self, data_arr, idx):
@@ -375,9 +375,10 @@ class MM001_MarketSnapshotStrategy(bt.Strategy):
         ind_entry["5m.marketregime"] = self.market_regime_5m.marketregime[0]
         ind_entry["1h.trends"] = self.market_regime_1h.trends[0]
         ind_entry["1h.marketregime"] = self.market_regime_1h.marketregime[0]
-        ind_entry["1h.marketregime_hist"] = [self.market_regime_1h.marketregime[-4], self.market_regime_1h.marketregime[-3], self.market_regime_1h.marketregime[-2], self.market_regime_1h.marketregime[-1], self.market_regime_1h.marketregime[0]]
         ind_entry["1D.trends"] = self.market_regime_1D.trends[0]
         ind_entry["1D.marketregime"] = self.market_regime_1D.marketregime[0]
+        ind_entry["marketregime"] = self.market_regime_5m.marketregime[0]
+        ind_entry["marketregime_hist"] = [self.market_regime_5m.marketregime[-4], self.market_regime_5m.marketregime[-3], self.market_regime_5m.marketregime[-2], self.market_regime_5m.marketregime[-1], self.market_regime_5m.marketregime[0]]
         result["OHLCV"] = {}
         for i, data in enumerate(datas):
             key = "data{}".format(i)
