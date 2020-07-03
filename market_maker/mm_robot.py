@@ -218,7 +218,7 @@ class NerdMarketMakerRobot:
         if position['currentQty'] != 0:
             combined_msg += "Avg Entry Price: {}\n".format(math.get_round_value(position['avgEntryPrice'], tick_log))
             combined_msg += "Distance To Avg Price: {:.2f}%\n".format(self.exchange.get_distance_to_avg_price_pct())
-            combined_msg += "Unrealized PNL: {:.8f} ({:.2f}%)\n".format(math.get_round_value(self.exchange.get_unrealized_pnl(), tick_log), self.exchange.get_unrealized_pnl_pct())
+            combined_msg += "Unrealized PnL: {:.8f} ({:.2f}%)\n".format(math.get_round_value(self.exchange.get_unrealized_pnl(), tick_log), self.exchange.get_unrealized_pnl_pct())
             combined_msg += "Liquidation Price (Dist %): {} ({:.2f}%)\n".format(math.get_round_value(float(position['liquidationPrice']), tick_log), self.exchange.get_distance_to_liq_price_pct())
         combined_msg += "Interval, % (RP) = {} ({})\n".format(self.get_pct_value(self.dynamic_settings.interval_pct), self.dynamic_settings.curr_risk_profile_id)
         combined_msg += "Min/Max Position = {}/{}\n".format(self.dynamic_settings.min_position, self.dynamic_settings.max_position)
@@ -585,7 +585,7 @@ class NerdMarketMakerRobot:
             self.exchange.cancel_all_orders()
 
     def handle_db_dynamic_settings_changed(self):
-        robot_settings = DatabaseManager.retrieve_robot_settings(settings.EXCHANGE, settings.ROBOTID)
+        robot_settings = DatabaseManager.retrieve_robot_settings(logger, settings.EXCHANGE, settings.ROBOTID)
         if settings["QUOTING_SIDE"] != robot_settings.quoting_side:
             settings["QUOTING_SIDE"] = robot_settings.quoting_side
             self.exchange.cancel_all_orders()

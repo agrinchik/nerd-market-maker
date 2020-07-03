@@ -40,10 +40,10 @@ class BacktraderRunner(object):
         return "USD"  # TODO: Reimplement
 
     def init_cerebro(self, cerebro):
-        robots_id_list = DatabaseManager.get_enabled_robots_id_list(settings.EXCHANGE)
+        robots_id_list = DatabaseManager.get_enabled_robots_id_list(logger, settings.EXCHANGE)
         robot_id = robots_id_list[0]
         num_robots = len(robots_id_list)
-        db_robot_settings = DatabaseManager.retrieve_robot_settings(settings.EXCHANGE, robot_id)
+        db_robot_settings = DatabaseManager.retrieve_robot_settings(logger, settings.EXCHANGE, robot_id)
         symbol = db_robot_settings.symbol
 
         broker_config = self.get_broker_config(db_robot_settings)

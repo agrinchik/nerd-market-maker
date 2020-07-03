@@ -58,7 +58,7 @@ class MarketInterface:
 
 class NerdSupervisor:
     def __init__(self, mi):
-        self.robot_ids_list = DatabaseManager.get_enabled_robots_id_list(settings.EXCHANGE)
+        self.robot_ids_list = DatabaseManager.get_enabled_robots_id_list(logger, settings.EXCHANGE)
         self.mi = mi
         self.curr_market_regime_hist = None
         self.last_tg_sent_state = None
@@ -84,7 +84,7 @@ class NerdSupervisor:
             combined_msg = bold("Portfolio Status:\n")
             for position in portfolio_positions:
                 if position.exchange and position.current_qty != 0:
-                    robot_settings = DatabaseManager.retrieve_robot_settings(position.exchange, position.robot_id)
+                    robot_settings = DatabaseManager.retrieve_robot_settings(logger, position.exchange, position.robot_id)
                     combined_msg += "{}: {}|{}|{}|{}|{:.2f}%|{}\n".format(
                         bold(RobotInfo.parse_for_tg_logs(position.robot_id)),
                         bold(self.get_position_arrow_status(position)),
@@ -95,7 +95,7 @@ class NerdSupervisor:
                         robot_settings.quoting_side
                     )
                 else:
-                    robot_settings = DatabaseManager.retrieve_robot_settings(settings.EXCHANGE, position.robot_id)
+                    robot_settings = DatabaseManager.retrieve_robot_settings(logger, settings.EXCHANGE, position.robot_id)
                     combined_msg += "{}: {}|{}\n".format(
                         bold(RobotInfo.parse_for_tg_logs(position.robot_id)),
                         "CLOSED",
@@ -151,7 +151,7 @@ class NerdSupervisor:
 
     def run_loop(self):
         while True:
-            robot_settings_dict = DatabaseManager.get_enabled_robots_dict(settings.EXCHANGE)
+            robot_settings_dict = DatabaseManager.get_enabled_robots_dict(logger, settings.EXCHANGE)
             portfolio_positions = DatabaseManager.get_portfolio_positions(logger, self.robot_ids_list)
             portfolio_balance = DatabaseManager.get_portfolio_balance(logger, self.robot_ids_list)
             self.print_status(portfolio_positions, portfolio_balance, True)
