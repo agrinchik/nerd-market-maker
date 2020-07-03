@@ -163,7 +163,7 @@ class DynamicSettings(object):
             self.order_margin_amount = round(last_wallet_balance * self.order_margin_pct, 8)
             self.max_possible_position_margin = round(self.position_margin_amount * self.default_leverage * ticker_last_price)
             self.max_short_position_ratio = round(1 + 1/(self.position_margin_pct * BITMEX_DEFAULT_LEVERAGE), 8)
-            self.min_position = round(-1 * last_wallet_balance * self.max_short_position_ratio * ticker_last_price)
+            self.min_position = round(-1 * self.max_possible_position_margin * self.max_short_position_ratio)
             self.max_position = round(self.max_possible_position_margin)
             self.order_step_size = self.get_order_step_size(last_wallet_balance)
             self.order_start_size = round(self.max_possible_position_margin / self.max_number_dca_orders - self.order_step_size * (self.max_number_dca_orders - 1) / 2)
