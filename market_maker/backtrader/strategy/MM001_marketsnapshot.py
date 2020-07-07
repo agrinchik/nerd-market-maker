@@ -345,13 +345,16 @@ class MarketRegimeIndicator(bt.Indicator):
             if trends_sum <= (-1 * self.p.sensdn):
                 self.l.marketregime[0] = -1
             else:
-                prev_marketregime = self.l.marketregime[0]
-                is_nan = math.isnan(prev_marketregime)
-                if self.p.usealw is True and not is_nan:
-                    self.l.marketregime[0] = prev_marketregime
-                else:
+                try:
+                    prev_marketregime = self.l.marketregime[0]
+                    is_nan = math.isnan(prev_marketregime)
+                    if self.p.usealw is True and is_nan is False:
+                        self.l.marketregime[0] = prev_marketregime
+                    else:
+                        self.l.marketregime[0] = 0
+                except Exception as e:
+                    logger.info("Strange exception occurred: {}".format(e))
                     self.l.marketregime[0] = 0
-
 
 class MM001_MarketSnapshotStrategy(bt.Strategy):
     params = (
