@@ -355,6 +355,8 @@ class MarketRegimeIndicator(bt.Indicator):
                 except Exception as e:
                     logger.info("Strange exception occurred: {}".format(e))
                     self.l.marketregime[0] = 0
+        logger.info("trends_sum={}, self.p.sensup={}, self.p.sensdn={}, self.p.usealw={}, self.l.trends[0]={}. Resolved self.l.marketregime[0]={}".format(trends_sum, self.p.sensup, self.p.sensdn, self.p.usealw, self.l.trends[0], self.l.marketregime[0]))
+
 
 class MM001_MarketSnapshotStrategy(bt.Strategy):
     params = (
