@@ -342,6 +342,8 @@ class MarketRegimeIndicator(bt.Indicator):
         prev_marketregime = self.l.marketregime[0]
         is_nan = math.isnan(prev_marketregime)
 
+        logger.info("BEFORE: type(prev_marketregime)={}, self.l.marketregime[-1]={}, self.l.marketregime[0]={}, is_nan={}, trends_sum={}, self.p.sensup={}, self.p.sensdn={}, self.p.usealw={}, self.l.trends[0]={}".format(type(prev_marketregime), self.l.marketregime[-1], self.l.marketregime[0], is_nan, trends_sum, self.p.sensup, self.p.sensdn, self.p.usealw, self.l.trends[0]))
+
         if trends_sum >= self.p.sensup:
             self.l.marketregime[0] = 1
         else:
@@ -356,7 +358,7 @@ class MarketRegimeIndicator(bt.Indicator):
                 except Exception as e:
                     logger.info("Strange exception occurred: {}".format(e))
                     self.l.marketregime[0] = 0
-        logger.info("prev_marketregime={}, is_nan={}, trends_sum={}, self.p.sensup={}, self.p.sensdn={}, self.p.usealw={}, self.l.trends[0]={}. Resolved self.l.marketregime[0]={}".format(prev_marketregime, is_nan, trends_sum, self.p.sensup, self.p.sensdn, self.p.usealw, self.l.trends[0], self.l.marketregime[0]))
+        logger.info("AFTER: self.l.marketregime[-1]={}, self.l.marketregime[0]={}, is_nan={}, trends_sum={}, self.p.sensup={}, self.p.sensdn={}, self.p.usealw={}, self.l.trends[0]={}. Resolved self.l.marketregime[0]={}".format(self.l.marketregime[-1], self.l.marketregime[0], is_nan, trends_sum, self.p.sensup, self.p.sensdn, self.p.usealw, self.l.trends[0], self.l.marketregime[0]))
 
 
 class MM001_MarketSnapshotStrategy(bt.Strategy):
