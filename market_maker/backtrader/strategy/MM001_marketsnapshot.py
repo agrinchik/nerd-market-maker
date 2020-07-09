@@ -339,26 +339,18 @@ class MarketRegimeIndicator(bt.Indicator):
         trends_sum = self.WOWtrend[-1] + self.BMAtrend[-1] + self.BARtrend[-1] + self.SUPtrend[-1] + self.DItrend[-1] + self.TTStrend[-1] + self.RSItrend[-1] + self.WTOtrend[-1] + self.MACDtrend1[-1] + self.MACDtrend2[-1] + self.IStrend[-1] + self.EVtrend[-1]
         self.l.trends[0] = trends_sum
 
-        prev_marketregime = self.l.marketregime[0]
-        is_nan = math.isnan(prev_marketregime)
-
-        logger.info("BEFORE: type(prev_marketregime)={}, self.l.marketregime[-1]={}, self.l.marketregime[0]={}, is_nan={}, trends_sum={}, self.p.sensup={}, self.p.sensdn={}, self.p.usealw={}, self.l.trends[0]={}".format(type(prev_marketregime), self.l.marketregime[-1], self.l.marketregime[0], is_nan, trends_sum, self.p.sensup, self.p.sensdn, self.p.usealw, self.l.trends[0]))
-
         if trends_sum >= self.p.sensup:
             self.l.marketregime[0] = 1
         else:
             if trends_sum <= (-1 * self.p.sensdn):
                 self.l.marketregime[0] = -1
             else:
-                try:
-                    if self.p.usealw is True and is_nan is False:
-                        self.l.marketregime[0] = prev_marketregime
-                    else:
-                        self.l.marketregime[0] = 0
-                except Exception as e:
-                    logger.info("Strange exception occurred: {}".format(e))
+                if self.p.usealw is True:
+                    prev_marketregime = self.l.marketregime[-1]
+                    self.l.marketregime[0] = prev_marketregime
+                else:
                     self.l.marketregime[0] = 0
-        logger.info("AFTER: self.l.marketregime[-1]={}, self.l.marketregime[0]={}, is_nan={}, trends_sum={}, self.p.sensup={}, self.p.sensdn={}, self.p.usealw={}, self.l.trends[0]={}. Resolved self.l.marketregime[0]={}".format(self.l.marketregime[-1], self.l.marketregime[0], is_nan, trends_sum, self.p.sensup, self.p.sensdn, self.p.usealw, self.l.trends[0], self.l.marketregime[0]))
+
 
 
 class MM001_MarketSnapshotStrategy(bt.Strategy):
