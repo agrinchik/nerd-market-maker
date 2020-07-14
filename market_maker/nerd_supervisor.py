@@ -11,11 +11,11 @@ from market_maker.db.market_regime import MarketRegime
 from market_maker.utils.log import log_info
 from market_maker.utils.log import log_error
 from market_maker.settings import settings
-from market_maker.utils import log, math
+from market_maker.utils import log, mm_math
 from market_maker.db.db_manager import DatabaseManager
 from market_maker.backtrader.btrunner import BacktraderRunner
 from market_maker.db.model import *
-from market_maker.db.quoting_side import *
+import math
 
 CHAR_ARROW_UP = "⇧"
 CHAR_ARROW_DOWN = "⇩"
@@ -43,16 +43,11 @@ class MarketInterface:
         self.mit.start()
         logger.info("********* Started Market Interface *********")
 
-    def get_market_regime(self):
+    def get_market_snapshot(self, exchange, symbol):
         try:
-            market_snapshot = self.btrunner.get_market_snapshot()
-            if market_snapshot:
-                market_regime_hist = market_snapshot["Indicators"]["Market Regime"]["marketregime_hist"]
-                return market_regime_hist
-            else:
-                return None
+            return self.btrunner.get_market_snapshot(exchange, symbol)
         except Exception as e:
-            log_error(logger, "Exception has occurred in MarketInterface.get_market_regime(): {}".format(e), True)
+            log_error(logger, "Exception has occurred in MarketInterface.get_market_snapshot(): {}".format(e), True)
             return None
 
 
@@ -60,7 +55,7 @@ class NerdSupervisor:
     def __init__(self, mi):
         self.robot_ids_list = DatabaseManager.get_enabled_robots_id_list(logger, settings.EXCHANGE)
         self.mi = mi
-        self.curr_market_regime_hist = None
+        self.curr_market_snapshot = None
         self.last_tg_sent_state = None
         atexit.register(self.exit)
         signal.signal(signal.SIGTERM, self.exit)
@@ -77,6 +72,11 @@ class NerdSupervisor:
             return CHAR_ARROW_DOWN
         return CHAR_HYPHEN
 
+    def get_pct_value(self, val):
+        if isinstance(val, str):
+            return val
+        return "{}%".format(round(val * 100, 2))
+
     def print_status(self, portfolio_positions, portfolio_balance, send_to_telegram):
         """Print the current status of NerdSupervisor"""
 
@@ -89,8 +89,8 @@ class NerdSupervisor:
                         bold(RobotInfo.parse_for_tg_logs(position.robot_id)),
                         bold(self.get_position_arrow_status(position)),
                         position.symbol,
-                        math.get_round_value(position.avg_entry_price, position.tick_log),
-                        math.get_round_value(position.current_qty, position.tick_log),
+                        mm_math.get_round_value(position.avg_entry_price, position.tick_log),
+                        mm_math.get_round_value(position.current_qty, position.tick_log),
                         position.distance_to_avg_price_pct,
                         robot_settings.quoting_side
                     )
@@ -105,13 +105,17 @@ class NerdSupervisor:
             for position in portfolio_positions:
                 combined_msg += "  {}".format(bold(self.get_position_arrow_status(position)))
 
-            combined_msg += "\n{} {}".format(bold("Mkt Regime:"), MarketRegime.get_name(self.curr_market_regime_hist[-1]) if self.curr_market_regime_hist else "N/A")
-            if self.curr_market_regime_hist and len(self.curr_market_regime_hist) > 0:
-                combined_msg += "\n{} {} {} {} {} {}".format(bold("Mkt Regime Hist:"), round(self.curr_market_regime_hist[0]), round(self.curr_market_regime_hist[1]),
-                                                            round(self.curr_market_regime_hist[2]), round(self.curr_market_regime_hist[3]), round(self.curr_market_regime_hist[4]))
+            combined_msg += "\n{} {}".format(bold("ATR (5 min):"), self.get_pct_value(self.curr_market_snapshot.atr_pct) if self.curr_market_snapshot else "N/A")
+            combined_msg += "\n{} {}".format(bold("Mkt Regime (5 min):"), MarketRegime.get_name(self.curr_market_snapshot.marketregime) if self.curr_market_snapshot else "N/A")
+            if self.curr_market_snapshot:
+                combined_msg += "\n{} {} {} {} {} {}".format(bold("Mkt Regime Hist:"), round(self.curr_market_snapshot.marketregime_hist1),
+                                                                                       round(self.curr_market_snapshot.marketregime_hist2),
+                                                                                       round(self.curr_market_snapshot.marketregime_hist3),
+                                                                                       round(self.curr_market_snapshot.marketregime_hist4),
+                                                                                       round(self.curr_market_snapshot.marketregime_hist5))
 
             num_robots = len(self.robot_ids_list)
-            combined_msg += "\n{} [{} {}]: {}\n".format(bold("Total Balance"), bold(num_robots), bold("robots" if num_robots > 1 else "robot"), math.get_round_value(portfolio_balance, 8))
+            combined_msg += "\n{} [{} {}]: {}\n".format(bold("Total Balance"), bold(num_robots), bold("robots" if num_robots > 1 else "robot"), mm_math.get_round_value(portfolio_balance, 8))
             log_info(logger, combined_msg, send_to_telegram)
             self.last_tg_sent_state = portfolio_balance
 
@@ -124,40 +128,34 @@ class NerdSupervisor:
 
         os._exit(status)
 
-    def resolve_quoting_side(self, market_regime):
-        if market_regime == MarketRegime.BULLISH:
-            return QuotingSide.LONG
-        if market_regime == MarketRegime.BEARISH:
-            return QuotingSide.SHORT
-        if market_regime == MarketRegime.RANGE:
-            return QuotingSide.BOTH
+    def on_market_snapshot_update(self, market_snapshot):
+        if market_snapshot:
+            logger.debug("self.market_snapshot={}".format(market_snapshot))
+            prev_market_regime = self.curr_market_snapshot.marketregime if self.curr_market_snapshot else None
+            prev_atr = self.curr_market_snapshot.atr_pct if self.curr_market_snapshot else "N/A"
+            new_market_regime = market_snapshot.marketregime
+            new_atr = market_snapshot.atr_pct
+            is_atr_changed = prev_atr != new_atr and not math.isnan(new_atr)
+            is_market_regime_changed = prev_market_regime != new_market_regime and not math.isnan(new_market_regime)
+            if is_atr_changed or is_market_regime_changed:
+                log_info(logger, "Market Snapshot has been updated:\nATR (5 min): {} => {}\nMarket Regime: {} => {}".format(self.get_pct_value(prev_atr), self.get_pct_value(new_atr), MarketRegime.get_name(prev_market_regime), MarketRegime.get_name(new_market_regime)), True)
+                DatabaseManager.update_market_snapshot(logger, market_snapshot)
+                self.curr_market_snapshot = market_snapshot
 
-    def check_market_regime_changed(self, robot_settings_dict, market_regime_hist, portfolio_positions):
-        logger.debug("self.market_regime_hist={}".format(market_regime_hist))
-        if market_regime_hist is not None and len(market_regime_hist) > 1:
-            new_market_regime = market_regime_hist[-1]
-            prev_market_regime = self.curr_market_regime_hist[-1] if self.curr_market_regime_hist and len(self.curr_market_regime_hist) > 1 else None
-            self.curr_market_regime_hist = market_regime_hist
-            if new_market_regime != prev_market_regime:
-                log_info(logger, "Market Regime has changed: {} => {}".format(MarketRegime.get_name(prev_market_regime), MarketRegime.get_name(new_market_regime)), True)
-            new_quoting_side = self.resolve_quoting_side(new_market_regime)
-            for position in portfolio_positions:
-                pos_robot_id = position.robot_id
-                pos_exchange = position.exchange
-                robot_quoting_side = robot_settings_dict[pos_robot_id].quoting_side
-                if position.current_qty == 0 and new_quoting_side != robot_quoting_side:
-                    DatabaseManager.update_robot_quoting_side(logger, pos_exchange, position.robot_id, new_quoting_side)
-                    log_info(logger, "As {} has no open positions and quoting side has changed, setting the new quoting side={}".format(position.robot_id, new_quoting_side), True)
+    def get_symbol(self, robot_settings_dict):
+        robot_settings = robot_settings_dict[self.robot_ids_list[0]]
+        return robot_settings.symbol
 
     def run_loop(self):
         while True:
             robot_settings_dict = DatabaseManager.get_enabled_robots_dict(logger, settings.EXCHANGE)
             portfolio_positions = DatabaseManager.get_portfolio_positions(logger, self.robot_ids_list)
             portfolio_balance = DatabaseManager.get_portfolio_balance(logger, self.robot_ids_list)
+            symbol = self.get_symbol(robot_settings_dict)
+            market_snapshot = self.mi.get_market_snapshot(settings.EXCHANGE, symbol)
+            self.on_market_snapshot_update(market_snapshot)
             self.print_status(portfolio_positions, portfolio_balance, True)
             sleep(DEFAULT_LOOP_INTERVAL)
-            market_regime_hist = self.mi.get_market_regime()
-            self.check_market_regime_changed(robot_settings_dict, market_regime_hist, portfolio_positions)
 
     def restart(self):
         logger.info("Restarting the NerdSupervisor ...")

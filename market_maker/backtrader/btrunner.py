@@ -10,8 +10,8 @@ from market_maker.db.db_manager import DatabaseManager
 from market_maker.utils.log import log_error
 import traceback
 
-OHLCV_BAR_LIMIT = 100
-PREFETCH_BARS = 100
+OHLCV_BAR_LIMIT = 250
+PREFETCH_BARS = 250
 
 logger = log.setup_supervisor_custom_logger('root')
 
@@ -124,23 +124,23 @@ class BacktraderRunner(object):
         strategy_class = self._strategy_enum.value.clazz
         cerebro.addstrategy(strategy_class, **self._strategy_params)
 
-    def get_market_snapshot(self):
-        strategy = self._cerebro.runningstrats[0] if len(self._cerebro.strats) > 0 and len(self._cerebro.runningstrats) > 0 else None
+    def get_market_snapshot(self, exchange, symbol):
+        strategy = self._cerebro.runningstrats[0] if self._cerebro and len(self._cerebro.strats) > 0 and len(self._cerebro.runningstrats) > 0 else None
         if strategy is not None and strategy.is_datas_live() and strategy.is_live_status() and strategy.is_all_datas_live_state():
-            return strategy.get_market_snapshot()
+            return strategy.get_market_snapshot(exchange, symbol)
         else:
             return None
 
     def start(self):
-        #try:
-        self._strategy_enum = BTStrategyEnum.MM001_MARKET_SNAPSHOT_STRATEGY_ID
-        self.init_strategy_params(self._strategy_enum)
+        try:
+            self._strategy_enum = BTStrategyEnum.MM001_MARKET_SNAPSHOT_STRATEGY_ID
+            self.init_strategy_params(self._strategy_enum)
 
-        self._cerebro = bt.Cerebro(quicknotify=True)
-        self.init_cerebro(self._cerebro)
-        self.add_strategy(self._cerebro)
+            self._cerebro = bt.Cerebro(quicknotify=True)
+            self.init_cerebro(self._cerebro)
+            self.add_strategy(self._cerebro)
 
-        self._cerebro.run()
+            self._cerebro.run()
 
-        #except Exception as e:
-        #    log_error(logger, traceback.format_exc(limit=3, chain=False), True)
+        except Exception as e:
+            log_error(logger, traceback.format_exc(limit=3, chain=False), True)

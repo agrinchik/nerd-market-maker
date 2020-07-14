@@ -3,7 +3,6 @@ from time import sleep
 import sys
 import os
 import requests
-import atexit
 import signal
 from market_maker.utils.log import log_debug
 from market_maker.utils.log import log_info
@@ -13,18 +12,17 @@ from market_maker import bitmex
 from market_maker import bitfinex
 from market_maker.settings import settings
 from market_maker.utils.bitmex import errors
-from market_maker.utils import log, math
+from market_maker.utils import log, mm_math
 from market_maker.exchange import ExchangeInfo
 from market_maker.db.model import *
-from market_maker.db.quoting_side import *
 from market_maker.dynamic_settings import DynamicSettings
 from datetime import datetime
 from market_maker.db.db_manager import DatabaseManager
 import numpy as np
+from market_maker.db.quoting_side import *
+from market_maker.db.market_regime import MarketRegime
+import math
 
-#
-# Helpers
-#
 logger = log.setup_robot_custom_logger('root')
 
 
@@ -173,6 +171,7 @@ class NerdMarketMakerRobot:
 
         logger.info("NerdMarketMakerRobot initializing, connecting to exchange. Live run: executing real trades.")
 
+        self.curr_market_snapshot = None
         self.start_time = datetime.now()
         self.starting_qty = self.exchange.get_delta()
         self.running_qty = self.starting_qty
@@ -212,14 +211,15 @@ class NerdMarketMakerRobot:
         tick_log = instrument["tickLog"]
         last_price = self.get_ticker()["last"]
 
-        combined_msg = "Wallet Balance: {}\n".format(math.get_round_value(wallet_balance, 8))
-        combined_msg += "Last Price: {}\n".format(math.get_round_value(last_price, 8))
-        combined_msg += "Position: {} ({}%)\n".format(math.get_round_value(self.running_qty, tick_log), round(self.get_deposit_usage_pct(self.running_qty), 2))
+        combined_msg = "Wallet Balance: {}\n".format(mm_math.get_round_value(wallet_balance, 8))
+        combined_msg += "Last Price: {}\n".format(mm_math.get_round_value(last_price, 8))
+        combined_msg += "Position: {} ({}%)\n".format(mm_math.get_round_value(self.running_qty, tick_log), round(self.get_deposit_usage_pct(self.running_qty), 2))
         if position['currentQty'] != 0:
-            combined_msg += "Avg Entry Price: {}\n".format(math.get_round_value(position['avgEntryPrice'], tick_log))
+            combined_msg += "Avg Entry Price: {}\n".format(mm_math.get_round_value(position['avgEntryPrice'], tick_log))
             combined_msg += "Distance To Avg Price: {:.2f}%\n".format(self.exchange.get_distance_to_avg_price_pct())
-            combined_msg += "Unrealized PnL: {:.8f} ({:.2f}%)\n".format(math.get_round_value(self.exchange.get_unrealized_pnl(), tick_log), self.exchange.get_unrealized_pnl_pct())
-            combined_msg += "Liquidation Price (Dist %): {} ({:.2f}%)\n".format(math.get_round_value(float(position['liquidationPrice']), tick_log), self.exchange.get_distance_to_liq_price_pct())
+            combined_msg += "Unrealized PnL: {:.8f} ({:.2f}%)\n".format(mm_math.get_round_value(self.exchange.get_unrealized_pnl(), tick_log), self.exchange.get_unrealized_pnl_pct())
+            combined_msg += "Liquidation Price (Dist %): {} ({:.2f}%)\n".format(mm_math.get_round_value(float(position['liquidationPrice']), tick_log), self.exchange.get_distance_to_liq_price_pct())
+        combined_msg += "ATR (5 min) = {}\n".format(self.get_pct_value(self.curr_market_snapshot.atr_pct)) if self.curr_market_snapshot else "N/A"
         combined_msg += "Interval, % (RP) = {} ({})\n".format(self.get_pct_value(self.dynamic_settings.interval_pct), self.dynamic_settings.curr_risk_profile_id)
         combined_msg += "Min/Max Position = {}/{}\n".format(self.dynamic_settings.min_position, self.dynamic_settings.max_position)
         combined_msg += "Lot Size = {}\n".format(self.dynamic_settings.order_start_size)
@@ -316,7 +316,7 @@ class NerdMarketMakerRobot:
             if index < 0 and start_position > self.start_position_sell:
                 start_position = self.start_position_buy
 
-        return math.toNearest(start_position * (1 + settings.INTERVAL) ** index, instrument['tickSize'])
+        return mm_math.toNearest(start_position * (1 + settings.INTERVAL) ** index, instrument['tickSize'])
 
     ###
     # Orders
@@ -361,7 +361,7 @@ class NerdMarketMakerRobot:
 
         instrument = self.exchange.get_instrument()
         minOrderLog = instrument.get("minOrderLog")
-        quantity = math.roundQuantity(settings.ORDER_START_SIZE + ((abs(index) - 1) * settings.ORDER_STEP_SIZE), minOrderLog)
+        quantity = mm_math.roundQuantity(settings.ORDER_START_SIZE + ((abs(index) - 1) * settings.ORDER_STEP_SIZE), minOrderLog)
 
         price = self.get_price_offset(index)
 
@@ -371,12 +371,12 @@ class NerdMarketMakerRobot:
         instrument = self.exchange.get_instrument()
         position = self.exchange.get_position()
         avg_entry_price = position['avgEntryPrice']
-        take_profit_pct = settings.MODE2_CLOSE_FULL_POSITION_TAKE_PROFIT_PCT
+        take_profit_pct = settings.MODE2_CLOSE_FULL_POSITION_ATR_MULT * self.curr_market_snapshot.atr_pct
         if is_long:
             price = avg_entry_price + avg_entry_price * take_profit_pct
         else:
             price = avg_entry_price - avg_entry_price * take_profit_pct
-        price = math.toNearest(price, instrument['tickSize'])
+        price = mm_math.toNearest(price, instrument['tickSize'])
 
         return {'price': price, 'orderQty': quantity, 'side': "Sell" if is_long is True else "Buy"}
 
@@ -561,7 +561,7 @@ class NerdMarketMakerRobot:
         # Sanity check:
         if self.get_price_offset(-1) >= ticker["sell"] or self.get_price_offset(1) <= ticker["buy"]:
             logger.error("Buy: {}, Sell: {}".format(self.start_position_buy, self.start_position_sell))
-            logger.error("First buy position: {}\nBitMEX Best Ask: {}\nFirst sell position: {}\nBitMEX Best Bid: {}".format(self.get_price_offset(-1), ticker["sell"], self.get_price_offset(1), ticker["buy"]))
+            logger.error("First buy position: {}\nBest Ask: {}\nFirst sell position: {}\nBest Bid: {}".format(self.get_price_offset(-1), ticker["sell"], self.get_price_offset(1), ticker["buy"]))
             log_error(logger, "Sanity check failed, exchange data is inconsistent", True)
             self.exit()
 
@@ -578,17 +578,45 @@ class NerdMarketMakerRobot:
     # Running
     ###
 
-    def update_dynamic_app_settings(self):
-        result = self.dynamic_settings.update_app_settings()
+    def update_dynamic_app_settings(self, force_update):
+        result = self.dynamic_settings.update_app_settings(self.curr_market_snapshot, force_update)
 
         if result:
             self.exchange.cancel_all_orders()
 
-    def handle_db_dynamic_settings_changed(self):
+    def resolve_quoting_side(self, market_regime):
+        if market_regime == MarketRegime.BULLISH:
+            return QuotingSide.LONG
+        if market_regime == MarketRegime.BEARISH:
+            return QuotingSide.SHORT
+        if market_regime == MarketRegime.RANGE:
+            return QuotingSide.BOTH
+
+    def on_market_snapshot_update(self):
         robot_settings = DatabaseManager.retrieve_robot_settings(logger, settings.EXCHANGE, settings.ROBOTID)
-        if settings["QUOTING_SIDE"] != robot_settings.quoting_side:
-            settings["QUOTING_SIDE"] = robot_settings.quoting_side
-            self.exchange.cancel_all_orders()
+        market_snapshot = DatabaseManager.retrieve_market_snapshot(logger, settings.EXCHANGE, settings.SYMBOL)
+        if market_snapshot:
+            logger.debug("on_market_snapshot_update(): self.market_snapshot={}".format(market_snapshot))
+            prev_market_regime = self.curr_market_snapshot.marketregime if self.curr_market_snapshot else None
+            prev_atr = self.curr_market_snapshot.atr_pct if self.curr_market_snapshot else "N/A"
+            new_market_regime = market_snapshot.marketregime
+            new_atr = market_snapshot.atr_pct
+            is_atr_changed = prev_atr != new_atr and not math.isnan(new_atr)
+            is_market_regime_changed = prev_market_regime != new_market_regime and not math.isnan(new_market_regime)
+            if is_atr_changed or is_market_regime_changed:
+                # log_info(logger, "Market Snapshot has been updated:\nATR (5 min): {} => {}\nMarket Regime: {} => {}".format(self.get_pct_value(prev_atr), self.get_pct_value(new_atr), MarketRegime.get_name(prev_market_regime), MarketRegime.get_name(new_market_regime)), True)
+                self.curr_market_snapshot = market_snapshot
+
+            if is_atr_changed:
+                self.update_dynamic_app_settings(True)
+
+            new_quoting_side = self.resolve_quoting_side(new_market_regime)
+            robot_quoting_side = robot_settings.quoting_side
+            if self.running_qty == 0 and new_quoting_side != robot_quoting_side:
+                DatabaseManager.update_robot_quoting_side(logger, settings.EXCHANGE, settings.ROBOTID, new_quoting_side)
+                settings.QUOTING_SIDE = robot_settings.quoting_side
+                log_info(logger, "As {} has no open positions and quoting side has changed, setting the new quoting side={}".format(settings.ROBOTID, new_quoting_side), True)
+                self.exchange.cancel_all_orders()
 
     def check_connection(self):
         """Ensure the WS connections are still open."""
@@ -632,8 +660,8 @@ class NerdMarketMakerRobot:
                 sleep(RESTART_TIMEOUT)
                 self.restart()
 
-            self.update_dynamic_app_settings()
-            self.handle_db_dynamic_settings_changed()
+            self.on_market_snapshot_update()
+            self.update_dynamic_app_settings(False)
             self.sanity_check()       # Ensures health of mm - several cut-out points here
             self.print_status(False)  # Print skew, delta, etc
             self.check_suspend_trading()

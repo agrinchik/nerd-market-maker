@@ -4,6 +4,7 @@ from market_maker.utils import log
 from market_maker.backtrader.utils import UTC_to_CurrTZ
 from market_maker.backtrader.ccxtbt import CCXTFeed
 import math
+from market_maker.db.db_manager import DatabaseManager
 
 logger = log.setup_supervisor_custom_logger('root')
 
@@ -13,7 +14,8 @@ class MarketRegimeIndicator(bt.Indicator):
     This is an implementation of an indicator based on strategy from TradingView - S002 Alex (Noro) SILA v1.6.1L strategy.
     '''
     lines = ('marketregime',
-             'trends'
+             'trends',
+             'atr_pct'
     )
 
     params = (
@@ -119,6 +121,11 @@ class MarketRegimeIndicator(bt.Indicator):
         self.evLasthigh = btind.Highest(self.data.close, period=30)
         self.evLastlow = btind.Lowest(self.data.close, period=30)
         self.EVtrend = [0, 0]
+
+        # Average ATR
+        self.ema_val2 = btind.MovingAverageExponential(self.data.close, period=200)
+        self.atr_val = btind.AverageTrueRange(self.data, period=200, movav=btind.MovAv.SMA)
+        self.atr_val_pct = self.atr_val / self.ema_val2
         ########### INDICATORS SECTION END ########
 
     def next(self):
@@ -351,6 +358,7 @@ class MarketRegimeIndicator(bt.Indicator):
                 else:
                     self.l.marketregime[0] = 0
 
+        self.l.atr_pct[0] = round(self.atr_val_pct[0], 4)
 
 
 class MM001_MarketSnapshotStrategy(bt.Strategy):
@@ -367,31 +375,44 @@ class MM001_MarketSnapshotStrategy(bt.Strategy):
     def get_last_ohlc_val(self, line):
         return line[0] if line[0] and not math.isnan(line[0]) else line[-1]
 
-    def get_market_snapshot(self):
-        result = {}
-        datas = self.datas
-        result["Indicators"] = {}
-        ind_entry = result["Indicators"]["Market Regime"] = {}
-        ind_entry["5m.trends"] = self.market_regime_5m.trends[0]
-        ind_entry["5m.marketregime"] = self.market_regime_5m.marketregime[0]
-        ind_entry["1h.trends"] = self.market_regime_1h.trends[0]
-        ind_entry["1h.marketregime"] = self.market_regime_1h.marketregime[0]
-        ind_entry["1D.trends"] = self.market_regime_1D.trends[0]
-        ind_entry["1D.marketregime"] = self.market_regime_1D.marketregime[0]
-        ind_entry["marketregime"] = self.market_regime_5m.marketregime[0]
-        ind_entry["marketregime_hist"] = [self.market_regime_5m.marketregime[-4], self.market_regime_5m.marketregime[-3], self.market_regime_5m.marketregime[-2], self.market_regime_5m.marketregime[-1], self.market_regime_5m.marketregime[0]]
-        result["OHLCV"] = {}
-        for i, data in enumerate(datas):
-            key = "data{}".format(i)
-            ohlcv = [
-                        self.get_last_ohlc_val(data.open),
-                        self.get_last_ohlc_val(data.high),
-                        self.get_last_ohlc_val(data.low),
-                        self.get_last_ohlc_val(data.close),
-                        self.get_last_ohlc_val(data.volume)
-                    ]
-            result["OHLCV"][key] = ohlcv
-        return result
+    def get_market_snapshot(self, exchange, symbol):
+        market_snapshot = DatabaseManager.retrieve_market_snapshot(logger, exchange, symbol)
+
+        market_snapshot.trends_5m = self.market_regime_5m.trends[0]
+        market_snapshot.trends_1h = self.market_regime_1h.trends[0]
+        market_snapshot.trends_1D = self.market_regime_1D.trends[0]
+        market_snapshot.marketregime_5m = self.market_regime_5m.marketregime[0]
+        market_snapshot.marketregime_1h = self.market_regime_1h.marketregime[0]
+        market_snapshot.marketregime_1D = self.market_regime_1D.marketregime[0]
+        market_snapshot.marketregime = self.market_regime_5m.marketregime[0]
+        market_snapshot.marketregime_hist1 = self.market_regime_5m.marketregime[-4]
+        market_snapshot.marketregime_hist2 = self.market_regime_5m.marketregime[-3]
+        market_snapshot.marketregime_hist3 = self.market_regime_5m.marketregime[-2]
+        market_snapshot.marketregime_hist4 = self.market_regime_5m.marketregime[-1]
+        market_snapshot.marketregime_hist5 = self.market_regime_5m.marketregime[0]
+        market_snapshot.atr_pct = self.market_regime_5m.atr_pct[0]
+        market_snapshot.ohlcv_1m_open = self.get_last_ohlc_val(self.datas[0].open)
+        market_snapshot.ohlcv_1m_high = self.get_last_ohlc_val(self.datas[0].high)
+        market_snapshot.ohlcv_1m_low = self.get_last_ohlc_val(self.datas[0].low)
+        market_snapshot.ohlcv_1m_close = self.get_last_ohlc_val(self.datas[0].close)
+        market_snapshot.ohlcv_1m_volume = self.get_last_ohlc_val(self.datas[0].volume)
+        market_snapshot.ohlcv_5m_open = self.get_last_ohlc_val(self.datas[1].open)
+        market_snapshot.ohlcv_5m_high = self.get_last_ohlc_val(self.datas[1].high)
+        market_snapshot.ohlcv_5m_low = self.get_last_ohlc_val(self.datas[1].low)
+        market_snapshot.ohlcv_5m_close = self.get_last_ohlc_val(self.datas[1].close)
+        market_snapshot.ohlcv_5m_volume = self.get_last_ohlc_val(self.datas[1].volume)
+        market_snapshot.ohlcv_1h_open = self.get_last_ohlc_val(self.datas[2].open)
+        market_snapshot.ohlcv_1h_high = self.get_last_ohlc_val(self.datas[2].high)
+        market_snapshot.ohlcv_1h_low = self.get_last_ohlc_val(self.datas[2].low)
+        market_snapshot.ohlcv_1h_close = self.get_last_ohlc_val(self.datas[2].close)
+        market_snapshot.ohlcv_1h_volume = self.get_last_ohlc_val(self.datas[2].volume)
+        market_snapshot.ohlcv_1D_open = self.get_last_ohlc_val(self.datas[3].open)
+        market_snapshot.ohlcv_1D_high = self.get_last_ohlc_val(self.datas[3].high)
+        market_snapshot.ohlcv_1D_low = self.get_last_ohlc_val(self.datas[3].low)
+        market_snapshot.ohlcv_1D_close = self.get_last_ohlc_val(self.datas[3].close)
+        market_snapshot.ohlcv_1D_volume = self.get_last_ohlc_val(self.datas[3].volume)
+
+        return market_snapshot
 
     def is_datas_live(self):
         for d in self.datas:
@@ -450,8 +471,11 @@ class MM001_MarketSnapshotStrategy(bt.Strategy):
         self.log_data(3, self.data3)
         logger.debug('self.market_regime_5m.trends = {}'.format(self.market_regime_5m.trends[0]))
         logger.debug('self.market_regime_5m.marketregime = {}'.format(self.market_regime_5m.marketregime[0]))
+        logger.debug('self.market_regime_5m.atr_pct = {}'.format(self.market_regime_5m.atr_pct[0]))
         logger.debug('self.market_regime_1h.trends = {}'.format(self.market_regime_1h.trends[0]))
         logger.debug('self.market_regime_1h.marketregime = {}'.format(self.market_regime_1h.marketregime[0]))
+        logger.debug('self.market_regime_1h.atr_pct = {}'.format(self.market_regime_1h.atr_pct[0]))
         logger.debug('self.market_regime_1D.trends = {}'.format(self.market_regime_1D.trends[0]))
         logger.debug('self.market_regime_1D.marketregime = {}'.format(self.market_regime_1D.marketregime[0]))
+        logger.debug('self.market_regime_1D.atr_pct = {}'.format(self.market_regime_1D.atr_pct[0]))
         logger.debug('----------------------')

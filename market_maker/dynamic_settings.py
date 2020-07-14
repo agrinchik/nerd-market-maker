@@ -72,8 +72,9 @@ class DynamicSettings(object):
         running_qty = self.exchange.get_delta()
         deposit_usage_pct = self.get_deposit_usage_pct(running_qty)
         risk_profile = self.get_risk_profile(distance_to_avg_price_pct, deposit_usage_pct)
+        market_snapshot = DatabaseManager.retrieve_market_snapshot(logger, settings.EXCHANGE, settings.SYMBOL)
 
-        self.update_dynamic_params(wallet_balance, ticker_last_price, risk_profile)
+        self.update_dynamic_params(market_snapshot, wallet_balance, ticker_last_price, risk_profile)
         self.update_settings_value("MIN_POSITION", self.min_position)
         self.update_settings_value("MAX_POSITION", self.max_position)
 
@@ -86,8 +87,8 @@ class DynamicSettings(object):
         if settings[key] != value:
             settings[key] = value
 
-    def update_app_settings(self):
-        params_updated = self.update_parameters()
+    def update_app_settings(self, market_snapshot, force_update):
+        params_updated = self.update_parameters(market_snapshot, force_update)
         if params_updated is True:
             # TODO: Workaround - needs to be reimplemented
             self.update_settings_value("ORDER_PAIRS", self.order_pairs)
@@ -113,7 +114,7 @@ class DynamicSettings(object):
         else:
             return abs(running_qty / settings.MAX_POSITION) * 100
 
-    def update_parameters(self):
+    def update_parameters(self, market_snapshot, force_update):
         result = False
         ticker = self.exchange.get_ticker()
         ticker_last_price = ticker["last"]
@@ -134,17 +135,17 @@ class DynamicSettings(object):
         is_params_exceeded_update_interval_flag = params_seconds_from_last_update >= PARAMS_UPDATE_INTERVAL
         is_risk_profile_changed_flag = True if risk_profile_id != self.curr_risk_profile_id else False
 
-        if is_params_exceeded_update_interval_flag is True and is_risk_profile_changed_flag is True:
-            self.update_dynamic_params(wallet_balance, ticker_last_price, risk_profile)
+        if force_update or (is_params_exceeded_update_interval_flag and is_risk_profile_changed_flag):
+            self.update_dynamic_params(market_snapshot, wallet_balance, ticker_last_price, risk_profile)
             self.params_last_update = curr_time
             result = True
 
-        if result is True:
+        if result:
             self.log_params(ticker_last_price)
 
         return result
 
-    def update_dynamic_params(self, last_wallet_balance, ticker_last_price, risk_profile):
+    def update_dynamic_params(self, market_snapshot, last_wallet_balance, ticker_last_price, risk_profile):
         if ExchangeInfo.is_bitmex():
             self.position_margin_pct = settings.BITMEX_DEFAULT_POSITION_MARGIN_TO_WALLET_RATIO_PCT
             self.order_margin_pct = settings.BITMEX_DEFAULT_ORDER_MARGIN_TO_WALLET_RATIO_PCT
@@ -154,7 +155,7 @@ class DynamicSettings(object):
             self.curr_risk_profile_id = risk_profile.rp_id
             self.curr_risk_level = risk_profile.risk_level
             self.max_number_dca_orders = risk_profile.max_number_dca_orders
-            self.interval_pct = risk_profile.interval_pct * settings.INTERVAL_ADJUST_MULT
+            self.interval_pct = risk_profile.interval_atr_mult * market_snapshot.atr_pct * settings.INTERVAL_ADJUST_MULT if market_snapshot.atr_pct > 0 else settings.INTERVAL
             self.min_spread_pct = round(self.interval_pct * 2 * DEFAULT_MIN_SPREAD_ADJUSTMENT_FACTOR, 8)
             self.relist_interval_pct = round(self.interval_pct * DEFAULT_RELIST_INTERVAL_ADJUSTMENT_FACTOR, 8)
             self.order_pairs = risk_profile.order_pairs
@@ -174,7 +175,7 @@ class DynamicSettings(object):
             self.curr_risk_profile_id = risk_profile.rp_id
             self.curr_risk_level = risk_profile.risk_level
             self.max_number_dca_orders = risk_profile.max_number_dca_orders
-            self.interval_pct = risk_profile.interval_pct * settings.INTERVAL_ADJUST_MULT
+            self.interval_pct = risk_profile.interval_atr_mult * market_snapshot.atr_pct * settings.INTERVAL_ADJUST_MULT if market_snapshot.atr_pct > 0 else settings.INTERVAL_PCT
             self.min_spread_pct = round(self.interval_pct * 2 * DEFAULT_MIN_SPREAD_ADJUSTMENT_FACTOR, 8)
             self.relist_interval_pct = round(self.interval_pct * DEFAULT_RELIST_INTERVAL_ADJUSTMENT_FACTOR, 8)
             self.order_pairs = risk_profile.order_pairs

@@ -12,13 +12,13 @@ from market_maker.utils.log import log_error, log_info
 from market_maker.settings import settings
 from market_maker.auth.bitmex.APIKeyAuth import generate_expires, generate_signature
 from market_maker.utils.log import setup_robot_custom_logger
-from market_maker.utils.math import toNearest
+from market_maker.utils.mm_math import toNearest
 from future.utils import iteritems
 from future.standard_library import hooks
 with hooks():  # Python 2/3 compat
     from urllib.parse import urlparse, urlunparse
 from market_maker.exchange import ExchangeInfo
-from market_maker.utils import math
+from market_maker.utils import mm_math
 from market_maker.db.db_manager import DatabaseManager
 
 ORDER_POSITION_STATUS_INCREASE = 0
@@ -87,7 +87,7 @@ class BitMEXWebsocket():
         instrument = matchingInstruments[0]
         # Turn the 'tickSize' into 'tickLog' for use in rounding
         # http://stackoverflow.com/a/6190291/832202
-        instrument['tickLog'] = math.get_decimal_digits_number(instrument['tickSize'])
+        instrument['tickLog'] = mm_math.get_decimal_digits_number(instrument['tickSize'])
         return instrument
 
     def get_ticker(self, symbol):
