@@ -223,6 +223,7 @@ class NerdMarketMakerRobot:
         combined_msg += "Interval, % (RP) = {} ({})\n".format(self.get_pct_value(self.dynamic_settings.interval_pct), self.dynamic_settings.curr_risk_profile_id)
         combined_msg += "Min/Max Position = {}/{}\n".format(self.dynamic_settings.min_position, self.dynamic_settings.max_position)
         combined_msg += "Lot Size = {}\n".format(self.dynamic_settings.order_start_size)
+        combined_msg += "Quoting Side = {}\n".format(settings.QUOTING_SIDE)
         log_debug(logger, combined_msg, send_to_telegram)
 
     def check_suspend_trading(self):

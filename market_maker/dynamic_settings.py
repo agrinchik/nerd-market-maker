@@ -21,7 +21,7 @@ BITFINEX_DISTANCE_TO_LIQUIDATION_PRICE_PCT = 0.25
 BITFINEX_TOTAL_POSITION_MARGIN_ADJUST_RATIO = 0.45
 BITFINEX_DEFAULT_LEVERAGE = 5
 
-PARAMS_UPDATE_INTERVAL = 300  # 5 minutes
+#PARAMS_UPDATE_INTERVAL = 300  # 5 minutes
 
 
 class DynamicSettings(object):
@@ -128,14 +128,14 @@ class DynamicSettings(object):
         self.deposit_usage_pct = self.get_deposit_usage_pct(running_qty)
         curr_time = datetime.datetime.now()
 
-        params_seconds_from_last_update = (curr_time - self.params_last_update).total_seconds()
+        #params_seconds_from_last_update = (curr_time - self.params_last_update).total_seconds()
         risk_profile = self.get_risk_profile(self.distance_to_avg_price_pct, self.deposit_usage_pct)
         risk_profile_id = risk_profile.rp_id
 
-        is_params_exceeded_update_interval_flag = params_seconds_from_last_update >= PARAMS_UPDATE_INTERVAL
+        #is_params_exceeded_update_interval_flag = params_seconds_from_last_update >= PARAMS_UPDATE_INTERVAL
         is_risk_profile_changed_flag = True if risk_profile_id != self.curr_risk_profile_id else False
 
-        if force_update or (is_params_exceeded_update_interval_flag and is_risk_profile_changed_flag):
+        if force_update or is_risk_profile_changed_flag:
             self.update_dynamic_params(market_snapshot, wallet_balance, ticker_last_price, risk_profile)
             self.params_last_update = curr_time
             result = True
