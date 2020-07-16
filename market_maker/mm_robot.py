@@ -614,8 +614,8 @@ class NerdMarketMakerRobot:
             new_quoting_side = self.resolve_quoting_side(new_market_regime)
             robot_quoting_side = robot_settings.quoting_side
             if self.running_qty == 0 and new_quoting_side != robot_quoting_side:
+                settings.QUOTING_SIDE = new_quoting_side
                 DatabaseManager.update_robot_quoting_side(logger, settings.EXCHANGE, settings.ROBOTID, new_quoting_side)
-                settings.QUOTING_SIDE = robot_settings.quoting_side
                 log_info(logger, "As {} has no open positions and quoting side has changed, setting the new quoting side={}".format(settings.ROBOTID, new_quoting_side), True)
                 self.exchange.cancel_all_orders()
 
