@@ -4,7 +4,7 @@ import datetime as dt
 from market_maker.backtrader.ccxtbt import CCXTStore
 from market_maker.utils import log
 from market_maker.settings import settings
-from market_maker.backtrader.strategy.strategy_enum import BTStrategyEnum
+from market_maker.backtrader.strategy.bt_strategy_enum import BTStrategyEnum
 from market_maker.backtrader.broker_mappings import BrokerMappings
 from market_maker.db.db_manager import DatabaseManager
 from market_maker.utils.log import log_error
@@ -133,7 +133,7 @@ class BacktraderRunner(object):
 
     def start(self):
         try:
-            self._strategy_enum = BTStrategyEnum.MM001_MARKET_SNAPSHOT_STRATEGY_ID
+            self._strategy_enum = BTStrategyEnum.BT_MARKET_SNAPSHOT_STRATEGY_ID
             self.init_strategy_params(self._strategy_enum)
 
             self._cerebro = bt.Cerebro(quicknotify=True)

@@ -1,5 +1,5 @@
 from enum import Enum
-from market_maker.backtrader.strategy.MM001_marketsnapshot import MM001_MarketSnapshotStrategy
+from market_maker.backtrader.strategy.btmarketsnapshot import BTMarketSnapshotStrategy
 
 
 class BTStrategy(object):
@@ -13,7 +13,7 @@ class BTStrategy(object):
 
 
 class BTStrategyEnum(Enum):
-    MM001_MARKET_SNAPSHOT_STRATEGY_ID = BTStrategy(MM001_MarketSnapshotStrategy, "MM001_MarketSnapshotStrategy")
+    BT_MARKET_SNAPSHOT_STRATEGY_ID = BTStrategy(BTMarketSnapshotStrategy, "BTMarketSnapshotStrategy")
 
     @classmethod
     def get_strategy_enum_by_str(cls, strategy_str):

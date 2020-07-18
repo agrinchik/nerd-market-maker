@@ -361,7 +361,7 @@ class MarketRegimeIndicator(bt.Indicator):
         self.l.atr_pct[0] = round(self.atr_val_pct[0], 4)
 
 
-class MM001_MarketSnapshotStrategy(bt.Strategy):
+class BTMarketSnapshotStrategy(bt.Strategy):
     params = (
         ("debug", False),
     )
@@ -437,12 +437,12 @@ class MM001_MarketSnapshotStrategy(bt.Strategy):
             self.status = self.data._getstatusname(CCXTFeed.LIVE)
             logger.debug("**** Initialized the Backtrader in LIVE mode: {} ****".format(self.data.symbol))
             logger.debug("=" * 120)
-            logger.debug("LIVE DATA - MM001_MarketSnapshotStrategy initialized")
+            logger.debug("LIVE DATA - BTMarketSnapshotStrategy initialized")
             logger.debug("=" * 120)
 
     def next(self):
         try:
-            logger.debug("MM001_MarketSnapshotStrategy.next(): status={}, len(datas[0])={}, len(datas[1])={}, len(datas[2])={}, len(datas[3])={}".format(
+            logger.debug("BTMarketSnapshotStrategy.next(): status={}, len(datas[0])={}, len(datas[1])={}, len(datas[2])={}, len(datas[3])={}".format(
                 self.status, len(self.datas[0]), len(self.datas[1]), len(self.datas[2]), len(self.datas[3])))
 
             if self.is_datas_live() and not self.is_live_status():
