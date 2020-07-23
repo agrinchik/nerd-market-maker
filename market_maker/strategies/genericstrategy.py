@@ -5,10 +5,11 @@ from market_maker.utils.log import log_debug
 from market_maker.utils.log import log_info
 from market_maker.utils.log import log_error
 from market_maker.dynamic_settings import DynamicSettings
+from market_maker.db.db_manager import DatabaseManager
 from market_maker.db.quoting_side import *
 from market_maker.db.market_regime import MarketRegime
 from common.exception import *
-
+import math
 
 
 class GenericStrategy(object):
@@ -25,23 +26,52 @@ class GenericStrategy(object):
         self.running_qty = self.starting_qty
         self.dynamic_settings = DynamicSettings(self.exchange)
 
-    @abstractmethod
     def on_market_snapshot_update(self):
+        robot_settings = DatabaseManager.retrieve_robot_settings(self.logger, settings.EXCHANGE, settings.ROBOTID)
+        market_snapshot = DatabaseManager.retrieve_market_snapshot(self.logger, settings.EXCHANGE, settings.SYMBOL)
+        if market_snapshot:
+            self.logger.debug("on_market_snapshot_update(): self.market_snapshot={}".format(market_snapshot))
+            prev_market_regime = self.curr_market_snapshot.marketregime if self.curr_market_snapshot else None
+            prev_atr = self.curr_market_snapshot.atr_pct if self.curr_market_snapshot else "N/A"
+            new_market_regime = market_snapshot.marketregime
+            new_atr = market_snapshot.atr_pct
+            is_atr_changed = prev_atr != new_atr and not math.isnan(new_atr)
+            is_market_regime_changed = prev_market_regime != new_market_regime and not math.isnan(new_market_regime)
+            if is_atr_changed or is_market_regime_changed:
+                # log_info(logger, "Market Snapshot has been updated:\nATR (5 min): {} => {}\nMarket Regime: {} => {}".format(self.get_pct_value(prev_atr), self.get_pct_value(new_atr), MarketRegime.get_name(prev_market_regime), MarketRegime.get_name(new_market_regime)), True)
+                self.curr_market_snapshot = market_snapshot
+
+            if is_atr_changed:
+                self.update_dynamic_app_settings(True)
+
+            new_quoting_side = self.resolve_quoting_side(new_market_regime)
+            robot_quoting_side = robot_settings.quoting_side
+            running_qty = self.exchange.get_delta()
+            if running_qty == 0 and new_quoting_side != robot_quoting_side:
+                settings.QUOTING_SIDE = new_quoting_side
+                DatabaseManager.update_robot_quoting_side(self.logger, settings.EXCHANGE, settings.ROBOTID, new_quoting_side)
+                log_info(self.logger, "As {} has no open positions and quoting side has changed, setting the new quoting side={}".format(settings.ROBOTID, new_quoting_side), True)
+                self.exchange.cancel_all_orders()
+
+    @abstractmethod
+    def check_suspend_trading(self):
         pass
 
-    def update_dynamic_app_settings(self, force_update):
-        result = self.dynamic_settings.update_app_settings(self.curr_market_snapshot, force_update)
+    @abstractmethod
+    def place_orders(self):
+        pass
 
-        if result:
-            self.exchange.cancel_all_orders()
+    @abstractmethod
+    def prepare_order(self, index):
+        pass
 
-    def resolve_quoting_side(self, market_regime):
-        if market_regime == MarketRegime.BULLISH:
-            return QuotingSide.LONG
-        if market_regime == MarketRegime.BEARISH:
-            return QuotingSide.SHORT
-        if market_regime == MarketRegime.RANGE:
-            return QuotingSide.BOTH
+    @abstractmethod
+    def prepare_tp_order(self, is_long, quantity):
+        pass
+
+    @abstractmethod
+    def converge_orders(self, buy_orders, sell_orders):
+        pass
 
     def get_price_offset(self, index):
         instrument = self.exchange.get_instrument()
@@ -66,6 +96,18 @@ class GenericStrategy(object):
 
         return mm_math.toNearest(start_position * (1 + settings.INTERVAL) ** index, instrument['tickSize'])
 
+    @abstractmethod
+    def update_dynamic_app_settings(self, force_update):
+        pass
+
+    def resolve_quoting_side(self, market_regime):
+        if market_regime == MarketRegime.BULLISH:
+            return QuotingSide.LONG
+        if market_regime == MarketRegime.BEARISH:
+            return QuotingSide.SHORT
+        if market_regime == MarketRegime.RANGE:
+            return QuotingSide.BOTH
+
     ###
     # Position Limits
     ###
@@ -83,68 +125,23 @@ class GenericStrategy(object):
         position = self.exchange.get_delta()
         return position >= settings.MAX_POSITION
 
+    @abstractmethod
     def get_ticker(self):
-        instrument = self.exchange.get_instrument()
-        ticker = self.exchange.get_ticker()
-        tickSize = instrument['tickSize']
-        tickLog = instrument['tickLog']
+        pass
 
-        # Set up our buy & sell positions as the smallest possible unit above and below the current spread
-        # and we'll work out from there. That way we always have the best price but we don't kill wide
-        # and potentially profitable spreads.
-        self.start_position_buy = ticker["buy"] + tickSize
-        self.start_position_sell = ticker["sell"] - tickSize
-
-        # If we're maintaining spreads and we already have orders in place,
-        # make sure they're not ours. If they are, we need to adjust, otherwise we'll
-        # just work the orders inward until they collide.
-        if settings.MAINTAIN_SPREADS:
-            if ticker['buy'] == self.exchange.get_highest_buy()['price']:
-                self.start_position_buy = ticker["buy"]
-            if ticker['sell'] == self.exchange.get_lowest_sell()['price']:
-                self.start_position_sell = ticker["sell"]
-
-        # Back off if our spread is too small.
-        if self.start_position_buy * (1.00 + settings.MIN_SPREAD) > self.start_position_sell:
-            self.start_position_buy *= (1.00 - (settings.MIN_SPREAD / 2))
-            self.start_position_sell *= (1.00 + (settings.MIN_SPREAD / 2))
-
-        # Midpoint, used for simpler order placement.
-        self.start_position_mid = ticker["mid"]
-        self.logger.debug("{} Ticker: Buy: {}, Sell: {}".format(instrument['symbol'], round(ticker["buy"], tickLog), round(ticker["sell"], tickLog)))
-        self.logger.debug('Start Positions: Buy: {}, Sell: {}, Mid: {}'.format(self.start_position_buy, self.start_position_sell, self.start_position_mid))
-        return ticker
-
-    ###
-    # Sanity
-    ##
+    @abstractmethod
     def sanity_check(self):
-        """Perform checks before placing orders."""
+        pass
 
-        # Check if OB is empty - if so, can't quote.
-        self.exchange.check_if_orderbook_empty()
+    def is_quoting_side_ok(self, is_long, quoting_side):
+        result = None
+        if is_long:
+            result = quoting_side in [QuotingSide.BOTH, QuotingSide.LONG]
+        else:
+            result = quoting_side in [QuotingSide.BOTH, QuotingSide.SHORT]
 
-        # Ensure market is still open.
-        self.exchange.check_market_open()
-
-        # Get ticker, which sets price offsets and prints some debugging info.
-        ticker = self.get_ticker()
-
-        # Sanity check:
-        if self.get_price_offset(-1) >= ticker["sell"] or self.get_price_offset(1) <= ticker["buy"]:
-            self.logger.error("Buy: {}, Sell: {}".format(self.start_position_buy, self.start_position_sell))
-            self.logger.error("First buy position: {}\nBest Ask: {}\nFirst sell position: {}\nBest Bid: {}".format(self.get_price_offset(-1), ticker["sell"], self.get_price_offset(1), ticker["buy"]))
-            log_error(self.logger, "Sanity check failed, exchange data is inconsistent", True)
-            raise ForceRestartException("NerdSupervisor will be restarted")
-
-        # Messaging if the position limits are reached
-        if self.long_position_limit_exceeded():
-            self.logger.debug("Long delta limit exceeded")
-            self.logger.debug("Current Position: {}, Maximum Position: {}".format(self.exchange.get_delta(), settings.MAX_POSITION))
-
-        if self.short_position_limit_exceeded():
-            self.logger.debug("Short delta limit exceeded")
-            self.logger.debug("Current Position: {}, Minimum Position: {}".format(self.exchange.get_delta(), settings.MIN_POSITION))
+        log_debug(self.logger, "is_quoting_side_ok(): is_long={}, result={}".format(is_long, result), False)
+        return result
 
     def get_deposit_usage_pct(self, running_qty):
         if running_qty < 0:
@@ -180,3 +177,6 @@ class GenericStrategy(object):
         combined_msg += "Lot Size = {}\n".format(self.dynamic_settings.order_start_size)
         combined_msg += "Quoting Side = {}\n".format(settings.QUOTING_SIDE)
         log_debug(self.logger, combined_msg, send_to_telegram)
+
+    def is_market_snapshot_initialized(self):
+        return self.curr_market_snapshot.atr_pct != 0

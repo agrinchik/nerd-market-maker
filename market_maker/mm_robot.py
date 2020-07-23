@@ -179,8 +179,6 @@ class NerdMarketMakerRobot:
 
     def reset(self):
         self.exchange.cancel_all_orders()
-        self.strategy.sanity_check()
-        self.strategy.print_status(False)
         self.strategy.check_suspend_trading()
         self.strategy.dynamic_settings.initialize_params()
 
@@ -227,12 +225,13 @@ class NerdMarketMakerRobot:
                 self.restart()
 
             self.strategy.on_market_snapshot_update()
-            self.strategy.update_dynamic_app_settings(False)
-            self.strategy.sanity_check()       # Ensures health of mm - several cut-out points here
-            self.strategy.print_status(False)  # Print skew, delta, etc
-            self.strategy.check_suspend_trading()
-            self.strategy.place_orders()       # Creates desired orders and converges to existing orders
-            self.update_db()
+            if self.strategy.is_market_snapshot_initialized():
+                self.strategy.update_dynamic_app_settings(False)
+                self.strategy.sanity_check()       # Ensures health of mm - several cut-out points here
+                self.strategy.print_status(False)  # Print skew, delta, etc
+                self.strategy.check_suspend_trading()
+                self.strategy.place_orders()       # Creates desired orders and converges to existing orders
+                self.update_db()
 
             sleep(settings.LOOP_INTERVAL)
 

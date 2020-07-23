@@ -3,7 +3,6 @@ from time import sleep
 import sys
 import requests
 from datetime import datetime
-from market_maker.db.db_manager import DatabaseManager
 from market_maker.strategies.genericstrategy import GenericStrategy
 from market_maker.settings import settings
 from market_maker.utils import log, mm_math
@@ -14,7 +13,6 @@ from market_maker.utils.log import log_error
 from common.exception import *
 from market_maker.db.quoting_side import *
 import numpy as np
-import math
 
 
 class MM001_GridMarketMakerStrategy(GenericStrategy):
@@ -23,33 +21,6 @@ class MM001_GridMarketMakerStrategy(GenericStrategy):
         super().__init__(logger, exchange)
         self.price_change_last_check = datetime.now()
         self.price_change_last_price = -1
-
-    def on_market_snapshot_update(self):
-        robot_settings = DatabaseManager.retrieve_robot_settings(self.logger, settings.EXCHANGE, settings.ROBOTID)
-        market_snapshot = DatabaseManager.retrieve_market_snapshot(self.logger, settings.EXCHANGE, settings.SYMBOL)
-        if market_snapshot:
-            self.logger.debug("on_market_snapshot_update(): self.market_snapshot={}".format(market_snapshot))
-            prev_market_regime = self.curr_market_snapshot.marketregime if self.curr_market_snapshot else None
-            prev_atr = self.curr_market_snapshot.atr_pct if self.curr_market_snapshot else "N/A"
-            new_market_regime = market_snapshot.marketregime
-            new_atr = market_snapshot.atr_pct
-            is_atr_changed = prev_atr != new_atr and not math.isnan(new_atr)
-            is_market_regime_changed = prev_market_regime != new_market_regime and not math.isnan(new_market_regime)
-            if is_atr_changed or is_market_regime_changed:
-                # log_info(logger, "Market Snapshot has been updated:\nATR (5 min): {} => {}\nMarket Regime: {} => {}".format(self.get_pct_value(prev_atr), self.get_pct_value(new_atr), MarketRegime.get_name(prev_market_regime), MarketRegime.get_name(new_market_regime)), True)
-                self.curr_market_snapshot = market_snapshot
-
-            if is_atr_changed:
-                self.update_dynamic_app_settings(True)
-
-            new_quoting_side = self.resolve_quoting_side(new_market_regime)
-            robot_quoting_side = robot_settings.quoting_side
-            running_qty = self.exchange.get_delta()
-            if running_qty == 0 and new_quoting_side != robot_quoting_side:
-                settings.QUOTING_SIDE = new_quoting_side
-                DatabaseManager.update_robot_quoting_side(self.logger, settings.EXCHANGE, settings.ROBOTID, new_quoting_side)
-                log_info(self.logger, "As {} has no open positions and quoting side has changed, setting the new quoting side={}".format(settings.ROBOTID, new_quoting_side), True)
-                self.exchange.cancel_all_orders()
 
     def check_suspend_trading(self):
         position_size = self.exchange.get_delta()
@@ -97,12 +68,12 @@ class MM001_GridMarketMakerStrategy(GenericStrategy):
         self.running_qty = self.exchange.get_delta()
         if settings.WORKING_MODE == settings.MODE2_ALWAYS_CLOSE_FULL_POSITION_STRATEGY and self.running_qty != 0:
             if self.running_qty > 0:
-                sell_orders.append(self.prepare_order_opposite_side(True, abs(self.running_qty)))
+                sell_orders.append(self.prepare_tp_order(True, abs(self.running_qty)))
                 for i in reversed(range(1, settings.ORDER_PAIRS + 1)):
                     if not self.long_position_limit_exceeded():
                         buy_orders.append(self.prepare_order(-i))
             else:
-                buy_orders.append(self.prepare_order_opposite_side(False, abs(self.running_qty)))
+                buy_orders.append(self.prepare_tp_order(False, abs(self.running_qty)))
                 for i in reversed(range(1, settings.ORDER_PAIRS + 1)):
                     if not self.short_position_limit_exceeded():
                         sell_orders.append(self.prepare_order(i))
@@ -133,7 +104,7 @@ class MM001_GridMarketMakerStrategy(GenericStrategy):
 
         return {'price': price, 'orderQty': quantity, 'side': "Buy" if index < 0 else "Sell"}
 
-    def prepare_order_opposite_side(self, is_long, quantity):
+    def prepare_tp_order(self, is_long, quantity):
         instrument = self.exchange.get_instrument()
         position = self.exchange.get_position()
         avg_entry_price = position['avgEntryPrice']
@@ -186,15 +157,11 @@ class MM001_GridMarketMakerStrategy(GenericStrategy):
         log_debug(self.logger, "is_order_placement_allowed(): order={}, result={}".format(order, result), False)
         return result
 
-    def is_quoting_side_ok(self, is_long, quoting_side):
-        result = None
-        if is_long:
-            result = quoting_side in [QuotingSide.BOTH, QuotingSide.LONG]
-        else:
-            result = quoting_side in [QuotingSide.BOTH, QuotingSide.SHORT]
+    def update_dynamic_app_settings(self, force_update):
+        result = self.dynamic_settings.update_app_settings(self.curr_market_snapshot, force_update)
 
-        log_debug(self.logger, "is_quoting_side_ok(): is_long={}, result={}".format(is_long, result), False)
-        return result
+        if result:
+            self.exchange.cancel_all_orders()
 
     def converge_orders(self, buy_orders, sell_orders):
         """Converge the orders we currently have in the book with what we want to be in the book.
@@ -289,3 +256,66 @@ class MM001_GridMarketMakerStrategy(GenericStrategy):
                 combined_msg += "%4s %d @ %.*f\n" % (order['side'], order['leavesQty'], tickLog, order['price'])
             log_info(self.logger, combined_msg, False)
             self.exchange.cancel_bulk_orders(to_cancel)
+
+    def get_ticker(self):
+        instrument = self.exchange.get_instrument()
+        ticker = self.exchange.get_ticker()
+        tickSize = instrument['tickSize']
+        tickLog = instrument['tickLog']
+
+        # Set up our buy & sell positions as the smallest possible unit above and below the current spread
+        # and we'll work out from there. That way we always have the best price but we don't kill wide
+        # and potentially profitable spreads.
+        self.start_position_buy = ticker["buy"] + tickSize
+        self.start_position_sell = ticker["sell"] - tickSize
+
+        # If we're maintaining spreads and we already have orders in place,
+        # make sure they're not ours. If they are, we need to adjust, otherwise we'll
+        # just work the orders inward until they collide.
+        if settings.MAINTAIN_SPREADS:
+            if ticker['buy'] == self.exchange.get_highest_buy()['price']:
+                self.start_position_buy = ticker["buy"]
+            if ticker['sell'] == self.exchange.get_lowest_sell()['price']:
+                self.start_position_sell = ticker["sell"]
+
+        # Back off if our spread is too small.
+        if self.start_position_buy * (1.00 + settings.MIN_SPREAD) > self.start_position_sell:
+            self.start_position_buy *= (1.00 - (settings.MIN_SPREAD / 2))
+            self.start_position_sell *= (1.00 + (settings.MIN_SPREAD / 2))
+
+        # Midpoint, used for simpler order placement.
+        self.start_position_mid = ticker["mid"]
+        self.logger.debug("{} Ticker: Buy: {}, Sell: {}".format(instrument['symbol'], round(ticker["buy"], tickLog), round(ticker["sell"], tickLog)))
+        self.logger.debug('Start Positions: Buy: {}, Sell: {}, Mid: {}'.format(self.start_position_buy, self.start_position_sell, self.start_position_mid))
+        return ticker
+
+    ###
+    # Sanity
+    ##
+    def sanity_check(self):
+        """Perform checks before placing orders."""
+
+        # Check if OB is empty - if so, can't quote.
+        self.exchange.check_if_orderbook_empty()
+
+        # Ensure market is still open.
+        self.exchange.check_market_open()
+
+        # Get ticker, which sets price offsets and prints some debugging info.
+        ticker = self.get_ticker()
+
+        # Sanity check:
+        if self.get_price_offset(-1) >= ticker["sell"] or self.get_price_offset(1) <= ticker["buy"]:
+            self.logger.error("Buy: {}, Sell: {}".format(self.start_position_buy, self.start_position_sell))
+            self.logger.error("First buy position: {}\nBest Ask: {}\nFirst sell position: {}\nBest Bid: {}".format(self.get_price_offset(-1), ticker["sell"], self.get_price_offset(1), ticker["buy"]))
+            log_error(self.logger, "Sanity check failed, exchange data is inconsistent", True)
+            raise ForceRestartException("NerdSupervisor will be restarted")
+
+        # Messaging if the position limits are reached
+        if self.long_position_limit_exceeded():
+            self.logger.debug("Long delta limit exceeded")
+            self.logger.debug("Current Position: {}, Maximum Position: {}".format(self.exchange.get_delta(), settings.MAX_POSITION))
+
+        if self.short_position_limit_exceeded():
+            self.logger.debug("Short delta limit exceeded")
+            self.logger.debug("Current Position: {}, Minimum Position: {}".format(self.exchange.get_delta(), settings.MIN_POSITION))
