@@ -31,10 +31,10 @@ class GenericStrategy(object):
         market_snapshot = DatabaseManager.retrieve_market_snapshot(self.logger, settings.EXCHANGE, settings.SYMBOL)
         if market_snapshot:
             self.logger.debug("on_market_snapshot_update(): self.market_snapshot={}".format(market_snapshot))
-            prev_market_regime = self.curr_market_snapshot.marketregime if self.curr_market_snapshot else None
-            prev_atr = self.curr_market_snapshot.atr_pct if self.curr_market_snapshot else "N/A"
-            new_market_regime = market_snapshot.marketregime
-            new_atr = market_snapshot.atr_pct
+            prev_market_regime = self.curr_market_snapshot.marketregime_1m if self.curr_market_snapshot else None
+            prev_atr = self.curr_market_snapshot.atr_pct_1m if self.curr_market_snapshot else "N/A"
+            new_market_regime = market_snapshot.marketregime_1m
+            new_atr = market_snapshot.atr_pct_1m
             is_atr_changed = prev_atr != new_atr and not math.isnan(new_atr)
             is_market_regime_changed = prev_market_regime != new_market_regime and not math.isnan(new_market_regime)
             if is_atr_changed or is_market_regime_changed:
@@ -171,7 +171,7 @@ class GenericStrategy(object):
             combined_msg += "Distance To Avg Price: {:.2f}%\n".format(self.exchange.get_distance_to_avg_price_pct())
             combined_msg += "Unrealized PnL: {:.8f} ({:.2f}%)\n".format(mm_math.get_round_value(self.exchange.get_unrealized_pnl(), tick_log), self.exchange.get_unrealized_pnl_pct())
             combined_msg += "Liquidation Price (Dist %): {} ({:.2f}%)\n".format(mm_math.get_round_value(float(position['liquidationPrice']), tick_log), self.exchange.get_distance_to_liq_price_pct())
-        combined_msg += "ATR (5 min) = {}\n".format(self.get_pct_value(self.curr_market_snapshot.atr_pct)) if self.curr_market_snapshot else "N/A"
+        combined_msg += "ATR (1m/5m) = {} | {}\n".format(self.get_pct_value(self.curr_market_snapshot.atr_pct_1m), self.get_pct_value(self.curr_market_snapshot.atr_pct_5m)) if self.curr_market_snapshot else "N/A"
         combined_msg += "Interval, % (RP) = {} ({})\n".format(self.get_pct_value(self.dynamic_settings.interval_pct), self.dynamic_settings.curr_risk_profile_id)
         combined_msg += "Min/Max Position = {}/{}\n".format(self.dynamic_settings.min_position, self.dynamic_settings.max_position)
         combined_msg += "Lot Size = {}\n".format(self.dynamic_settings.order_start_size)
@@ -179,4 +179,4 @@ class GenericStrategy(object):
         log_debug(self.logger, combined_msg, send_to_telegram)
 
     def is_market_snapshot_initialized(self):
-        return self.curr_market_snapshot.atr_pct != 0
+        return self.curr_market_snapshot.atr_pct_1m != 0

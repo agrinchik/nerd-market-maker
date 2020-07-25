@@ -105,14 +105,8 @@ class NerdSupervisor:
             for position in portfolio_positions:
                 combined_msg += "  {}".format(bold(self.get_position_arrow_status(position)))
 
-            combined_msg += "\n{} {}".format(bold("ATR (5 min):"), self.get_pct_value(self.curr_market_snapshot.atr_pct) if self.curr_market_snapshot else "N/A")
-            combined_msg += "\n{} {}".format(bold("Mkt Regime (5 min):"), MarketRegime.get_name(self.curr_market_snapshot.marketregime) if self.curr_market_snapshot else "N/A")
-            if self.curr_market_snapshot:
-                combined_msg += "\n{} {} {} {} {} {}".format(bold("Mkt Regime Hist:"), round(self.curr_market_snapshot.marketregime_hist1),
-                                                                                       round(self.curr_market_snapshot.marketregime_hist2),
-                                                                                       round(self.curr_market_snapshot.marketregime_hist3),
-                                                                                       round(self.curr_market_snapshot.marketregime_hist4),
-                                                                                       round(self.curr_market_snapshot.marketregime_hist5))
+            combined_msg += "\n{} {} | {}".format(bold("ATR (1m | 5m):"), self.get_pct_value(self.curr_market_snapshot.atr_pct_1m) if self.curr_market_snapshot else "N/A", self.get_pct_value(self.curr_market_snapshot.atr_pct_5m) if self.curr_market_snapshot else "N/A")
+            combined_msg += "\n{} {}".format(bold("Mkt Regime (1m):"), MarketRegime.get_name(self.curr_market_snapshot.marketregime_1m) if self.curr_market_snapshot else "N/A")
 
             num_robots = len(self.robot_ids_list)
             combined_msg += "\n{} [{} {}]: {}\n".format(bold("Total Balance"), bold(num_robots), bold("robots" if num_robots > 1 else "robot"), mm_math.get_round_value(portfolio_balance, 8))
@@ -131,14 +125,14 @@ class NerdSupervisor:
     def on_market_snapshot_update(self, market_snapshot):
         if market_snapshot:
             logger.debug("self.market_snapshot={}".format(market_snapshot))
-            prev_market_regime = self.curr_market_snapshot.marketregime if self.curr_market_snapshot else None
-            prev_atr = self.curr_market_snapshot.atr_pct if self.curr_market_snapshot else "N/A"
-            new_market_regime = market_snapshot.marketregime
-            new_atr = market_snapshot.atr_pct
+            prev_market_regime = self.curr_market_snapshot.marketregime_1m if self.curr_market_snapshot else None
+            prev_atr = self.curr_market_snapshot.atr_pct_1m if self.curr_market_snapshot else "N/A"
+            new_market_regime = market_snapshot.marketregime_1m
+            new_atr = market_snapshot.atr_pct_1m
             is_atr_changed = prev_atr != new_atr and not math.isnan(new_atr)
             is_market_regime_changed = prev_market_regime != new_market_regime and not math.isnan(new_market_regime)
             if is_atr_changed or is_market_regime_changed:
-                log_info(logger, "Market Snapshot has been updated:\nATR (5 min): {} => {}\nMarket Regime: {} => {}".format(self.get_pct_value(prev_atr), self.get_pct_value(new_atr), MarketRegime.get_name(prev_market_regime), MarketRegime.get_name(new_market_regime)), True)
+                log_info(logger, "Market Snapshot has been updated:\nATR (1 min): {} => {}\nMarket Regime: {} => {}".format(self.get_pct_value(prev_atr), self.get_pct_value(new_atr), MarketRegime.get_name(prev_market_regime), MarketRegime.get_name(new_market_regime)), True)
                 DatabaseManager.update_market_snapshot(logger, market_snapshot)
                 self.curr_market_snapshot = market_snapshot
 

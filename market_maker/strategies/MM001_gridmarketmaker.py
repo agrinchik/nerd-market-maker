@@ -107,7 +107,7 @@ class MM001_GridMarketMakerStrategy(GenericStrategy):
         instrument = self.exchange.get_instrument()
         position = self.exchange.get_position()
         avg_entry_price = position['avgEntryPrice']
-        take_profit_pct = settings.MODE2_CLOSE_FULL_POSITION_ATR_MULT * self.curr_market_snapshot.atr_pct
+        take_profit_pct = settings.MODE2_CLOSE_FULL_POSITION_ATR_MULT * self.curr_market_snapshot.atr_pct_1m
         if is_long:
             price = avg_entry_price + avg_entry_price * take_profit_pct
         else:

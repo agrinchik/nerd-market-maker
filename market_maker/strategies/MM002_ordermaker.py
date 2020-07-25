@@ -170,7 +170,7 @@ class MM002_OrderMakerStrategy(GenericStrategy):
                 sleep(0.1)
                 return
 
-        if need_create or need_amend or need_cancel:
+        if need_create:
             self.print_status(True)
 
 

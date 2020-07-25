@@ -368,6 +368,7 @@ class BTMarketSnapshotStrategy(bt.Strategy):
 
     def __init__(self):
         self.status = CCXTFeed._getstatusname(CCXTFeed.UNKNOWN)
+        self.market_regime_1m = MarketRegimeIndicator(self.data0)
         self.market_regime_5m = MarketRegimeIndicator(self.data1)
         self.market_regime_1h = MarketRegimeIndicator(self.data2)
         self.market_regime_1D = MarketRegimeIndicator(self.data3)
@@ -378,19 +379,18 @@ class BTMarketSnapshotStrategy(bt.Strategy):
     def get_market_snapshot(self, exchange, symbol):
         market_snapshot = DatabaseManager.retrieve_market_snapshot(logger, exchange, symbol)
 
+        market_snapshot.trends_1m = self.market_regime_1m.trends[0]
         market_snapshot.trends_5m = self.market_regime_5m.trends[0]
         market_snapshot.trends_1h = self.market_regime_1h.trends[0]
         market_snapshot.trends_1D = self.market_regime_1D.trends[0]
+        market_snapshot.marketregime_1m = self.market_regime_1m.marketregime[0]
         market_snapshot.marketregime_5m = self.market_regime_5m.marketregime[0]
         market_snapshot.marketregime_1h = self.market_regime_1h.marketregime[0]
         market_snapshot.marketregime_1D = self.market_regime_1D.marketregime[0]
-        market_snapshot.marketregime = self.market_regime_5m.marketregime[0]
-        market_snapshot.marketregime_hist1 = self.market_regime_5m.marketregime[-4]
-        market_snapshot.marketregime_hist2 = self.market_regime_5m.marketregime[-3]
-        market_snapshot.marketregime_hist3 = self.market_regime_5m.marketregime[-2]
-        market_snapshot.marketregime_hist4 = self.market_regime_5m.marketregime[-1]
-        market_snapshot.marketregime_hist5 = self.market_regime_5m.marketregime[0]
-        market_snapshot.atr_pct = self.market_regime_5m.atr_pct[0]
+        market_snapshot.atr_pct_1m = self.market_regime_1m.atr_pct[0]
+        market_snapshot.atr_pct_5m = self.market_regime_5m.atr_pct[0]
+        market_snapshot.atr_pct_1h = self.market_regime_1h.atr_pct[0]
+        market_snapshot.atr_pct_1D = self.market_regime_1D.atr_pct[0]
         market_snapshot.ohlcv_1m_open = self.get_last_ohlc_val(self.datas[0].open)
         market_snapshot.ohlcv_1m_high = self.get_last_ohlc_val(self.datas[0].high)
         market_snapshot.ohlcv_1m_low = self.get_last_ohlc_val(self.datas[0].low)
@@ -469,6 +469,9 @@ class BTMarketSnapshotStrategy(bt.Strategy):
         self.log_data(1, self.data1)
         self.log_data(2, self.data2)
         self.log_data(3, self.data3)
+        logger.debug('self.market_regime_1m.trends = {}'.format(self.market_regime_1m.trends[0]))
+        logger.debug('self.market_regime_1m.marketregime = {}'.format(self.market_regime_1m.marketregime[0]))
+        logger.debug('self.market_regime_1m.atr_pct = {}'.format(self.market_regime_1m.atr_pct[0]))
         logger.debug('self.market_regime_5m.trends = {}'.format(self.market_regime_5m.trends[0]))
         logger.debug('self.market_regime_5m.marketregime = {}'.format(self.market_regime_5m.marketregime[0]))
         logger.debug('self.market_regime_5m.atr_pct = {}'.format(self.market_regime_5m.atr_pct[0]))
