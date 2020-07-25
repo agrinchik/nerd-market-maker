@@ -17,7 +17,7 @@ def roundQuantity(qty, minOrderLog = None):
     if minOrderLog is not None:
         return round(qty, minOrderLog)
     else:
-        if qty < 1:
+        if abs(qty) < 1:
             return round(qty, 5)
         else:
             return int(qty)

@@ -11,7 +11,6 @@ from market_maker.utils.log import log_debug
 from market_maker.utils.log import log_info
 from market_maker.utils.log import log_error
 from common.exception import *
-from market_maker.db.quoting_side import *
 import numpy as np
 
 
