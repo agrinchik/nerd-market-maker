@@ -358,7 +358,7 @@ class MarketRegimeIndicator(bt.Indicator):
                 else:
                     self.l.marketregime[0] = 0
 
-        self.l.atr_pct[0] = round(self.atr_val_pct[0], 4)
+        self.l.atr_pct[0] = round(self.atr_val_pct[0], 5)
 
 
 class BTMarketSnapshotStrategy(bt.Strategy):

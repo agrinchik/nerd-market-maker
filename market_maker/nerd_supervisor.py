@@ -75,7 +75,7 @@ class NerdSupervisor:
     def get_pct_value(self, val):
         if isinstance(val, str):
             return val
-        return "{}%".format(round(val * 100, 2))
+        return "{}%".format(round(val * 100, 3))
 
     def print_status(self, portfolio_positions, portfolio_balance, send_to_telegram):
         """Print the current status of NerdSupervisor"""

@@ -150,7 +150,7 @@ class GenericStrategy(object):
             return abs(running_qty / settings.MAX_POSITION) * 100
 
     def get_pct_value(self, val):
-        return "{}%".format(round(val * 100, 2))
+        return "{}%".format(round(val * 100, 3))
 
     def print_status(self, send_to_telegram):
         """Print the current status of NerdMarkerMakerRobot"""
