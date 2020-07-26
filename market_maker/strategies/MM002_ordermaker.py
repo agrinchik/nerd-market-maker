@@ -1,18 +1,17 @@
 
-
 from market_maker.strategies.genericstrategy import GenericStrategy
 from market_maker.settings import settings
 from market_maker.utils import mm_math
 from market_maker.db.quoting_side import *
-import requests
 
-from time import sleep
-
-TP_NUM_TICKS_FACTOR = 0
-INTERVAL_NUM_TICKS_FACTOR = 0
-RELIST_INTERVAL_NUM_TICKS_FACTOR = 1
-
-LIVE_POSITION_ADJUST_MULT = 3
+TAKER_FEE_PCT = 0.00075
+MAKER_FEE_PCT = 0.00025
+SL_ATR_MULT = 2
+RR_RATIO = 3
+INTERVAL_ATR_MULT = 1
+MAX_NUM_ORDERS_NON_ZERO_POSITION = 2
+MAX_NUM_ORDERS_ZERO_POSITION_QUOTING_SIDE_BOTH = 2
+MAX_NUM_ORDERS_ZERO_POSITION_QUOTING_SIDE_NON_BOTH = 1
 
 
 class MM002_OrderMakerStrategy(GenericStrategy):
@@ -31,9 +30,11 @@ class MM002_OrderMakerStrategy(GenericStrategy):
         running_qty = self.exchange.get_delta()
         if running_qty != 0:
             if running_qty > 0:
-                sell_orders.append(self.prepare_tp_order(True, running_qty))
+                sell_orders.append(self.prepare_tp_order(True, abs(running_qty)))
+                sell_orders.append(self.prepare_sl_order(True, abs(running_qty)))
             else:
-                buy_orders.append(self.prepare_tp_order(False, running_qty))
+                buy_orders.append(self.prepare_tp_order(False, abs(running_qty)))
+                buy_orders.append(self.prepare_sl_order(False, abs(running_qty)))
         else:
             quoting_side = settings.QUOTING_SIDE
             if self.is_quoting_side_ok(True, quoting_side):
@@ -50,65 +51,73 @@ class MM002_OrderMakerStrategy(GenericStrategy):
         self.dynamic_settings.update_app_settings(self.curr_market_snapshot, force_update)
         self.override_parameters()
 
-    def get_tp_price(self, is_long, instrument, ticker_bid_price, ticker_ask_price):
-        take_profit_num_ticks = TP_NUM_TICKS_FACTOR * instrument["tickSize"]
+    def calc_sl_price(self):
+        return SL_ATR_MULT * self.curr_market_snapshot.atr_pct_1m
+
+    def get_tp_price(self, is_long, instrument, avg_entry_price):
+        take_profit_pct = self.calc_sl_price() * RR_RATIO
         if is_long:
-            price = ticker_ask_price + take_profit_num_ticks
+            price = avg_entry_price * (1 + take_profit_pct)
         else:
-            price = ticker_bid_price - take_profit_num_ticks
+            price = avg_entry_price * (1 - take_profit_pct)
+        price = mm_math.toNearest(price, instrument['tickSize'])
         return price
 
-    def get_price(self, index, instrument, ticker_bid_price, ticker_ask_price):
-        interval_num_ticks = INTERVAL_NUM_TICKS_FACTOR * instrument["tickSize"]
-        if index < 0:
-            price = ticker_bid_price - interval_num_ticks
+    def get_sl_price(self, is_long, instrument, avg_entry_price):
+        stop_loss_pct = self.calc_sl_price()
+        if is_long:
+            price = avg_entry_price * (1 - stop_loss_pct)
         else:
-            price = ticker_ask_price + interval_num_ticks
+            price = avg_entry_price * (1 + stop_loss_pct)
+        price = mm_math.toNearest(price, instrument['tickSize'])
         return price
 
-    def get_quantity(self, is_long):
-        if not is_long:
-            return mm_math.roundQuantity(settings.MIN_POSITION / LIVE_POSITION_ADJUST_MULT)
-        else:
-            return mm_math.roundQuantity(settings.MAX_POSITION / LIVE_POSITION_ADJUST_MULT)
+    def get_price(self, index, instrument, ticker_last_price):
+        price = ticker_last_price * (1 + index * INTERVAL_ATR_MULT * self.curr_market_snapshot.atr_pct_1m)
+        price = mm_math.toNearest(price, instrument['tickSize'])
+        return price
 
     def prepare_tp_order(self, is_long, quantity):
         instrument = self.exchange.get_instrument()
-        symbol = self.exchange.symbol
-        ticker = self.exchange.get_ticker(symbol)
-        ticker_bid_price = ticker["buy"]
-        ticker_ask_price = ticker["sell"]
+        position = self.exchange.get_position()
+        avg_entry_price = position['avgEntryPrice']
 
-        price = self.get_tp_price(is_long, instrument, ticker_bid_price, ticker_ask_price)
-        side = "Sell" if is_long else "Buy"
+        price = self.get_tp_price(is_long, instrument, avg_entry_price)
 
-        return {"price": price, "orderQty": -quantity, "side": side, "ordType": "Limit", "execInst": "ParticipateDoNotInitiate,ReduceOnly"}
+        return {"price": price, "orderQty": quantity, "side": "Sell" if is_long is True else "Buy", "ordType": "Limit", "execInst": "ParticipateDoNotInitiate,ReduceOnly"}
+
+    def prepare_sl_order(self, is_long, quantity):
+        instrument = self.exchange.get_instrument()
+        position = self.exchange.get_position()
+        avg_entry_price = position['avgEntryPrice']
+
+        price = self.get_sl_price(is_long, instrument, avg_entry_price)
+
+        return {"stopPx": price, "orderQty": quantity, "side": "Sell" if is_long is True else "Buy", "ordType": "Stop", "execInst": "Close,LastPrice"}
 
     def prepare_order(self, index):
         """Create an order object."""
+
         instrument = self.exchange.get_instrument()
         minOrderLog = instrument.get("minOrderLog")
         symbol = self.exchange.symbol
         ticker = self.exchange.get_ticker(symbol)
-        ticker_bid_price = ticker["buy"]
-        ticker_ask_price = ticker["sell"]
+        ticker_last_price = ticker["last"]
 
         if index > 0:
-            quantity = self.get_quantity(False)
+            quantity = mm_math.roundQuantity(settings.MIN_POSITION, minOrderLog)
         elif index < 0:
-            quantity = self.get_quantity(True)
+            quantity = mm_math.roundQuantity(settings.MAX_POSITION, minOrderLog)
         else:
             quantity = 0
 
-        price = self.get_price(index, instrument, ticker_bid_price, ticker_ask_price)
-        side = "Buy" if index < 0 else "Sell"
-
-        return {"price": price, "orderQty": quantity, "side": side, "ordType": "Limit", "execInst": "ParticipateDoNotInitiate"}
+        price = self.get_price(index, instrument, ticker_last_price)
+        return {"price": price, "orderQty": quantity, "side": "Buy" if index < 0 else "Sell", "ordType": "Limit", "execInst": "ParticipateDoNotInitiate"}
 
     def get_ticker(self):
         instrument = self.exchange.get_instrument()
         ticker = self.exchange.get_ticker()
-        tickSize = instrument["tickSize"]
+        tickSize = instrument['tickSize']
         tickLog = instrument['tickLog']
 
         # Midpoint, used for simpler order placement.
@@ -122,57 +131,70 @@ class MM002_OrderMakerStrategy(GenericStrategy):
         if len(lst) > 0:
             return lst[0]
 
-    def is_price_diff_exceeded_value(self, price1, price2, max_diff):
-        return abs(price1 - price2) >= max_diff
+    def is_price_diff_exceeded_value(self, price1, price2, pct_value):
+        return abs((price1 - price2) / price1) > pct_value
 
-    def compare_orders(self, existing_orders, desired_orders, instrument):
-        to_create = []
-        to_amend = []
-        to_cancel = []
-        relist_interval = RELIST_INTERVAL_NUM_TICKS_FACTOR * instrument["tickSize"]
+    def validate_orders(self, orders, instrument, running_qty, avgEntryPrice, quoting_side):
+        if running_qty != 0 and len(orders) != MAX_NUM_ORDERS_NON_ZERO_POSITION or \
+           running_qty == 0 and quoting_side == QuotingSide.BOTH and len(orders) != MAX_NUM_ORDERS_ZERO_POSITION_QUOTING_SIDE_BOTH or \
+           running_qty == 0 and quoting_side != QuotingSide.BOTH and len(orders) != MAX_NUM_ORDERS_ZERO_POSITION_QUOTING_SIDE_NON_BOTH:
+            return False
 
-        for d_order in desired_orders:
-            matched_existing_order = self.find_order_with_params(existing_orders, abs(d_order["orderQty"]), d_order["side"], d_order["ordType"])
-            if not matched_existing_order:
-                to_create.append(d_order)
+        if running_qty != 0:
+            if running_qty > 0:
+                tp_order = self.find_order_with_params(orders, running_qty, "Sell", "Limit")
+                sl_order = self.find_order_with_params(orders, running_qty, "Sell", "Stop")
+                if not tp_order or not sl_order:
+                    return False
+
+                tp_desired_price = self.get_tp_price(True, instrument, avgEntryPrice)
+                if tp_order["price"] != tp_desired_price:
+                    return False
+
+                sl_desired_price = self.get_sl_price(True, instrument, avgEntryPrice)
+                if sl_order["stopPx"] != sl_desired_price:
+                    return False
             else:
-                is_price_exceeded = self.is_price_diff_exceeded_value(matched_existing_order["price"], d_order["price"], relist_interval)
-                if is_price_exceeded:
-                    d_order["orderID"] = matched_existing_order["orderID"]
-                    to_amend.append(d_order)
-                existing_orders = list(filter(lambda eo: eo["clOrdID"] != matched_existing_order["clOrdID"], existing_orders))
+                tp_order = self.find_order_with_params(orders, -running_qty, "Buy", "Limit")
+                sl_order = self.find_order_with_params(orders, -running_qty, "Buy", "Stop")
+                if not tp_order or not sl_order:
+                    return False
 
-        if len(existing_orders) > 0:
-            to_cancel = existing_orders.copy()
+                tp_desired_price = self.get_tp_price(False, instrument, avgEntryPrice)
+                if tp_order["price"] != tp_desired_price:
+                    return False
 
-        return [to_create, to_amend, to_cancel]
+                sl_desired_price = self.get_sl_price(False, instrument, avgEntryPrice)
+                if sl_order["stopPx"] != sl_desired_price:
+                    return False
+        else:
+            quoting_side = settings.QUOTING_SIDE
+            buy_order = self.find_order_with_params(orders, settings.MAX_POSITION, "Buy", "Limit")
+            sell_order = self.find_order_with_params(orders, -settings.MIN_POSITION, "Sell", "Limit")
+
+            if self.is_quoting_side_ok(True, quoting_side) and not buy_order:
+                return False
+            if self.is_quoting_side_ok(False, quoting_side) and not sell_order:
+                return False
+        return True
 
     def converge_orders(self, buy_orders, sell_orders):
         instrument = self.exchange.get_instrument()
         existing_orders = self.exchange.get_orders()
-        desired_orders = buy_orders + sell_orders
+        to_create = buy_orders + sell_orders
+        to_cancel = existing_orders
+        running_qty = self.exchange.get_delta()
+        quoting_side = settings.QUOTING_SIDE
+        position = self.exchange.get_position()
+        avgEntryPrice = position['avgEntryPrice']
 
-        [to_create, to_amend, to_cancel] = self.compare_orders(existing_orders, desired_orders, instrument)
-        need_create = len(to_create) > 0
-        need_amend = len(to_amend) > 0
-        need_cancel = len(to_cancel) > 0
+        is_orders_valid = self.validate_orders(existing_orders, instrument, running_qty, avgEntryPrice, quoting_side)
 
-        if need_cancel:
-            self.exchange.cancel_bulk_orders(to_cancel)
-
-        if need_create:
-            self.exchange.create_bulk_orders(desired_orders)
-
-        if need_amend:
-            try:
-                self.exchange.amend_bulk_orders(to_amend)
-            except Exception as e:
-                sleep(0.1)
-                return
-
-        if need_create:
+        if not is_orders_valid:
+            if len(to_cancel) > 0:
+                self.exchange.cancel_bulk_orders(to_cancel)
+            self.exchange.create_bulk_orders(to_create)
             self.print_status(True)
-
 
     ###
     # Sanity
