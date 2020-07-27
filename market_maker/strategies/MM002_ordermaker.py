@@ -6,9 +6,9 @@ from market_maker.db.quoting_side import *
 
 TAKER_FEE_PCT = 0.00075
 MAKER_FEE_PCT = 0.00025
-SL_ATR_MULT = 2
+SL_ATR_MULT = 1
 RR_RATIO = 3
-INTERVAL_ATR_MULT = 1
+INTERVAL_ATR_MULT = 0.5
 MAX_NUM_ORDERS_NON_ZERO_POSITION = 2
 MAX_NUM_ORDERS_ZERO_POSITION_QUOTING_SIDE_BOTH = 2
 MAX_NUM_ORDERS_ZERO_POSITION_QUOTING_SIDE_NON_BOTH = 1
@@ -52,7 +52,7 @@ class MM002_OrderMakerStrategy(GenericStrategy):
         self.override_parameters()
 
     def calc_sl_price(self):
-        return SL_ATR_MULT * self.curr_market_snapshot.atr_pct_1m
+        return SL_ATR_MULT * self.curr_market_snapshot.atr_pct_5m
 
     def get_tp_price(self, is_long, instrument, avg_entry_price):
         take_profit_pct = self.calc_sl_price() * RR_RATIO
@@ -73,7 +73,7 @@ class MM002_OrderMakerStrategy(GenericStrategy):
         return price
 
     def get_price(self, index, instrument, ticker_last_price):
-        price = ticker_last_price * (1 + index * INTERVAL_ATR_MULT * self.curr_market_snapshot.atr_pct_1m)
+        price = ticker_last_price * (1 + index * INTERVAL_ATR_MULT * self.curr_market_snapshot.atr_pct_5m)
         price = mm_math.toNearest(price, instrument['tickSize'])
         return price
 
@@ -95,19 +95,27 @@ class MM002_OrderMakerStrategy(GenericStrategy):
 
         return {"stopPx": price, "orderQty": quantity, "side": "Sell" if is_long is True else "Buy", "ordType": "Stop", "execInst": "Close,LastPrice"}
 
+    def get_quantity(self, is_long):
+        if settings.ENV == "live":
+            return 100
+        else:
+            if not is_long:
+                return mm_math.roundQuantity(settings.MIN_POSITION)
+            else:
+                return mm_math.roundQuantity(settings.MAX_POSITION)
+
     def prepare_order(self, index):
         """Create an order object."""
 
         instrument = self.exchange.get_instrument()
-        minOrderLog = instrument.get("minOrderLog")
         symbol = self.exchange.symbol
         ticker = self.exchange.get_ticker(symbol)
         ticker_last_price = ticker["last"]
 
         if index > 0:
-            quantity = mm_math.roundQuantity(settings.MIN_POSITION, minOrderLog)
+            quantity = self.get_quantity(False)
         elif index < 0:
-            quantity = mm_math.roundQuantity(settings.MAX_POSITION, minOrderLog)
+            quantity = self.get_quantity(True)
         else:
             quantity = 0
 
@@ -169,8 +177,10 @@ class MM002_OrderMakerStrategy(GenericStrategy):
                     return False
         else:
             quoting_side = settings.QUOTING_SIDE
-            buy_order = self.find_order_with_params(orders, settings.MAX_POSITION, "Buy", "Limit")
-            sell_order = self.find_order_with_params(orders, -settings.MIN_POSITION, "Sell", "Limit")
+            buy_quantity = self.get_quantity(True)
+            sell_quantity = self.get_quantity(False)
+            buy_order = self.find_order_with_params(orders, buy_quantity, "Buy", "Limit")
+            sell_order = self.find_order_with_params(orders, -sell_quantity, "Sell", "Limit")
 
             if self.is_quoting_side_ok(True, quoting_side) and not buy_order:
                 return False

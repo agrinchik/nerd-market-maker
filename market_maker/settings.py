@@ -14,6 +14,7 @@ settings.update(app_common_settings)
 try:
     if args.robotid:
         db_robot_settings = RobotSettings.get(RobotSettings.exchange == args.exchange, RobotSettings.robot_id == args.robotid)
+        settings["ENV"] = args.env
         settings["EXCHANGE"] = db_robot_settings.exchange
         settings["ROBOTID"] = db_robot_settings.robot_id
         settings["INSTANCEID"] = db_robot_settings.robot_id
@@ -23,6 +24,7 @@ try:
         settings["QUOTING_SIDE"] = db_robot_settings.quoting_side
         settings["INTERVAL_ADJUST_MULT"] = db_robot_settings.interval_adjust_mult
     else:
+        settings["ENV"] = args.env
         settings["INSTANCEID"] = args.instanceid
         settings["EXCHANGE"] = args.exchange
 
