@@ -6,7 +6,7 @@ from market_maker.db.quoting_side import *
 
 TAKER_FEE_PCT = 0.00075
 MAKER_FEE_PCT = 0.00025
-SL_ATR_MULT = 1
+SL_ATR_MULT = 2
 RR_RATIO = 3
 INTERVAL_ATR_MULT = 0.5
 RELIST_INTERVAL_ATR_MULT = 0.55
