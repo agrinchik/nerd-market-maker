@@ -9,6 +9,7 @@ MAKER_FEE_PCT = 0.00025
 SL_ATR_MULT = 1
 RR_RATIO = 3
 INTERVAL_ATR_MULT = 0.5
+RELIST_INTERVAL_ATR_MULT = 0.55
 MAX_NUM_ORDERS_NON_ZERO_POSITION = 2
 MAX_NUM_ORDERS_ZERO_POSITION_QUOTING_SIDE_BOTH = 2
 MAX_NUM_ORDERS_ZERO_POSITION_QUOTING_SIDE_NON_BOTH = 1
@@ -142,7 +143,9 @@ class MM002_OrderMakerStrategy(GenericStrategy):
     def is_price_diff_exceeded_value(self, price1, price2, pct_value):
         return abs((price1 - price2) / price1) > pct_value
 
-    def validate_orders(self, orders, instrument, running_qty, avgEntryPrice, quoting_side):
+    def validate_orders(self, orders, instrument, running_qty, avgEntryPrice, ticker_last_price, quoting_side):
+        relist_interval_pct = RELIST_INTERVAL_ATR_MULT * self.curr_market_snapshot.atr_pct_5m
+
         if running_qty != 0 and len(orders) != MAX_NUM_ORDERS_NON_ZERO_POSITION or \
            running_qty == 0 and quoting_side == QuotingSide.BOTH and len(orders) != MAX_NUM_ORDERS_ZERO_POSITION_QUOTING_SIDE_BOTH or \
            running_qty == 0 and quoting_side != QuotingSide.BOTH and len(orders) != MAX_NUM_ORDERS_ZERO_POSITION_QUOTING_SIDE_NON_BOTH:
@@ -186,10 +189,24 @@ class MM002_OrderMakerStrategy(GenericStrategy):
                 return False
             if self.is_quoting_side_ok(False, quoting_side) and not sell_order:
                 return False
+
+            if buy_order:
+                buy_order_desired_price = self.get_price(-1, instrument, ticker_last_price)
+                if self.is_price_diff_exceeded_value(buy_order["price"], buy_order_desired_price, relist_interval_pct):
+                    return False
+
+            if sell_order:
+                sell_order_desired_price = self.get_price(1, instrument, ticker_last_price)
+                if self.is_price_diff_exceeded_value(sell_order["price"], sell_order_desired_price, relist_interval_pct):
+                    return False
+
         return True
 
     def converge_orders(self, buy_orders, sell_orders):
         instrument = self.exchange.get_instrument()
+        symbol = self.exchange.symbol
+        ticker = self.exchange.get_ticker(symbol)
+        ticker_last_price = ticker["last"]
         existing_orders = self.exchange.get_orders()
         to_create = buy_orders + sell_orders
         to_cancel = existing_orders
@@ -198,7 +215,7 @@ class MM002_OrderMakerStrategy(GenericStrategy):
         position = self.exchange.get_position()
         avgEntryPrice = position['avgEntryPrice']
 
-        is_orders_valid = self.validate_orders(existing_orders, instrument, running_qty, avgEntryPrice, quoting_side)
+        is_orders_valid = self.validate_orders(existing_orders, instrument, running_qty, avgEntryPrice, ticker_last_price, quoting_side)
 
         if not is_orders_valid:
             if len(to_cancel) > 0:
