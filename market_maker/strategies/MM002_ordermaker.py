@@ -179,8 +179,8 @@ class MM002_OrderMakerStrategy(GenericStrategy):
             quoting_side = settings.QUOTING_SIDE
             buy_quantity = self.get_quantity(True)
             sell_quantity = self.get_quantity(False)
-            buy_order = self.find_order_with_params(orders, buy_quantity, "Buy", "Limit")
-            sell_order = self.find_order_with_params(orders, -sell_quantity, "Sell", "Limit")
+            buy_order = self.find_order_with_params(orders, abs(buy_quantity), "Buy", "Limit")
+            sell_order = self.find_order_with_params(orders, abs(sell_quantity), "Sell", "Limit")
 
             if self.is_quoting_side_ok(True, quoting_side) and not buy_order:
                 return False
