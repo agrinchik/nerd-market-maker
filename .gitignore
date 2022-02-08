@@ -11,3 +11,5 @@ dist/
 env
 .idea/
 logs/
+*db*
+bitfinex.py
